@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Results
+results/logs/*
+results/frames/*
+results/videos/*
+results/plots/*
+results/tables/*
+!results/logs/.gitkeep
+!results/frames/.gitkeep
+!results/videos/.gitkeep
+!results/plots/.gitkeep
+!results/tables/.gitkeep
+
+# Unity
+unity/**/Library/
+unity/**/Temp/
+unity/**/Obj/
+unity/**/Build/
+unity/**/Builds/
+unity/**/Logs/
+unity/**/UserSettings/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Model files
+*.pt
+*.onnx

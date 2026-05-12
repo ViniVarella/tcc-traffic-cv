@@ -1,0 +1,43 @@
+{
+  "sumo": {
+    "config_path": "../sumo/configs/simulacao.sumocfg",
+    "gui": true,
+    "step_length": 0.1,
+    "tls_id": "center_tls"
+  },
+  "unity": {
+    "state_host": "127.0.0.1",
+    "state_port": 5004,
+    "frame_host": "127.0.0.1",
+    "frame_port": 5005,
+    "frame_timeout": 2.0
+  },
+  "vision": {
+    "model_path": "yolov8n.pt",
+    "confidence_threshold": 0.35,
+    "inference_size": 640,
+    "classes": [2, 3, 5, 7],
+    "use_tracker": true,
+    "smoothing_window": 5
+  },
+  "rois": {
+    "north": [[100, 120], [250, 120], [250, 350], [100, 350]],
+    "south": [[390, 300], [540, 300], [540, 540], [390, 540]],
+    "east": [[300, 100], [560, 100], [560, 240], [300, 240]],
+    "west": [[80, 390], [340, 390], [340, 540], [80, 540]]
+  },
+  "traffic_controller": {
+    "min_green": 10.0,
+    "max_green": 45.0,
+    "yellow_duration": 3.0,
+    "all_red_duration": 1.0,
+    "queue_threshold": 5,
+    "imbalance_margin": 3,
+    "cooldown": 5.0
+  },
+  "logging": {
+    "output_dir": "../results/logs",
+    "save_debug_frames": true,
+    "debug_frame_dir": "../results/frames"
+  }
+}
