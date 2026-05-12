@@ -18,3 +18,30 @@ A decisão de controle não usa sensores perfeitos do SUMO. Os dados internos do
 - `python/controller`: política de controle semafórico.
 - `python/logging_utils`: logs, métricas e metadados de execução.
 - `python/experiments`: execução de cenários e experimentos.
+
+## Teste de visão local
+
+O teste de visão roda sem SUMO e sem Unity, usando imagem ou vídeo local para validar a pipeline YOLO + SORT + ROI.
+
+1. Instale as dependências do ambiente virtual:
+
+```powershell
+cd python
+python -m pip install -r requirements.txt
+```
+
+2. Execute o teste com um vídeo local:
+
+```powershell
+cd python
+python -m experiments.test_vision --input ../samples/traffic_top_view.mp4
+```
+
+3. Para imagem única:
+
+```powershell
+cd python
+python -m experiments.test_vision --input ../samples/minha_imagem.jpg
+```
+
+Os frames de debug são salvos em `results/frames` com bounding boxes, `track_id`, ROIs e contagens suavizadas.
