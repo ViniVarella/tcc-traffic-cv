@@ -1,11 +1,25 @@
 # Python
 __pycache__/
 *.py[cod]
+*.class
 .venv/
 venv/
+env/
 .env
+.env.*
+!.env.example
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# Results
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+# Results / generated experiment outputs
 results/logs/*
 results/frames/*
 results/videos/*
@@ -17,6 +31,48 @@ results/tables/*
 !results/plots/.gitkeep
 !results/tables/.gitkeep
 
+# Local samples / datasets
+samples/*
+!samples/.gitkeep
+datasets/*
+!datasets/.gitkeep
+data/*
+!data/.gitkeep
+
+# YOLO / model files
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tflite
+*.pb
+*.weights
+
+# Media files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tiff
+
+# Keep placeholder files even inside ignored media/data dirs
+!.gitkeep
+
+# SUMO generated outputs
+*.tripinfo.xml
+*.summary.xml
+*.queue.xml
+*.emissions.xml
+*.statistic.xml
+*.fcd.xml
+*.log
+*.rou.alt.xml
+
 # Unity
 unity/**/Library/
 unity/**/Temp/
@@ -25,6 +81,17 @@ unity/**/Build/
 unity/**/Builds/
 unity/**/Logs/
 unity/**/UserSettings/
+unity/**/.vs/
+unity/**/*.csproj
+unity/**/*.sln
+unity/**/*.user
+unity/**/*.pidb
+unity/**/*.booproj
+unity/**/*.svd
+unity/**/*.pdb
+unity/**/*.mdb
+unity/**/*.opendb
+unity/**/*.VC.db
 
 # IDE
 .idea/
@@ -33,7 +100,8 @@ unity/**/UserSettings/
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Model files
-*.pt
-*.onnx
+# Local implementation guide copies
+docs/IMPLEMENTATION_GUIDE.md
+docs/IMPLEMENTATION_GUIDE_TCC_TRAFFIC_CV.md
