@@ -1,4 +1,10 @@
-"""Teste local da pipeline de visao com imagem ou video, sem SUMO e sem Unity."""
+"""Teste local preliminar da pipeline de visao, sem SUMO e sem Unity.
+
+Este script continua existindo como validacao tecnica isolada. Ele usa um
+video ou imagem local, tipicamente top-down, apenas para confirmar a pipeline
+YOLO + SORT + ROI antes da integracao com a arquitetura final de quatro
+cameras da Unity.
+"""
 
 from __future__ import annotations
 
@@ -23,7 +29,7 @@ def load_project_config(config_path: Path) -> dict[str, Any]:
 
 
 def build_default_rois(frame_width: int, frame_height: int) -> dict[str, list[list[int]]]:
-    """Cria quatro ROIs simples para um video top-down de teste."""
+    """Cria quatro ROIs simples para um video top-down de teste preliminar."""
     center_x = frame_width // 2
     center_y = frame_height // 2
     margin_x = max(frame_width // 12, 20)
@@ -38,10 +44,28 @@ def build_default_rois(frame_width: int, frame_height: int) -> dict[str, list[li
 
 
 def resolve_rois(config: dict[str, Any], frame_width: int, frame_height: int) -> dict[str, list[list[int | float]]]:
-    """Usa ROIs do config quando disponiveis; caso contrario gera um padrao simples."""
-    rois = config.get("rois")
-    if isinstance(rois, dict) and rois:
-        return rois
+    """Resolve ROIs a partir da configuracao final por camera ou de um fallback.
+
+    A arquitetura alvo define as ROIs em `cameras.<camera_id>.roi`. Durante o
+    teste preliminar com um unico video local, o script reutiliza essas ROIs
+    como compatibilidade temporaria; se elas nao existirem, gera poligonos
+    simples diretamente a partir do frame.
+    """
+    cameras = config.get("cameras", {})
+    if isinstance(cameras, dict) and cameras:
+        rois: dict[str, list[list[int | float]]] = {}
+        for camera_id, camera_config in cameras.items():
+            if not camera_config.get("enabled", False):
+                continue
+            roi = camera_config.get("roi")
+            if roi:
+                rois[camera_id] = roi
+        if rois:
+            return rois
+
+    legacy_rois = config.get("rois")
+    if isinstance(legacy_rois, dict) and legacy_rois:
+        return legacy_rois
     return build_default_rois(frame_width=frame_width, frame_height=frame_height)
 
 
@@ -176,7 +200,12 @@ def process_video(
 
 
 def main() -> None:
-    """Executa o teste de visao local com imagem ou video."""
+    """Executa o teste de visao local com imagem ou video.
+
+    O objetivo aqui e validar a camada de visao em isolamento. Isso nao substitui
+    a etapa futura de validar cedo o YOLO em frames reais renderizados pela
+    Unity.
+    """
     args = parse_args()
     input_path = Path(args.input).resolve()
     config_path = Path(args.config).resolve()
@@ -194,7 +223,7 @@ def main() -> None:
         output_dir = (config_path.parent / logging_config["debug_frame_dir"]).resolve()
 
     detector = YoloVehicleDetector(
-        model_path=args.model,
+        model_path=args.model if args.model != "yolov8n.pt" else vision_config.get("model_path", "yolov8n.pt"),
         confidence_threshold=float(vision_config.get("confidence_threshold", 0.35)),
         classes=vision_config.get("classes"),
         inference_size=int(vision_config.get("inference_size", 640)),

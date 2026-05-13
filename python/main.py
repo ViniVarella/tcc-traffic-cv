@@ -2,27 +2,35 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 
 def load_config(config_path: str | Path) -> dict[str, Any]:
-    """Load the project configuration from a YAML file encoded as JSON."""
+    """Carrega a configuracao YAML legivel do projeto."""
     path = Path(config_path)
-    return json.loads(path.read_text(encoding="utf-8"))
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
 def main() -> None:
-    """Load the initial configuration and confirm the scaffold is ready."""
+    """Carrega a configuracao revisada e confirma o scaffold arquitetural."""
     base_dir = Path(__file__).resolve().parent
     config = load_config(base_dir / "config.yaml")
+    enabled_cameras = [
+        camera_id
+        for camera_id, camera_config in config.get("cameras", {}).items()
+        if camera_config.get("enabled", False)
+    ]
 
     print(
         "Estrutura inicial pronta: "
-        f"SUMO gui={config['sumo']['gui']}, "
-        f"TLS={config['sumo']['tls_id']}, "
-        f"porta Unity estado={config['unity']['state_port']}."
+        f"cenario={config['experiment']['scenario']}, "
+        f"step_length={config['sumo']['step_length']}, "
+        f"tls={config['traffic_light']['id']}, "
+        f"cameras={len(enabled_cameras)}, "
+        f"vision_every_steps={config['vision']['update_every_steps']}."
     )
 
 

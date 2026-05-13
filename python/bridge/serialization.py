@@ -28,6 +28,8 @@ def deserialize_frame_header(header: dict[str, Any]) -> FramePacket:
     return FramePacket(
         step_id=int(header.get("step_id", -1)),
         sim_time=float(header.get("sim_time", 0.0)),
+        camera_id=str(header.get("camera_id", "unknown")),
+        image_format=str(header.get("image_format", "jpeg")),
         payload_size=int(header.get("payload_size", 0)),
         latency_ms=float(header["latency_ms"]) if "latency_ms" in header else None,
     )

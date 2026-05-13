@@ -6,7 +6,12 @@ from typing import Any
 
 
 class GroundTruthCollector:
-    """Centraliza metricas do SUMO usadas apenas para avaliacao experimental."""
+    """Centraliza metricas perfeitas do SUMO usadas apenas para avaliacao.
+
+    Essas metricas existem para comparar contagem visual, filas reais, tempos
+    de espera e demais indicadores de desempenho. Elas nao devem alimentar a
+    decisao online do controlador baseado em visao.
+    """
 
     def __init__(self, tls_id: str) -> None:
         self.tls_id = tls_id

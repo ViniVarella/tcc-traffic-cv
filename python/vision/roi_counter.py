@@ -15,7 +15,14 @@ def _bbox_center(bbox: list[float]) -> tuple[float, float]:
 
 
 class ROICounter:
-    """Conta veiculos rastreados em poligonos associados a cada aproximacao."""
+    """Conta veiculos dentro de ROIs poligonais associadas a cada aproximacao.
+
+    Na arquitetura final, cada camera Unity tera sua propria ROI calibrada
+    manualmente. O contador usa o centro da bounding box para medir quantos
+    veiculos estao aguardando dentro da regiao relevante da imagem. O uso do
+    tracker e auxiliar; pequenas trocas de ID nao devem ser criticas para o
+    controlador inicial.
+    """
 
     def __init__(self, rois: dict[str, list[list[int | float]]]) -> None:
         self.rois = rois

@@ -6,6 +6,7 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 
 - Marco 1: concluído
 - Marco 2: concluído
+- Arquitetura revisada documentada: concluído
 - Marco 3 em diante: pendentes
 
 ## Marco 1 — Estrutura inicial do repositório
@@ -79,6 +80,11 @@ Observações:
 - o teste depende do ambiente virtual com dependências instaladas;
 - na primeira execução, o `ultralytics` pode baixar `yolov8n.pt`;
 - modelos `.pt`, vídeos, imagens e frames gerados permanecem fora de versionamento pelo `.gitignore`.
+- esse teste continua sendo apenas preliminar, com vídeo ou imagem local;
+- a arquitetura final documentada passa a usar quatro câmeras Unity com ROIs por câmera;
+- a visão final deve rodar a cada `N` steps simulados, com `update_every_steps` configurável;
+- o protocolo final de frames deve identificar `step_id` e `camera_id`;
+- ground truth do SUMO continua reservado para avaliação, nunca para decisão online.
 
 ## Próximos Marcos
 

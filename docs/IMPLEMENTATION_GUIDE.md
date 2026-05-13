@@ -2,23 +2,22 @@
 
 ## 1. Introdução
 
-Este projeto tem como objetivo desenvolver um sistema de controle semafórico adaptativo baseado em visão computacional. A proposta é simular o tráfego urbano no SUMO, renderizar esse tráfego em ambiente 3D na Unity, processar os frames da câmera virtual com YOLO + tracking e usar a estimativa visual de veículos/fila para tomar decisões de controle semafórico.
+Este projeto tem como objetivo desenvolver um sistema de controle semafórico adaptativo baseado em visão computacional. A proposta é simular o tráfego urbano no SUMO, renderizar esse tráfego em ambiente 3D na Unity, processar os frames das câmeras virtuais com YOLO e usar a estimativa visual de veículos em fila para tomar decisões de controle semafórico.
 
 O sistema deve ser construído com a seguinte arquitetura principal:
 
 ```text
-SUMO → Python/TraCI → Unity/SUMO2Unity → câmera → Python/YOLO+SORT → controlador → SUMO
+SUMO → Python/TraCI → Unity/SUMO2Unity → 4 câmeras → Python/YOLO+ROI(+SORT) → controlador → SUMO
 ```
 
-O ponto central do projeto é que a decisão semafórica deve ser tomada a partir da imagem renderizada pela Unity, não diretamente a partir dos sensores internos do SUMO. O SUMO será usado para gerar a dinâmica do tráfego, controlar a simulação e fornecer ground truth para avaliação posterior. A Unity será usada como ambiente visual 3D. O YOLO e o SORT serão usados para detectar, rastrear e contar veículos a partir da imagem.
+O ponto central do projeto é que a decisão semafórica deve ser tomada a partir da imagem renderizada pela Unity, não diretamente a partir dos sensores internos do SUMO. O SUMO será usado para gerar a dinâmica do tráfego, controlar a simulação e fornecer ground truth para avaliação posterior. A Unity será usada como ambiente visual 3D. O YOLO será usado para detectar veículos a partir da imagem, as ROIs por câmera serão a base da contagem usada pelo controlador e o SORT poderá ser usado como apoio de tracking e debug.
 
 O projeto reaproveitará dois trabalhos existentes:
 
-1. O repositório `car-counter`, que já contém uma implementação em Python de detecção e contagem de veículos usando YOLOv8 e SORT. O README do projeto descreve que ele detecta, rastreia e conta veículos em vídeos, usando YOLO para detecção e SORT para manter IDs de rastreamento ao longo dos frames.
+1. O repositório `car-counter`, que já contém uma implementação em Python de detecção e contagem de veículos usando YOLOv8 e SORT.
+2. O projeto SUMO2Unity, que fornece uma base de integração entre SUMO e Unity.
 
-2. O projeto SUMO2Unity, que fornece uma base de integração entre SUMO e Unity. O README do SUMO2Unity informa que a ferramenta importa redes viárias complexas do SUMO para Unity e programa a troca de coordenadas de veículos e informações semafóricas em intervalos de 0,10 s.
-
-Neste projeto, o SUMO2Unity será usado principalmente como base visual/importador de cenário Unity, mas a arquitetura de controle será centralizada no Python. Isso significa que a Unity não deve ser o cliente TraCI principal. O Python deve ser o único cliente TraCI responsável por avançar a simulação, extrair o estado necessário para renderização, enviar esse estado para Unity, receber os frames da câmera e aplicar as decisões de controle no SUMO.
+Neste projeto, o SUMO2Unity será usado principalmente como base visual e importador de cenário Unity, mas a arquitetura de controle será centralizada no Python. A Unity não deve ser o cliente TraCI principal. O Python deve ser o único cliente TraCI responsável por avançar a simulação, extrair o estado necessário para renderização, enviar esse estado para a Unity, receber os frames das câmeras e aplicar as decisões de controle no SUMO.
 
 ---
 
@@ -32,19 +31,20 @@ Construir um sistema completo capaz de:
 3. Extrair posições, rotações e estados de veículos/semaforos do SUMO.
 4. Enviar esse estado para Unity.
 5. Atualizar a cena 3D na Unity usando a base do SUMO2Unity.
-6. Renderizar uma câmera virtual.
-7. Enviar o frame da câmera de volta para Python.
-8. Detectar veículos no frame usando YOLO.
-9. Rastrear veículos usando SORT.
-10. Estimar filas por região de interesse.
-11. Tomar uma decisão semafórica.
-12. Aplicar a decisão no SUMO via TraCI.
-13. Salvar logs e métricas para avaliação experimental.
+6. Renderizar quatro câmeras virtuais.
+7. Enviar os frames das câmeras de volta para Python.
+8. Detectar veículos nos frames usando YOLO.
+9. Opcionalmente rastrear veículos usando SORT.
+10. Estimar filas por região de interesse em cada câmera.
+11. Agregar contagens em grupos NS e EW.
+12. Tomar uma decisão semafórica.
+13. Aplicar a decisão no SUMO via TraCI.
+14. Salvar logs e métricas para avaliação experimental.
 ```
 
 ---
 
-## 3. Decisão arquitetural principal
+## 3. Decisões arquiteturais principais
 
 ### 3.1 Python será o único cliente TraCI
 
@@ -55,19 +55,141 @@ Fluxo correto:
 ```text
 SUMO ←→ Python ←→ Unity
           ↓
-      YOLO + SORT
+      YOLO + ROI
           ↓
   controle semafórico
 ```
 
-Fluxo que deve ser evitado neste projeto:
+Fluxo que deve ser evitado:
 
 ```text
 SUMO ←→ Python
 SUMO ←→ Unity
 ```
 
-O motivo é reduzir a complexidade de sincronização. Com dois clientes TraCI, seria necessário garantir ordem de execução, sincronização de `simulationStep()` e correspondência exata entre o estado simulado e o frame renderizado. Para o TCC, é mais seguro e mais defensável manter o Python como orquestrador único.
+O motivo é reduzir a complexidade de sincronização. Com dois clientes TraCI, seria necessário garantir ordem de execução, sincronização de `simulationStep()` e correspondência exata entre o estado simulado e o frame renderizado.
+
+### 3.2 Simulação step-based, não tempo real estrito
+
+O sistema deve operar em modo síncrono orientado a passos discretos da simulação. O Python avança o SUMO via `simulationStep()` e só então executa as demais etapas do pipeline.
+
+Regra operacional:
+
+```text
+- o relógio de referência do experimento é o tempo simulado do SUMO;
+- não é necessário que 0,1 s simulados sejam processados em 0,1 s de tempo real;
+- se YOLO, renderização ou comunicação adicionarem latência, isso é aceitável;
+- determinismo, simplicidade e reprodutibilidade têm prioridade sobre tempo real estrito.
+```
+
+### 3.3 Quatro câmeras virtuais na Unity
+
+A arquitetura final deve usar quatro câmeras virtuais fixas:
+
+```text
+- north
+- south
+- east
+- west
+```
+
+Cada câmera observa uma aproximação da interseção.
+
+Motivação:
+
+```text
+- veículos maiores no frame;
+- menos oclusão;
+- ROIs mais simples;
+- melhor probabilidade de detecção pelo YOLO.
+```
+
+### 3.4 Uma ROI fixa por câmera
+
+Cada câmera terá sua própria ROI fixa, calibrada manualmente em pixels. Essa ROI representa a região da imagem onde veículos aguardando o semáforo devem ser contados.
+
+Regra metodológica:
+
+```text
+YOLO detecta no frame inteiro.
+O controlador usa apenas a contagem dos veículos dentro da ROI relevante.
+```
+
+### 3.5 Estrutura inicial do controle
+
+A primeira versão do controlador trabalhará com dois grupos de fluxo:
+
+```text
+NS = north + south
+EW = east + west
+```
+
+Isso reduz a complexidade inicial e é suficiente para uma primeira validação do ciclo completo.
+
+### 3.6 Visão a cada N steps
+
+A visão não precisa ser executada a cada `simulationStep()`. A configuração inicial recomendada é:
+
+```text
+step_length = 0.1 s
+update_every_steps = 5
+```
+
+Isso equivale a executar a percepção a cada `0,5 s` simulados. Se o custo computacional ficar alto com quatro câmeras, esse intervalo pode ser aumentado para `1,0 s` simulado ou outro valor adequado.
+
+### 3.7 Frames Unity → Python via TCP
+
+O envio de frames da Unity para o Python deve usar TCP, não UDP.
+
+Motivação:
+
+```text
+- frames JPEG podem ser grandes;
+- UDP pode sofrer fragmentação e perda;
+- o experimento é step-based, então confiabilidade vale mais que latência mínima;
+- localhost com TCP é suficiente para o TCC.
+```
+
+### 3.8 Timeout de frame não deve travar o experimento
+
+Se um frame não chegar dentro do timeout:
+
+```text
+- registrar missing_frame para aquela câmera;
+- usar a última contagem válida daquela câmera;
+- continuar a simulação.
+```
+
+Isso evita que uma falha transitória de renderização ou comunicação derrube o experimento inteiro.
+
+### 3.9 Ground truth do SUMO apenas para avaliação
+
+O SUMO pode fornecer métricas perfeitas da simulação, mas essas informações devem ser usadas apenas para:
+
+```text
+- logs;
+- métricas;
+- comparação entre contagem visual e verdade de terreno;
+- avaliação final dos experimentos.
+```
+
+O controlador principal não deve receber sensores perfeitos do SUMO.
+
+### 3.10 Reprodutibilidade por seed fixa
+
+A configuração do experimento deve prever uma seed fixa.
+
+Motivação:
+
+```text
+- comparar controle fixo e controle por visão nas mesmas condições;
+- tornar os resultados reproduzíveis;
+- evitar comparações enviesadas por aleatoriedade da simulação.
+```
+
+### 3.11 Validar cedo o YOLO em frames da Unity
+
+Antes de implementar o controle completo, o projeto deve capturar frames estáticos da Unity e verificar se o YOLO detecta adequadamente os veículos renderizados. Esse risco deve ser validado cedo porque o modelo foi treinado em imagens reais, e os frames sintéticos da Unity podem divergir do domínio visual esperado.
 
 ---
 
@@ -103,20 +225,13 @@ TraCI não deve ser usado como sensor principal do algoritmo de decisão.
 
 ## 5. Estrutura recomendada do repositório
 
-Criar um novo repositório principal, por exemplo:
-
-```text
-tcc-traffic-cv/
-```
-
-Estrutura sugerida:
-
 ```text
 tcc-traffic-cv/
 │
 ├── README.md
 ├── docs/
 │   ├── IMPLEMENTATION_GUIDE.md
+│   ├── IMPLEMENTATION_PROGRESS.md
 │   ├── ARCHITECTURE.md
 │   ├── EXPERIMENTS.md
 │   └── METHODOLOGY.md
@@ -160,7 +275,8 @@ tcc-traffic-cv/
 │   └── experiments/
 │       ├── run_experiment.py
 │       ├── scenario_config.py
-│       └── batch_runner.py
+│       ├── batch_runner.py
+│       └── test_vision.py
 │
 ├── sumo/
 │   ├── networks/
@@ -191,9 +307,7 @@ tcc-traffic-cv/
     └── SUMO2Unity-reference/
 ```
 
-### Observação sobre `third_party`
-
-Não é obrigatório versionar os repositórios externos inteiros. Uma estratégia limpa é:
+Observação sobre `third_party`:
 
 ```text
 - copiar/adaptar o código necessário do car-counter para python/vision;
@@ -213,6 +327,7 @@ Responsabilidade:
 ```text
 - iniciar o SUMO;
 - controlar o clock da simulação;
+- avançar a simulação passo a passo;
 - extrair estado dos veículos;
 - extrair estado dos semáforos;
 - aplicar comandos semafóricos;
@@ -257,19 +372,6 @@ class SumoClient:
 
 Importante: iniciar o SUMO sem `--num-clients 2`.
 
-Exemplo esperado:
-
-```python
-sumo_cmd = ["sumo-gui", "-c", "sumo/configs/simulacao.sumocfg"]
-traci.start(sumo_cmd)
-```
-
-Não usar:
-
-```python
-sumo_cmd = ["sumo-gui", "-c", "sumo/configs/simulacao.sumocfg", "--num-clients", "2"]
-```
-
 ---
 
 ### 6.2 Módulo de extração de estado para Unity
@@ -288,6 +390,14 @@ Responsabilidade:
 - incluir step_id e sim_time;
 - incluir veículos ativos;
 - incluir estado semafórico.
+```
+
+Observação arquitetural:
+
+```text
+o estado enviado pelo Python é global para o step;
+a Unity é responsável por renderizar esse estado nas quatro câmeras;
+o Python continua sendo o orquestrador do avanço da simulação.
 ```
 
 Formato de mensagem Python → Unity:
@@ -317,16 +427,6 @@ Formato de mensagem Python → Unity:
 }
 ```
 
-Conversão inicial sugerida:
-
-```text
-SUMO x → Unity x
-SUMO y → Unity z
-Unity y → 0 ou altura do veículo
-```
-
-A função de conversão deve ficar isolada para permitir ajustes posteriores de escala, offset e rotação.
-
 ---
 
 ### 6.3 Módulo de comunicação Python ↔ Unity
@@ -342,8 +442,9 @@ Responsabilidade:
 
 ```text
 - enviar estado do SUMO para Unity;
-- receber frame da câmera Unity;
+- receber frames das câmeras Unity;
 - validar step_id;
+- validar camera_id;
 - medir latência;
 - tratar timeout;
 - descartar frames atrasados.
@@ -353,19 +454,19 @@ Implementação inicial recomendada:
 
 ```text
 Python → Unity: UDP com JSON
-Unity → Python: UDP ou TCP com frame JPG + header
+Unity → Python: TCP com frame JPG + header
 ```
 
-Para a primeira versão, usar UDP é aceitável em localhost, mas todo pacote de frame deve conter:
+Cada frame enviado pela Unity deve conter:
 
 ```text
 - step_id;
 - sim_time;
+- camera_id;
+- image_format;
 - tamanho do payload;
 - bytes JPEG.
 ```
-
-Se o frame for enviado por UDP, tomar cuidado com fragmentação. Para simplificar e aumentar robustez, é preferível usar TCP para os frames da câmera.
 
 Interface desejada:
 
@@ -387,13 +488,20 @@ class UnityBridge:
     def receive_frame(self) -> tuple | None:
         """
         Retorna:
-            (frame_bgr, step_id, sim_time, latency_ms)
+            (frame_bgr, step_id, sim_time, camera_id, latency_ms)
         ou None em caso de timeout.
         """
         pass
 
     def close(self) -> None:
         pass
+```
+
+Política de timeout:
+
+```text
+se um frame não chegar no tempo esperado, registrar o evento e reutilizar a
+última contagem válida da câmera correspondente, sem travar a simulação inteira.
 ```
 
 ---
@@ -414,43 +522,6 @@ Responsabilidade:
 - retornar detecções em formato padronizado.
 ```
 
-Interface:
-
-```python
-class YoloVehicleDetector:
-    def __init__(
-        self,
-        model_path: str = "yolov8n.pt",
-        confidence_threshold: float = 0.35,
-        classes: list[int] | None = None,
-        inference_size: int = 640,
-    ):
-        pass
-
-    def detect(self, frame) -> list[dict]:
-        """
-        Retorna:
-        [
-            {
-                "bbox": [x1, y1, x2, y2],
-                "confidence": 0.91,
-                "class_id": 2
-            }
-        ]
-        """
-        pass
-```
-
-Classes recomendadas:
-
-```python
-classes = [2, 3, 5, 7]
-```
-
-Representando, no dataset COCO usado pelo YOLO, carros, motos, ônibus e caminhões.
-
----
-
 #### Arquivo: `python/vision/sort_tracker.py`
 
 Responsabilidade:
@@ -462,73 +533,28 @@ Responsabilidade:
 - manter compatibilidade com o formato usado pelo contador de ROI.
 ```
 
-Interface:
+Importante:
 
-```python
-class VehicleTracker:
-    def __init__(self, max_age: int = 20, min_hits: int = 3, iou_threshold: float = 0.3):
-        pass
-
-    def update(self, detections: list[dict]) -> list[dict]:
-        """
-        Retorna:
-        [
-            {
-                "track_id": 12,
-                "bbox": [x1, y1, x2, y2],
-                "confidence": 0.88,
-                "class_id": 2
-            }
-        ]
-        """
-        pass
+```text
+o SORT é auxiliar, não requisito crítico da decisão;
+trocas pontuais de ID não devem comprometer o controlador inicial;
+a métrica principal continua sendo a contagem em ROI por câmera.
 ```
-
----
 
 #### Arquivo: `python/vision/roi_counter.py`
 
 Responsabilidade:
 
 ```text
-- definir regiões de interesse por aproximação;
+- definir regiões de interesse por câmera/aproximação;
 - verificar se o centro da bbox está dentro da ROI;
 - contar tracks únicos por região;
-- produzir contagem por aproximação.
+- produzir contagem por câmera.
 ```
 
 Ao contrário do `car-counter`, este projeto não deve contar apenas cruzamentos de linha. Para controle semafórico, a métrica principal deve ser veículos em região de fila, não veículos que já passaram.
 
-Interface:
-
-```python
-class ROICounter:
-    def __init__(self, rois: dict):
-        """
-        rois:
-        {
-            "north": [[x1, y1], [x2, y2], ...],
-            "south": [[x1, y1], [x2, y2], ...],
-            "east": [[x1, y1], [x2, y2], ...],
-            "west": [[x1, y1], [x2, y2], ...]
-        }
-        """
-        pass
-
-    def count(self, tracks: list[dict]) -> dict:
-        """
-        Retorna:
-        {
-            "north": 4,
-            "south": 2,
-            "east": 7,
-            "west": 1
-        }
-        """
-        pass
-```
-
----
+Na arquitetura final, essas ROIs vêm de `cameras.<camera_id>.roi` no `config.yaml`. O teste atual com vídeo top-down local continua sendo apenas uma compatibilidade preliminar.
 
 #### Arquivo: `python/vision/queue_estimator.py`
 
@@ -537,25 +563,9 @@ Responsabilidade:
 ```text
 - suavizar contagens ao longo do tempo;
 - reduzir ruído da detecção;
-- estimar fila por aproximação;
+- estimar fila por câmera;
 - opcionalmente considerar persistência temporal dos tracks.
 ```
-
-Interface:
-
-```python
-class QueueEstimator:
-    def __init__(self, smoothing_window: int = 5):
-        pass
-
-    def update(self, roi_counts: dict) -> dict:
-        """
-        Retorna contagens suavizadas.
-        """
-        pass
-```
-
----
 
 #### Arquivo: `python/vision/visual_debug.py`
 
@@ -567,6 +577,13 @@ Responsabilidade:
 - desenhar ROIs;
 - desenhar contagens;
 - salvar frames de debug.
+```
+
+Observação:
+
+```text
+debug frames devem ser configuráveis e não precisam ser salvos em todos os
+steps de visão durante os experimentos finais.
 ```
 
 ---
@@ -584,7 +601,8 @@ python/controller/policies.py
 Responsabilidade:
 
 ```text
-- receber estimativa de fila por aproximação;
+- receber estimativa de fila por câmera;
+- agregar contagens em dois grupos principais, NS e EW;
 - decidir qual direção deve receber prioridade;
 - respeitar verde mínimo, verde máximo, amarelo e all-red;
 - aplicar transições seguras no SUMO.
@@ -611,39 +629,32 @@ traffic_controller:
   max_green: 45.0
   yellow_duration: 3.0
   all_red_duration: 1.0
-  queue_threshold: 5
-  imbalance_margin: 3
-  cooldown: 5.0
+  low_demand_threshold: 0
+  switch_margin: 2
 ```
 
-Interface:
+Mapeamento explícito das fases do SUMO:
 
-```python
-class TrafficController:
-    def __init__(self, tls_id: str, config: dict):
-        pass
-
-    def update(self, sim_time: float, visual_counts: dict) -> dict:
-        """
-        Decide ação de controle.
-        Não necessariamente aplica diretamente no SUMO.
-        """
-        pass
-
-    def apply(self, sumo_client, decision: dict) -> None:
-        """
-        Aplica decisão usando TraCI.
-        """
-        pass
+```yaml
+traffic_light:
+  id: "center_tls"
+  phases:
+    ns_green: 0
+    ns_yellow: 1
+    all_red_after_ns: 2
+    ew_green: 3
+    ew_yellow: 4
+    all_red_after_ew: 5
 ```
 
 Política inicial:
 
 ```text
 1. Se verde mínimo ainda não foi cumprido, manter fase.
-2. Se verde máximo foi atingido, iniciar transição.
-3. Se a fila da direção oposta superar a fila atual por margem definida, iniciar transição.
-4. Caso contrário, manter fase atual.
+2. Se verde máximo foi atingido, iniciar transição obrigatória.
+3. Se já passou do verde mínimo e a demanda atual está baixa enquanto a oposta tem demanda, iniciar transição.
+4. Se a fila da direção oposta superar a fila atual por margem definida, iniciar transição.
+5. Caso contrário, manter fase atual.
 ```
 
 ---
@@ -668,36 +679,7 @@ Responsabilidade:
 - salvar metadados do experimento.
 ```
 
-CSV por step:
-
-```text
-step
-sim_time
-tls_phase
-tls_state
-yolo_count_north
-yolo_count_south
-yolo_count_east
-yolo_count_west
-smoothed_count_north
-smoothed_count_south
-smoothed_count_east
-smoothed_count_west
-gt_queue_north
-gt_queue_south
-gt_queue_east
-gt_queue_west
-decision
-frame_latency_ms
-inference_latency_ms
-tracking_latency_ms
-control_latency_ms
-vehicles_inserted
-vehicles_arrived
-mean_waiting_time
-```
-
-Importante: as colunas `gt_*` podem usar dados do SUMO, mas apenas para avaliação, não para decisão.
+Importante: as métricas perfeitas do SUMO podem aparecer no log, mas apenas para avaliação, não para decisão.
 
 ---
 
@@ -708,8 +690,6 @@ O projeto Unity deve ficar em:
 ```text
 unity/TrafficVisionUnity/
 ```
-
-Usar o SUMO2Unity como base porque ele já é um projeto Unity voltado à visualização 3D de redes SUMO, incluindo importação de redes, veículos e semáforos.
 
 Adicionar scripts próprios em:
 
@@ -727,111 +707,26 @@ CameraFrameSender.cs
 SimulationFrameCoordinator.cs
 ```
 
-### 7.1 `PythonStateReceiver.cs`
-
-Responsabilidade:
-
-```text
-- abrir socket para receber JSON do Python;
-- desserializar estado;
-- armazenar último step recebido;
-- acionar atualização da cena.
-```
-
-Entrada esperada:
-
-```json
-{
-  "step": 123,
-  "sim_time": 12.3,
-  "vehicles": [],
-  "traffic_lights": []
-}
-```
-
----
-
-### 7.2 `VehicleManager.cs`
-
-Responsabilidade:
-
-```text
-- manter Dictionary<string, GameObject>;
-- criar veículo quando aparece novo ID;
-- atualizar posição e rotação;
-- remover veículo que não aparece mais no estado atual;
-- mapear tipo de veículo para prefab.
-```
-
-Regras:
-
-```text
-- Nunca criar duplicado para o mesmo vehicle_id.
-- Se o veículo desapareceu do SUMO, remover/desativar GameObject.
-- Atualizar transform somente após receber estado completo.
-```
-
----
-
-### 7.3 `TrafficLightVisualController.cs`
-
-Responsabilidade:
-
-```text
-- receber estado semafórico do SUMO;
-- converter caracteres r/y/g/G em luzes visuais;
-- atualizar materiais ou luzes da cena.
-```
-
-Mapeamento:
-
-```text
-r → vermelho
-y → amarelo
-g/G → verde
-```
-
----
-
-### 7.4 `CameraFrameSender.cs`
+### 7.1 `CameraFrameSender.cs`
 
 Responsabilidade:
 
 ```text
 - capturar imagem da câmera virtual;
 - codificar como JPG;
-- enviar para Python;
-- incluir step_id no header.
+- enviar para Python via TCP;
+- incluir step_id, sim_time e camera_id no header.
 ```
 
 Regras:
 
 ```text
-- Não enviar frames livremente a cada Update().
-- Enviar frame somente após a cena ser atualizada com um novo estado.
-- Incluir step_id do estado renderizado.
+- não enviar frames livremente a cada Update();
+- enviar frame somente após a cena ser atualizada com um novo estado;
+- incluir o identificador da câmera renderizada.
 ```
 
-Configuração inicial:
-
-```text
-resolução: 640x640
-formato: JPG
-qualidade: 75 ou 80
-câmera: câmera fixa apontando para a interseção
-```
-
----
-
-### 7.5 `SimulationFrameCoordinator.cs`
-
-Responsabilidade:
-
-```text
-- coordenar recepção de estado, atualização da cena e captura de frame;
-- garantir que cada frame enviado corresponde ao step recebido;
-- evitar envio duplicado de frames.
-```
+### 7.2 `SimulationFrameCoordinator.cs`
 
 Fluxo Unity:
 
@@ -839,15 +734,15 @@ Fluxo Unity:
 1. Recebe estado step N.
 2. Atualiza veículos e semáforos.
 3. Aguarda fim do frame/renderização, se necessário.
-4. Captura câmera.
-5. Envia imagem com step N para Python.
+4. Captura as quatro câmeras.
+5. Envia as imagens com step N e respectivos camera_id para Python.
 ```
 
 ---
 
 ## 8. Configuração central
 
-Criar:
+Arquivo:
 
 ```text
 python/config.yaml
@@ -856,11 +751,16 @@ python/config.yaml
 Exemplo:
 
 ```yaml
+experiment:
+  scenario: "intersection_basic"
+  seed: 42
+  duration: 1800
+  controller: "vision_adaptive"
+
 sumo:
-  config_path: "../sumo/configs/simulacao.sumocfg"
+  config_path: "../sumo/configs/intersection.sumocfg"
   gui: true
   step_length: 0.1
-  tls_id: "center_tls"
 
 unity:
   state_host: "127.0.0.1"
@@ -868,6 +768,37 @@ unity:
   frame_host: "127.0.0.1"
   frame_port: 5005
   frame_timeout: 2.0
+  frame_transport: "tcp"
+
+cameras:
+  north:
+    enabled: true
+    roi:
+      - [100, 250]
+      - [540, 250]
+      - [540, 620]
+      - [100, 620]
+  south:
+    enabled: true
+    roi:
+      - [100, 250]
+      - [540, 250]
+      - [540, 620]
+      - [100, 620]
+  east:
+    enabled: true
+    roi:
+      - [100, 250]
+      - [540, 250]
+      - [540, 620]
+      - [100, 620]
+  west:
+    enabled: true
+    roi:
+      - [100, 250]
+      - [540, 250]
+      - [540, 620]
+      - [100, 620]
 
 vision:
   model_path: "yolov8n.pt"
@@ -876,53 +807,45 @@ vision:
   classes: [2, 3, 5, 7]
   use_tracker: true
   smoothing_window: 5
+  update_every_steps: 5
 
-rois:
-  north:
-    - [100, 120]
-    - [250, 120]
-    - [250, 350]
-    - [100, 350]
-  south:
-    - [390, 300]
-    - [540, 300]
-    - [540, 540]
-    - [390, 540]
-  east:
-    - [300, 100]
-    - [560, 100]
-    - [560, 240]
-    - [300, 240]
-  west:
-    - [80, 390]
-    - [340, 390]
-    - [340, 540]
-    - [80, 540]
+traffic_light:
+  id: "center_tls"
+  phases:
+    ns_green: 0
+    ns_yellow: 1
+    all_red_after_ns: 2
+    ew_green: 3
+    ew_yellow: 4
+    all_red_after_ew: 5
 
 traffic_controller:
   min_green: 10.0
   max_green: 45.0
   yellow_duration: 3.0
   all_red_duration: 1.0
-  queue_threshold: 5
-  imbalance_margin: 3
-  cooldown: 5.0
+  low_demand_threshold: 0
+  switch_margin: 2
 
 logging:
   output_dir: "../results/logs"
-  save_debug_frames: true
   debug_frame_dir: "../results/frames"
+  save_debug_frames: true
+  save_every_n_vision_steps: 10
+```
+
+Observações:
+
+```text
+- os valores acima são placeholders;
+- as ROIs reais serão calibradas depois com frames das câmeras da Unity;
+- a seed do experimento deve ser fixa para permitir comparações reprodutíveis;
+- o teste top-down atual continua apenas como validação preliminar da pipeline de visão.
 ```
 
 ---
 
 ## 9. `main.py` esperado
-
-Arquivo:
-
-```text
-python/main.py
-```
 
 Responsabilidade:
 
@@ -946,13 +869,12 @@ def main():
     unity = UnityBridge(...)
     detector = YoloVehicleDetector(...)
     tracker = VehicleTracker(...)
-    roi_counter = ROICounter(...)
-    queue_estimator = QueueEstimator(...)
+    roi_counters = {...}  # um por camera
+    queue_estimators = {...}  # um por camera
     controller = TrafficController(...)
     logger = MetricsLogger(...)
 
     sumo.start()
-
     step = 0
 
     try:
@@ -962,45 +884,57 @@ def main():
             state = sumo.extract_state(step=step, sim_time=sim_time)
             unity.send_state(state)
 
-            frame_packet = unity.receive_frame()
+            if step % config["vision"]["update_every_steps"] == 0:
+                camera_counts = {}
 
-            if frame_packet is None:
-                logger.log_missing_frame(step, sim_time)
-                step += 1
-                continue
+                for camera_id in ["north", "south", "east", "west"]:
+                    frame_packet = unity.receive_frame()
 
-            frame, frame_step, frame_sim_time, latency_ms = frame_packet
+                    if frame_packet is None:
+                        logger.log_missing_frame(step, sim_time, camera_id)
+                        camera_counts[camera_id] = logger.get_last_valid_count(camera_id)
+                        continue
 
-            if frame_step != step:
-                logger.log_desync(expected=step, received=frame_step)
-                step += 1
-                continue
+                    frame, frame_step, frame_sim_time, camera_id, latency_ms = frame_packet
 
-            detections = detector.detect(frame)
-            tracks = tracker.update(detections)
-            roi_counts = roi_counter.count(tracks)
-            queue_counts = queue_estimator.update(roi_counts)
+                    if frame_step != step:
+                        logger.log_desync(expected=step, received=frame_step, camera_id=camera_id)
+                        camera_counts[camera_id] = logger.get_last_valid_count(camera_id)
+                        continue
+
+                    detections = detector.detect(frame)
+                    tracks = tracker.update(detections)
+                    roi_counts = roi_counters[camera_id].count(tracks)
+                    queue_counts = queue_estimators[camera_id].update(roi_counts)
+                    camera_counts[camera_id] = queue_counts[camera_id]
+
+                    logger.log_vision_step(
+                        step=step,
+                        sim_time=sim_time,
+                        camera_id=camera_id,
+                        detections=detections,
+                        tracks=tracks,
+                        roi_counts=roi_counts,
+                        queue_counts=queue_counts,
+                        latency_ms=latency_ms,
+                    )
+            else:
+                camera_counts = logger.get_last_valid_counts()
 
             decision = controller.update(
                 sim_time=sim_time,
-                visual_counts=queue_counts
+                visual_counts=camera_counts
             )
 
             controller.apply(sumo, decision)
-
             ground_truth = sumo.get_ground_truth_metrics()
 
             logger.log_step(
                 step=step,
                 sim_time=sim_time,
                 state=state,
-                detections=detections,
-                tracks=tracks,
-                roi_counts=roi_counts,
-                queue_counts=queue_counts,
                 decision=decision,
                 ground_truth=ground_truth,
-                latency_ms=latency_ms
             )
 
             step += 1
@@ -1034,7 +968,7 @@ Para cada cenário, executar:
 
 ```text
 1. Controle fixo.
-2. Controle por YOLO + SORT.
+2. Controle por YOLO + ROI (+ SORT opcional).
 3. Controle idealizado por ground truth TraCI, opcional, apenas como limite superior.
 ```
 
@@ -1079,46 +1013,22 @@ Métricas de controle:
 
 ---
 
-## 12. Ordem de implementação recomendada para o Codex
+## 12. Ordem de implementação recomendada
 
 ### Marco 1 — Criar estrutura do repositório
 
-Criar pastas e arquivos vazios com docstrings.
-
-Critério de sucesso:
-
-```text
-- árvore de diretórios criada;
-- README.md inicial criado;
-- docs/IMPLEMENTATION_GUIDE.md criado;
-- python/config.yaml criado.
-```
-
----
+Concluído.
 
 ### Marco 2 — Migrar código do `car-counter`
 
-A partir do repositório `car-counter`, adaptar:
+Concluído como pipeline preliminar de visão local.
+
+Observação:
 
 ```text
-- inferência YOLO;
-- SORT;
-- lógica de tracking;
-- utilidades de desenho, se úteis.
+o teste atual com vídeo/imagem local é apenas validação preliminar;
+ele não substitui a futura validação em frames reais da Unity.
 ```
-
-O `car-counter` atual é um contador de veículos em vídeo com YOLOv8, SORT, OpenCV e visualização do resultado. Neste projeto, ele deve virar a camada `python/vision`.
-
-Critério de sucesso:
-
-```text
-- YoloVehicleDetector funciona com uma imagem estática;
-- VehicleTracker funciona com lista de detecções;
-- ROICounter conta tracks dentro de polígonos;
-- teste local com vídeo ou imagem salva funciona.
-```
-
----
 
 ### Marco 3 — Criar cliente SUMO
 
@@ -1139,28 +1049,16 @@ Critério de sucesso:
 - Python altera fase semafórica manualmente.
 ```
 
----
-
 ### Marco 4 — Criar comunicação Python → Unity
-
-Implementar:
-
-```text
-python/bridge/unity_comm.py
-unity/.../PythonStateReceiver.cs
-unity/.../VehicleManager.cs
-```
 
 Critério de sucesso:
 
 ```text
 - Python envia JSON fake;
 - Unity recebe JSON;
-- Unity cria/move um veículo fake;
+- Unity atualiza a cena;
 - step_id aparece corretamente no log da Unity.
 ```
-
----
 
 ### Marco 5 — Integrar SUMO → Python → Unity
 
@@ -1173,53 +1071,40 @@ Critério de sucesso:
 - Unity não conecta diretamente ao SUMO.
 ```
 
----
-
 ### Marco 6 — Criar captura Unity → Python
-
-Implementar:
-
-```text
-CameraFrameSender.cs
-SimulationFrameCoordinator.cs
-```
 
 Critério de sucesso:
 
 ```text
-- Unity captura frame da câmera;
-- Unity envia frame com step_id;
-- Python recebe frame;
-- Python salva frame_000123.jpg;
+- Unity captura frames das quatro câmeras;
+- Unity envia frame com step_id e camera_id;
+- Python recebe os frames;
+- Python salva debug frames quando configurado;
 - step_id recebido é igual ao step enviado.
 ```
 
----
-
-### Marco 7 — YOLO no frame da Unity
+### Marco 7 — YOLO nos frames da Unity
 
 Critério de sucesso:
 
 ```text
-- Python roda YOLO no frame recebido;
+- Python roda YOLO nos frames recebidos;
 - bounding boxes são geradas;
-- debug frame é salvo com detecções;
-- latência de inferência é registrada.
+- debug frames são salvos quando configurado;
+- latência de inferência é registrada;
+- a qualidade de detecção em frames sintéticos é validada cedo.
 ```
 
----
-
-### Marco 8 — SORT + ROI
+### Marco 8 — ROI + agregação NS/EW
 
 Critério de sucesso:
 
 ```text
-- tracks possuem IDs estáveis;
+- contagem por câmera é produzida;
 - ROIs são desenhadas no debug frame;
-- contagem por aproximação é salva no CSV.
+- contagem agregada NS/EW é salva no CSV;
+- SORT pode ser usado como apoio sem ser dependência crítica da decisão.
 ```
-
----
 
 ### Marco 9 — Controlador semafórico
 
@@ -1233,22 +1118,20 @@ Critério de sucesso:
 - controlador aplica fase no SUMO.
 ```
 
----
-
 ### Marco 10 — Experimentos
 
 Critério de sucesso:
 
 ```text
 - rodar cenário com controle fixo;
-- rodar cenário com controle YOLO;
+- rodar cenário com controle por visão;
 - salvar logs;
 - gerar tabelas e gráficos comparativos.
 ```
 
 ---
 
-## 13. Regras de implementação para o Codex
+## 13. Regras de implementação
 
 Ao modificar o projeto, seguir estas regras:
 
@@ -1259,10 +1142,12 @@ Ao modificar o projeto, seguir estas regras:
 4. Usar config.yaml para parâmetros.
 5. Não usar dados de fila do SUMO no controlador YOLO.
 6. Usar dados de fila do SUMO apenas em ground_truth.py e logs.
-7. Sempre incluir step_id em mensagens Python ↔ Unity.
+7. Sempre incluir `step_id` em mensagens Python ↔ Unity e incluir `camera_id` nos frames Unity → Python.
 8. Nunca trocar diretamente de uma fase verde conflitante para outra.
 9. Salvar logs suficientes para reproduzir experimentos.
 10. Manter docstrings nos módulos principais.
+11. Tratar timeouts de frame sem travar a simulação inteira.
+12. Validar cedo o YOLO em frames reais renderizados pela Unity.
 ```
 
 ---
@@ -1274,98 +1159,34 @@ Antes de considerar o projeto pronto, verificar:
 ```text
 [ ] Python é o único cliente TraCI.
 [ ] Unity não chama TraCI diretamente.
+[ ] A simulação opera em modo step-based, não em tempo real estrito.
 [ ] Unity renderiza a partir do estado enviado pelo Python.
+[ ] Existem quatro câmeras virtuais fixas: north, south, east e west.
 [ ] YOLO processa frames reais da Unity.
 [ ] SORT rastreia veículos entre frames.
-[ ] Contagem é feita por ROI, não por sensores SUMO.
+[ ] Contagem é feita por ROI por câmera, não por sensores SUMO.
 [ ] Decisão semafórica usa apenas contagem visual.
 [ ] Ground truth SUMO é usado somente para avaliação.
+[ ] Frames Unity → Python usam TCP com `step_id` e `camera_id`.
+[ ] Timeouts de frame reutilizam a última contagem válida em vez de abortar o experimento.
 [ ] Logs registram contagem visual e ground truth separadamente.
 [ ] Experimentos com semáforo fixo e controle YOLO são comparáveis.
 ```
 
 ---
 
-## 15. README inicial sugerido
-
-O `README.md` do repositório pode começar assim:
-
-```markdown
-# TCC Traffic CV
-
-Sistema experimental de controle semafórico adaptativo baseado em visão computacional.
-
-O projeto integra SUMO, Unity, YOLOv8 e SORT para avaliar uma abordagem de otimização de tráfego urbano em ambiente simulado. O SUMO gera a dinâmica do tráfego, a Unity renderiza a cena 3D, o YOLO detecta veículos nos frames da câmera virtual, o SORT rastreia os veículos e um controlador semafórico toma decisões com base na estimativa visual de filas.
-
-A decisão de controle não usa sensores perfeitos do SUMO. Os dados internos do SUMO são usados para renderização, sincronização e avaliação posterior.
-
-## Arquitetura
-
-SUMO → Python/TraCI → Unity/SUMO2Unity → câmera → Python/YOLO+SORT → controlador → SUMO
-
-## Principais módulos
-
-- `python/sumo`: integração TraCI e extração de estado.
-- `python/bridge`: comunicação Python ↔ Unity.
-- `python/vision`: YOLO, SORT, ROI e estimativa de fila.
-- `python/controller`: política de controle semafórico.
-- `python/experiments`: execução de cenários e experimentos.
-- `unity`: projeto Unity baseado no SUMO2Unity.
-- `sumo`: redes, rotas e configurações SUMO.
-- `results`: logs, frames, vídeos e tabelas.
-```
-
----
-
-## 16. Primeiro prompt recomendado para o Codex
-
-Quando você criar o repositório, pode dar este prompt ao Codex:
-
-```text
-Leia docs/IMPLEMENTATION_GUIDE.md e implemente o Marco 1.
-
-Crie a estrutura inicial do projeto conforme o guia:
-- diretórios principais;
-- arquivos __init__.py;
-- README.md inicial;
-- python/config.yaml;
-- stubs das classes principais em python/sumo, python/bridge, python/vision, python/controller e python/logging_utils.
-
-Não implemente a lógica completa ainda.
-Inclua docstrings explicando a responsabilidade de cada classe.
-Garanta que o projeto Python tenha imports válidos e que `python/main.py` carregue o config.yaml e imprima uma mensagem indicando que a estrutura inicial está pronta.
-```
-
-Depois, o segundo prompt:
-
-```text
-Agora implemente o Marco 2.
-
-Adapte a lógica do repositório car-counter para os módulos:
-- python/vision/yolo_detector.py
-- python/vision/sort_tracker.py
-- python/vision/roi_counter.py
-- python/vision/visual_debug.py
-
-Não copie a lógica de contagem por linha como controle principal.
-A contagem principal deve ser por ROI.
-Mantenha SORT como tracker.
-Crie um script simples de teste para rodar YOLO + SORT em uma imagem ou vídeo local.
-```
-
----
-
-## 17. Decisão final do projeto
+## 15. Decisão final do projeto
 
 A direção final recomendada é:
 
 ```text
-- Repositório novo para o TCC.
-- Código do car-counter adaptado para a pasta python/vision.
-- SUMO2Unity usado como base visual/importador Unity.
-- Python como único cliente TraCI.
-- Unity como renderizador/câmera.
-- YOLO + SORT como fonte da decisão.
+- repositório novo para o TCC;
+- código do car-counter adaptado para a pasta python/vision;
+- SUMO2Unity usado como base visual/importador Unity;
+- Python como único cliente TraCI;
+- Unity como renderizador de quatro câmeras virtuais;
+- YOLO + ROI como base da decisão, com SORT como apoio opcional;
+- visão executada a cada N steps simulados;
 - TraCI usado para simulação, controle e avaliação, não como sensor perfeito do controlador.
 ```
 
