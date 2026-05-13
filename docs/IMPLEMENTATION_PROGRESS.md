@@ -6,8 +6,9 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 
 - Marco 1: concluído
 - Marco 2: concluído
+- Marco 3: concluído
 - Arquitetura revisada documentada: concluído
-- Marco 3 em diante: pendentes
+- Marco 4 em diante: pendentes
 
 ## Marco 1 — Estrutura inicial do repositório
 
@@ -86,28 +87,83 @@ Observações:
 - o protocolo final de frames deve identificar `step_id` e `camera_id`;
 - ground truth do SUMO continua reservado para avaliação, nunca para decisão online.
 
+## Marco 3 — Cliente SUMO e integração inicial via TraCI
+
+Status: concluído
+
+Objetivo atendido:
+
+- criar uma integração mínima e testável com SUMO via TraCI;
+- manter Python como único cliente TraCI;
+- permitir avanço step-based da simulação;
+- preparar extração de estado e ground truth sem implementar Unity nem controle adaptativo.
+
+Entregas realizadas:
+
+- implementação de `python/sumo/traci_client.py`;
+- implementação inicial de `python/sumo/state_extractor.py`;
+- implementação inicial de `python/sumo/ground_truth.py`;
+- criação de `python/experiments/test_sumo_traci.py`;
+- atualização do `README.md` com instruções mínimas para o teste SUMO.
+
+Capacidades disponíveis neste marco:
+
+- iniciar `sumo` ou `sumo-gui` a partir do `config.yaml`;
+- usar `experiment.seed` com `--seed`;
+- avançar a simulação com `simulationStep()`;
+- obter `sim_time` por `traci.simulation.getTime()`;
+- extrair veículos ativos com:
+  - `id`
+  - `x`
+  - `y`
+  - `angle`
+  - `speed`
+  - `type`
+- extrair estado do semáforo com:
+  - `id`
+  - `phase`
+  - `state`
+- alterar fase do semáforo manualmente;
+- fechar TraCI com segurança em `finally`.
+
+Validação realizada:
+
+- `python -m compileall python`
+- execução com a `.venv` do projeto:
+  - `cd python`
+  - `..\\.venv\\Scripts\\python.exe -m experiments.test_sumo_traci`
+
+Resultado da validação atual:
+
+- o script está funcional e falha de forma controlada quando o arquivo configurado em `sumo.config_path` não existe;
+- a mensagem de erro informa claramente que o `.sumocfg` esperado não foi encontrado.
+
+Observações:
+
+- neste momento, o repositório ainda não possui o cenário `sumo/configs/intersection.sumocfg`;
+- por isso, o caminho feliz do teste ainda depende da criação do cenário SUMO;
+- `ground_truth.py` continua reservado para avaliação futura, sem alimentar qualquer controlador.
+
 ## Próximos Marcos
 
-### Marco 3 — Cliente SUMO
+### Marco 4 — Comunicação Python -> Unity
 
 Pendente.
 
 Escopo previsto:
 
-- implementar `python/sumo/traci_client.py`;
-- implementar `python/sumo/state_extractor.py`;
-- iniciar e avançar o SUMO via TraCI;
-- extrair estado de veículos e semáforos;
-- permitir controle manual de fase semafórica.
+- comunicação Python -> Unity;
+- implementação inicial de `python/bridge/unity_comm.py`;
+- recepção de estado na Unity;
+- atualização visual básica da cena a partir de JSON fake.
 
-### Marco 4 em diante
+### Marco 5 em diante
 
 Pendentes conforme o guia:
 
-- comunicação Python -> Unity;
 - integração SUMO -> Python -> Unity;
 - captura Unity -> Python;
 - YOLO em frames da Unity;
-- SORT + ROI no loop integrado;
+- ROI por câmera no loop integrado;
 - controlador semafórico;
 - experimentos comparativos.
