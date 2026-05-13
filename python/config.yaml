@@ -5,7 +5,7 @@ experiment:
   controller: "vision_adaptive"
 
 sumo:
-  config_path: "../sumo/configs/intersection.sumocfg"
+  config_path: "../sumo/configs/RL.sumocfg"
   gui: true
   step_length: 0.1
 
@@ -57,14 +57,15 @@ vision:
   update_every_steps: 5
 
 traffic_light:
-  id: "center_tls"
+  id: "Node2"
   phases:
     ns_green: 0
     ns_yellow: 1
-    all_red_after_ns: 2
-    ew_green: 3
-    ew_yellow: 4
-    all_red_after_ew: 5
+    all_red_after_ns: null
+    ew_green: 2
+    ew_yellow: 3
+    all_red_after_ew: null
+  has_all_red: false
 
 traffic_controller:
   min_green: 10.0

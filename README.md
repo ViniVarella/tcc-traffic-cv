@@ -73,6 +73,22 @@ Os frames de debug são salvos em `results/frames` com bounding boxes, `track_id
 
 No modo preliminar com vídeo único, o script ainda aceita ROIs derivadas do frame ou compatibilidade temporária com ROIs globais. Na arquitetura final, a configuração principal passa a ser por câmera em `cameras.north.roi`, `cameras.south.roi`, `cameras.east.roi` e `cameras.west.roi`.
 
+## Teste inicial com SUMO
+
+O teste inicial de integração TraCI roda sem Unity e sem controle adaptativo. Ele apenas inicia o SUMO, avança alguns steps e imprime tempo simulado, número de veículos ativos e estado do semáforo configurado.
+
+```powershell
+cd python
+python -m experiments.test_sumo_traci
+```
+
+Observações:
+
+- o Python continua sendo o único cliente TraCI;
+- o script sempre fecha a conexão TraCI em `finally`;
+- se o arquivo configurado em `sumo.config_path` não existir, o teste falha com uma mensagem clara explicando que o `.sumocfg` não foi encontrado;
+- o módulo `python/sumo/ground_truth.py` existe apenas para avaliação futura, não para decisão de controle.
+
 ## Próxima validação importante
 
 Antes de integrar controle completo, o projeto deve validar cedo se o YOLO detecta bem os veículos renderizados pela Unity. Frames sintéticos podem divergir do domínio visual do COCO, então esse risco precisa ser medido antes de fechar a arquitetura de controle.
