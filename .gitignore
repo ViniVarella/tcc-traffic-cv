@@ -101,6 +101,3 @@ unity/**/*.VC.db
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# Local implementation guide copies
-docs/IMPLEMENTATION_GUIDE.md
