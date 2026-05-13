@@ -1,6 +1,6 @@
 # Progresso de Implementação
 
-Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTATION_GUIDE_TCC_TRAFFIC_CV.md`.
+Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTATION_GUIDE.md`.
 
 ## Status Geral
 
@@ -135,13 +135,21 @@ Validação realizada:
 
 Resultado da validação atual:
 
-- o script está funcional e falha de forma controlada quando o arquivo configurado em `sumo.config_path` não existe;
-- a mensagem de erro informa claramente que o `.sumocfg` esperado não foi encontrado.
+- o script `python -m experiments.test_sumo_traci` roda com a configuração atual do projeto;
+- o cenário SUMO configurado atualmente é `sumo/configs/RL.sumocfg`;
+- o semáforo monitorado atualmente é `Node2`;
+- a execução de validação avançou steps da simulação com sucesso e retornou:
+  - `sim_time` crescente de `0.10` até `0.50`;
+  - `active_vehicles=3` nos steps observados;
+  - `tls_phase=0`;
+  - `tls_state=GGGGgrrrrrGGGGgrrrrr`;
+- o teste também executou a alteração manual de fase sem erro.
 
 Observações:
 
-- neste momento, o repositório ainda não possui o cenário `sumo/configs/intersection.sumocfg`;
-- por isso, o caminho feliz do teste ainda depende da criação do cenário SUMO;
+- o nome do cenário SUMO atual do projeto é `RL`, não `intersection`;
+- o caminho configurado em `python/config.yaml` é `../sumo/configs/RL.sumocfg`;
+- o teste TraCI já está funcional no caminho feliz com a configuração atual do repositório;
 - `ground_truth.py` continua reservado para avaliação futura, sem alimentar qualquer controlador.
 
 ## Próximos Marcos
