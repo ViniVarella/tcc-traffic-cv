@@ -23,6 +23,7 @@ def main() -> None:
     sumo_client = SumoClient.from_config(config=config, base_dir=base_dir)
     state_extractor = SumoStateExtractor()
     tls_id = str(config["traffic_light"]["id"])
+    ew_green_phase = config["traffic_light"]["phases"]["ew_green"]
     ground_truth = GroundTruthCollector(tls_id=tls_id)
 
     try:
@@ -37,8 +38,8 @@ def main() -> None:
 
         print(f"SUMO iniciado com sucesso. TLS monitorado: {tls_id}")
 
-        max_steps = 5
-        for step in range(max_steps):
+        initial_steps = 5
+        for step in range(initial_steps):
             sim_time = sumo_client.step()
             vehicles = sumo_client.get_vehicle_state()
             traffic_light_state = sumo_client.get_traffic_light_state(tls_id)
@@ -63,10 +64,28 @@ def main() -> None:
             )
             print(f"ground_truth={metrics}")
 
-        if tls_ids:
-            current_phase = traffic_light_state["phase"]
-            sumo_client.set_traffic_light_phase(tls_id, current_phase)
-            print(f"Teste de alteracao manual de fase executado para {tls_id} na fase {current_phase}.")
+        print(
+            f"Solicitando troca manual de fase para {tls_id}: "
+            f"ew_green={ew_green_phase}"
+        )
+        sumo_client.set_traffic_light_phase(tls_id, ew_green_phase)
+
+        post_switch_steps = 3
+        for extra_step in range(post_switch_steps):
+            sim_time = sumo_client.step()
+            traffic_light_state = sumo_client.get_traffic_light_state(tls_id)
+            print(
+                f"post_switch_step={extra_step} "
+                f"sim_time={sim_time:.2f} "
+                f"tls_phase={traffic_light_state['phase']} "
+                f"tls_state={traffic_light_state['state']}"
+            )
+
+        print(
+            f"Teste de alteracao manual de fase executado para {tls_id}: "
+            f"fase atual={traffic_light_state['phase']} "
+            f"estado={traffic_light_state['state']}"
+        )
 
     except FileNotFoundError as exc:
         raise SystemExit(

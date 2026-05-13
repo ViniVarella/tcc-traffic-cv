@@ -143,7 +143,12 @@ Resultado da validação atual:
   - `active_vehicles=3` nos steps observados;
   - `tls_phase=0`;
   - `tls_state=GGGGgrrrrrGGGGgrrrrr`;
-- o teste também executou a alteração manual de fase sem erro.
+- o teste foi atualizado para validar explicitamente a troca manual de fase para `traffic_light.phases.ew_green`;
+- após os steps iniciais em `tls_phase=0`, o script solicitou `ew_green=2`;
+- após a troca, os steps seguintes retornaram:
+  - `tls_phase=2`;
+  - `tls_state=rrrrrGGGGgrrrrrGGGGg`;
+- isso confirma que o Python consegue mudar manualmente o semáforo `Node2` de NS green para EW green via TraCI usando o mapeamento do `config.yaml`.
 
 Observações:
 
