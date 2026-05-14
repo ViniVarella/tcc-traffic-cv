@@ -2,10 +2,22 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict, is_dataclass
 import json
 from typing import Any
 
 from .protocol import FramePacket, SimulationState
+
+
+def _normalize_message(value: Any) -> Any:
+    """Converte dataclasses do protocolo em estruturas JSON serializaveis."""
+    if is_dataclass(value):
+        return asdict(value)
+    if isinstance(value, list):
+        return [_normalize_message(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _normalize_message(item) for key, item in value.items()}
+    return value
 
 
 def serialize_state(state: SimulationState | dict[str, Any]) -> bytes:
@@ -13,12 +25,15 @@ def serialize_state(state: SimulationState | dict[str, Any]) -> bytes:
     if isinstance(state, SimulationState):
         payload = {
             "step": state.step,
+            "step_id": state.step,
             "sim_time": state.sim_time,
-            "vehicles": state.vehicles,
-            "traffic_lights": state.traffic_lights,
+            "vehicles": _normalize_message(state.vehicles),
+            "traffic_lights": _normalize_message(state.traffic_lights),
         }
     else:
-        payload = state
+        payload = _normalize_message(state)
+        if "step" in payload and "step_id" not in payload:
+            payload["step_id"] = payload["step"]
 
     return json.dumps(payload).encode("utf-8")
 

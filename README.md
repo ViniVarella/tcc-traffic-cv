@@ -89,6 +89,71 @@ Observações:
 - se o arquivo configurado em `sumo.config_path` não existir, o teste falha com uma mensagem clara explicando que o `.sumocfg` não foi encontrado;
 - o módulo `python/sumo/ground_truth.py` existe apenas para avaliação futura, não para decisão de controle.
 
+## Teste inicial Python -> Unity
+
+O primeiro teste de comunicação Python -> Unity envia estados JSON fake via UDP. Ele valida apenas o lado Python da ponte e a recepção manual do `step` ou `step_id` no log da Unity.
+
+```powershell
+cd python
+python -m experiments.test_unity_comm
+```
+
+Cada mensagem inclui:
+
+- `step`
+- `step_id`
+- `sim_time`
+- `vehicles`
+- `traffic_lights`
+
+O teste usa:
+
+- `unity.state_host`
+- `unity.state_port`
+
+Receptor Unity mínimo:
+
+- arquivo: [unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs](C:/Users/vinic/PycharmProjects/tcc-traffic-cv/unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs)
+- na Unity, crie um `GameObject` vazio, anexe `PythonStateReceiver` e rode a cena;
+- o Console da Unity deve mostrar `step` e `step_id` recebidos.
+
+Observações:
+
+- este marco cobre apenas Python -> Unity;
+- o envio usa JSON simples por UDP;
+- a Unity não deve se conectar diretamente ao SUMO;
+- captura de frames Unity -> Python fica para um marco posterior.
+
+## Teste inicial SUMO -> Python -> Unity
+
+O teste deste marco substitui o estado fake por estado real extraído do SUMO via TraCI e enviado para a Unity por UDP.
+
+```powershell
+cd python
+python -m experiments.test_sumo_to_unity
+```
+
+O script:
+
+- inicia o cenário configurado em `sumo.config_path`;
+- avança a simulação por alguns steps;
+- extrai veículos reais e estado real do semáforo configurado;
+- converte o estado para o formato Unity em `python/sumo/state_extractor.py`;
+- envia o estado para a Unity via `UnityBridge`.
+
+Configuração mínima na Unity:
+
+- anexe [PythonStateReceiver.cs](C:/Users/vinic/PycharmProjects/tcc-traffic-cv/unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs) a um `GameObject`;
+- anexe [VehicleManager.cs](C:/Users/vinic/PycharmProjects/tcc-traffic-cv/unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/VehicleManager.cs) a um `GameObject` na cena;
+- opcionalmente anexe [TrafficLightVisualController.cs](C:/Users/vinic/PycharmProjects/tcc-traffic-cv/unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/TrafficLightVisualController.cs) a um objeto com `Renderer`;
+- rode a cena em Play Mode antes de executar o script Python.
+
+Validação esperada:
+
+- o terminal Python deve imprimir `state_sent step=... sim_time=... vehicles=... traffic_lights=1`;
+- o Console da Unity deve registrar `step`, `step_id`, `sim_time` e quantidade de veículos;
+- a cena deve mostrar cubos simples representando veículos se movendo ao longo dos steps recebidos.
+
 ## Próxima validação importante
 
 Antes de integrar controle completo, o projeto deve validar cedo se o YOLO detecta bem os veículos renderizados pela Unity. Frames sintéticos podem divergir do domínio visual do COCO, então esse risco precisa ser medido antes de fechar a arquitetura de controle.

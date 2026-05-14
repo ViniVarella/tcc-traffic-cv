@@ -7,6 +7,28 @@ from typing import Any
 
 
 @dataclass(slots=True)
+class VehicleState:
+    """Representa um veiculo serializavel no protocolo Python -> Unity."""
+
+    id: str
+    x: float
+    y: float
+    z: float
+    angle: float
+    speed: float
+    type: str
+
+
+@dataclass(slots=True)
+class TrafficLightState:
+    """Representa um semaforo serializavel no protocolo Python -> Unity."""
+
+    id: str
+    phase: int
+    state: str
+
+
+@dataclass(slots=True)
 class SimulationState:
     """Representa o estado serializavel de um passo discreto da simulacao.
 
@@ -16,8 +38,8 @@ class SimulationState:
 
     step: int
     sim_time: float
-    vehicles: list[dict[str, Any]] = field(default_factory=list)
-    traffic_lights: list[dict[str, Any]] = field(default_factory=list)
+    vehicles: list[VehicleState | dict[str, Any]] = field(default_factory=list)
+    traffic_lights: list[TrafficLightState | dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(slots=True)

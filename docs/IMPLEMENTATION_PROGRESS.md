@@ -7,8 +7,10 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Marco 1: concluído
 - Marco 2: concluído
 - Marco 3: concluído
+- Marco 4: concluído
+- Marco 5: implementado
 - Arquitetura revisada documentada: concluído
-- Marco 4 em diante: pendentes
+- Marco 6 em diante: pendentes
 
 ## Marco 1 — Estrutura inicial do repositório
 
@@ -157,25 +159,156 @@ Observações:
 - o teste TraCI já está funcional no caminho feliz com a configuração atual do repositório;
 - `ground_truth.py` continua reservado para avaliação futura, sem alimentar qualquer controlador.
 
+## Marco 4 — Comunicação Python -> Unity
+
+Status: concluído
+
+Objetivo atendido:
+
+- implementar a primeira comunicação Python -> Unity com JSON simples;
+- manter Python como orquestrador do estado enviado;
+- validar manualmente a recepção de `step` e `step_id` no lado Unity.
+
+Entregas realizadas:
+
+- implementação inicial de `python/bridge/unity_comm.py` com envio UDP real;
+- atualização de `python/bridge/protocol.py`;
+- atualização de `python/bridge/serialization.py`;
+- criação de `python/experiments/test_unity_comm.py`;
+- criação de `unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs`;
+- atualização do `README.md` com instruções mínimas do teste Python -> Unity.
+
+Capacidades disponíveis neste marco:
+
+- construir `UnityBridge` a partir do `config.yaml`;
+- enviar estados fake por UDP usando `unity.state_host` e `unity.state_port`;
+- serializar JSON com:
+  - `step`
+  - `step_id`
+  - `sim_time`
+  - `vehicles`
+  - `traffic_lights`
+- validar manualmente o recebimento do estado no Console da Unity.
+
+Validação realizada:
+
+- `python -m compileall python`
+- execução com a `.venv` do projeto:
+  - `cd python`
+  - `..\\.venv\\Scripts\\python.exe -m experiments.test_unity_comm`
+- execução com a `.venv` do projeto:
+  - `cd python`
+  - `..\\.venv\\Scripts\\python.exe -m experiments.test_sumo_traci`
+- Unity 6.3 LTS instalada.
+- projeto Unity criado em `unity/TrafficVisionUnity`.
+- `PythonStateReceiver.cs` anexado a um `GameObject` na cena.
+- teste executado:
+  - `cd python`
+  - `python -m experiments.test_unity_comm`
+
+Resultado da validação atual:
+
+- `python -m experiments.test_unity_comm` envia cinco estados fake via UDP;
+- o terminal Python mostra `step=0` até `step=4`;
+- cada mensagem inclui `step`, `step_id`, `sim_time`, `vehicles` e `traffic_lights`;
+- Python enviou estados fake para `127.0.0.1:5004` via UDP;
+- a Unity recebeu os estados e registrou no Console:
+  - `step=0 step_id=0`
+  - `step=1 step_id=1`
+  - `step=2 step_id=2`
+  - `step=3 step_id=3`
+  - `step=4 step_id=4`
+- `python -m experiments.test_sumo_traci` continua funcionando e nao foi quebrado.
+
+Observações:
+
+- a comunicação Python -> Unity com JSON fake está validada;
+- este marco cobre apenas Python -> Unity;
+- a recepção Unity -> Python com frames JPEG por TCP continua fora do escopo;
+- ainda não há integração com estado real do SUMO neste marco;
+- ainda não há captura de frames Unity -> Python;
+- a Unity continua proibida de se conectar diretamente ao SUMO.
+
+## Marco 5 — Integração SUMO -> Python -> Unity
+
+Status: concluído
+
+Objetivo atendido:
+
+- substituir o estado fake por estado real extraído do SUMO;
+- manter Python como único cliente TraCI;
+- enviar estado real por UDP para a Unity;
+- atualizar uma visualização básica da cena na main thread da Unity.
+
+Entregas realizadas:
+
+- atualização de `python/sumo/state_extractor.py` com conversão simples SUMO -> Unity;
+- criação de `python/experiments/test_sumo_to_unity.py`;
+- reutilização de `python/bridge/unity_comm.py` para envio do estado real;
+- atualização de `unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs` para aplicar estado na main thread;
+- criação de `unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/VehicleManager.cs`;
+- criação de `unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/TrafficLightVisualController.cs`;
+- atualização do `README.md` com instruções do teste SUMO -> Python -> Unity.
+
+Capacidades disponíveis neste marco:
+
+- iniciar SUMO e extrair estado real do cenário `RL`;
+- serializar esse estado com `step`, `step_id`, `sim_time`, `vehicles` e `traffic_lights`;
+- enviar o estado para a Unity via UDP;
+- criar cubos para veículos ainda não vistos;
+- atualizar posição e rotação de veículos existentes;
+- ocultar veículos que não aparecem mais no estado corrente;
+- registrar no Console da Unity o step recebido e a quantidade de veículos.
+
+Validação realizada:
+
+- `python -m compileall python`
+- `python -m experiments.test_unity_comm`
+- `python -m experiments.test_sumo_traci`
+- `python -m experiments.test_sumo_to_unity`
+- Unity aberta com a cena em Play;
+- `PythonStateReceiver`, `VehicleManager` e `TrafficLightVisualController` criados fora do Play Mode;
+- `VehicleManager` conectado ao campo correspondente do `PythonStateReceiver`;
+- execução do comando:
+  - `cd python`
+  - `python -m experiments.test_sumo_to_unity`
+
+Resultado da validação atual:
+
+- os testes Python existentes continuam funcionando;
+- Python enviou estados reais do SUMO para Unity via UDP;
+- foram enviados steps de `0` a `19`;
+- `sim_time` avançou de `0.10` até `2.00`;
+- cada estado continha `vehicles=3` e `traffic_lights=1`;
+- a Unity recebeu os estados e registrou no Console mensagens com `step`, `step_id`, `sim_time` e quantidade de veículos;
+- a Unity criou e atualizou cubos cinzas representando veículos na cena.
+
+Observações:
+
+- este marco valida apenas SUMO -> Python -> Unity com estado real;
+- a visualização ainda é básica, com cubos em vez de modelos realistas;
+- ainda não há ruas ou cenário importado via SUMO2Unity;
+- ainda não há captura de frames Unity -> Python;
+- ainda não há YOLO sobre frames da Unity;
+- ainda não há ROI por câmera nem controle adaptativo;
+- a Unity continua proibida de se conectar diretamente ao SUMO.
+
 ## Próximos Marcos
 
-### Marco 4 — Comunicação Python -> Unity
+### Marco 6 — Captura Unity -> Python
 
 Pendente.
 
 Escopo previsto:
 
-- comunicação Python -> Unity;
-- implementação inicial de `python/bridge/unity_comm.py`;
-- recepção de estado na Unity;
-- atualização visual básica da cena a partir de JSON fake.
+- captura Unity -> Python;
+- envio de frames da Unity;
+- validação do retorno de `step_id` no caminho inverso.
 
-### Marco 5 em diante
+### Marco 7 em diante
 
 Pendentes conforme o guia:
 
-- integração SUMO -> Python -> Unity;
-- captura Unity -> Python;
 - YOLO em frames da Unity;
 - ROI por câmera no loop integrado;
 - controlador semafórico;
