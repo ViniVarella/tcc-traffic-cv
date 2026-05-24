@@ -1,0 +1,41 @@
+Video: C:/Users/vinic/Downloads/CourseHub-main/DigitalTwinsforSmart Cities/SP/InputVideo/0520-estabilizado-v2.mp4
+Frame size: 1920x1080 @ 60.00 fps
+Chosen snapshot index: 3
+
+ROI Polygon (image pixels):
+  P1: [930, 558]
+  P2: [1124, 494]
+  P3: [1317, 993]
+  P4: [1108, 1065]
+
+Polygon as numpy: np.array([[930, 558], [1124, 494], [1317, 993], [1108, 1065]])
+
+Known real-world lengths (meters):
+  L12 (P1-P2): 42.600000
+  L23 (P2-P3): 15.000000
+
+Number of lanes: 4
+
+Lane 1 (image pixels):
+  P1: [933, 560]
+  P2: [999, 534]
+  P3: [1188, 1036]
+  P4: [1112, 1064]
+
+Lane 2 (image pixels):
+  P1: [1000, 534]
+  P2: [1024, 525]
+  P3: [1220, 1026]
+  P4: [1191, 1038]
+
+Lane 3 (image pixels):
+  P1: [1028, 525]
+  P2: [1064, 513]
+  P3: [1250, 1017]
+  P4: [1221, 1026]
+
+Lane 4 (image pixels):
+  P1: [1066, 513]
+  P2: [1124, 495]
+  P3: [1318, 993]
+  P4: [1252, 1014]

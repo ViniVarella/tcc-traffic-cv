@@ -1,0 +1,45 @@
+INTERSECTION PERFORMANCE ANALYSIS
+======================================================================
+
+
+Lane 1
+----------------------------------------
+  lane_id: 1
+  throughput: 299
+  n_vehicles_completed: 299
+  n_vehicles_total: 299
+  avg_control_delay: 6.95922317499864
+  avg_stopped_delay: 5.255076923076911
+  avg_speed: 4.763448476027361
+  measured_flow: 1393.2483629590608
+  los: A
+  completion_rate: 1.0
+
+Lane 2
+----------------------------------------
+  lane_id: 2
+  throughput: 88
+  n_vehicles_completed: 88
+  n_vehicles_total: 88
+  avg_control_delay: 5.489728278698304
+  avg_stopped_delay: 3.5721477272726827
+  avg_speed: 5.314819587323047
+  measured_flow: 410.0530299009945
+  los: A
+  completion_rate: 1.0
+
+
+GLOBAL METRICS
+----------------------------------------
+  n_vehicles_total: 387
+  n_vehicles_completed: 387
+  completion_rate: 1.0
+  avg_control_delay: 6.625074464728797
+  avg_stopped_delay: 4.872395348837189
+  avg_speed_ms: 4.8888248527560965
+  avg_speed_kmh: 17.59976946992195
+  total_throughput: 387
+  throughput_per_hour: 1803.3013928600553
+  measurement_duration: 772.583
+  overall_los: A
+  lane_metrics: {np.int64(1): {'lane_id': np.int64(1), 'throughput': 299, 'n_vehicles_completed': 299, 'n_vehicles_total': 299, 'avg_control_delay': np.float64(6.95922317499864), 'avg_stopped_delay': np.float64(5.255076923076911), 'avg_speed': np.float64(4.763448476027361), 'measured_flow': np.float64(1393.2483629590608), 'los': 'A', 'completion_rate': 1.0}, np.int64(2): {'lane_id': np.int64(2), 'throughput': 88, 'n_vehicles_completed': 88, 'n_vehicles_total': 88, 'avg_control_delay': np.float64(5.489728278698304), 'avg_stopped_delay': np.float64(3.5721477272726827), 'avg_speed': np.float64(5.314819587323047), 'measured_flow': np.float64(410.0530299009945), 'los': 'A', 'completion_rate': 1.0}}

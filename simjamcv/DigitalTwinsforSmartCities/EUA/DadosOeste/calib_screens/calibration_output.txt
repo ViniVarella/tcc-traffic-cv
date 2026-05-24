@@ -1,0 +1,47 @@
+Video: C:/Users/vinic/Downloads/CourseHub-main/DigitalTwinsforSmart Cities/Video/InputVideo/Gainesville, Florida 5 pm Rush Hour Traffic During a Coronavirus Lockdown ｜ March 25, 2020.mp4
+Frame size: 1920x1080 @ 30.01 fps
+Chosen snapshot index: 3
+
+ROI Polygon (image pixels):
+  P1: [182, 336]
+  P2: [717, 448]
+  P3: [626, 579]
+  P4: [62, 452]
+
+Polygon as numpy: np.array([[182, 336], [717, 448], [626, 579], [62, 452]])
+
+Known real-world lengths (meters):
+  L12 (P1-P2): 79.200000
+  L23 (P2-P3): 23.300000
+
+Number of lanes: 5
+
+Lane 1 (image pixels):
+  P1: [183, 338]
+  P2: [718, 450]
+  P3: [706, 471]
+  P4: [165, 352]
+
+Lane 2 (image pixels):
+  P1: [705, 471]
+  P2: [692, 488]
+  P3: [152, 366]
+  P4: [164, 354]
+
+Lane 3 (image pixels):
+  P1: [692, 489]
+  P2: [680, 508]
+  P3: [134, 381]
+  P4: [148, 368]
+
+Lane 4 (image pixels):
+  P1: [676, 510]
+  P2: [666, 525]
+  P3: [120, 396]
+  P4: [132, 381]
+
+Lane 5 (image pixels):
+  P1: [118, 399]
+  P2: [664, 528]
+  P3: [644, 555]
+  P4: [84, 429]

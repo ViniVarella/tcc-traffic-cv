@@ -1,5 +1,11 @@
 # TCC Traffic CV
 
+## Observação
+
+A simulação 3D no Unity ainda não foi finalizada. Neste momento, os dados utilizados no projeto foram extraídos de vídeos reais capturados por drone e processados com o projeto open-source SimJamComputerVision, a partir do qual obtivemos as métricas de contagem de veículos e velocidade média. Os arquivos CSV com essas métricas, organizados por cenário e por sentido, estão nas pastas `SP` e `EUA` em `/simjamcv/DigitalTwinsforSmartCities/`, com nomes no formato `lane_metrics_{sentido}`. Os vídeos com as detecções de veículos para cada cenário e sentido estão disponíveis no Google Drive: https://drive.google.com/drive/folders/1bBa7s3MElVlagaMF5ZkscvY7kFj51qzr?usp=sharing
+
+## Introdução
+
 Sistema experimental de controle semafórico adaptativo baseado em visão computacional.
 
 O projeto integra SUMO, Unity, YOLOv8 e SORT para avaliar uma abordagem de otimização de tráfego urbano em ambiente simulado. O SUMO gera a dinâmica do tráfego, a Unity renderiza a cena 3D, o YOLO detecta veículos nos frames das câmeras virtuais, o SORT pode auxiliar no rastreamento e um controlador semafórico toma decisões com base na estimativa visual de filas.

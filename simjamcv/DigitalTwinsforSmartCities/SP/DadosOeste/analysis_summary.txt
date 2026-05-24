@@ -1,0 +1,32 @@
+INTERSECTION PERFORMANCE ANALYSIS
+======================================================================
+
+
+Lane 1
+----------------------------------------
+  lane_id: 1
+  throughput: 38
+  n_vehicles_completed: 38
+  n_vehicles_total: 38
+  avg_control_delay: 17.03827391489358
+  avg_stopped_delay: 12.031526315789515
+  avg_speed: 3.937880872258252
+  measured_flow: 185.27371889588784
+  los: B
+  completion_rate: 1.0
+
+
+GLOBAL METRICS
+----------------------------------------
+  n_vehicles_total: 38
+  n_vehicles_completed: 38
+  completion_rate: 1.0
+  avg_control_delay: 17.03827391489358
+  avg_stopped_delay: 12.031526315789515
+  avg_speed_ms: 3.937880872258252
+  avg_speed_kmh: 14.176371140129708
+  total_throughput: 38
+  throughput_per_hour: 185.27371889588784
+  measurement_duration: 738.367
+  overall_los: B
+  lane_metrics: {np.int64(1): {'lane_id': np.int64(1), 'throughput': 38, 'n_vehicles_completed': 38, 'n_vehicles_total': 38, 'avg_control_delay': np.float64(17.03827391489358), 'avg_stopped_delay': np.float64(12.031526315789515), 'avg_speed': np.float64(3.937880872258252), 'measured_flow': np.float64(185.27371889588784), 'los': 'B', 'completion_rate': 1.0}}
