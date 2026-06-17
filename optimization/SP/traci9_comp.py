@@ -15,10 +15,9 @@
 import os
 import sys
 import csv
-
-import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import numpy as np 
 
 import tensorflow as tf
 from tensorflow import keras
@@ -36,29 +35,32 @@ else:
 
 import traci
 
+# Get the directory where this script is located
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # =============================================================================
 # CONFIG
 # =============================================================================
 
-TOTAL_STEPS = 5000
+TOTAL_STEPS = 2000
 
-TRAINED_MODEL_PATH = "dqn_traffic_model.keras"
+TRAINED_MODEL_PATH = os.path.join(SCRIPT_DIR, "dqn_traffic_model.keras")
 
-TLS_ID = "Node2"
+TLS_ID = "clusterJ0_J14_J2_J7"
 
-DETECTORS_EB = [
-    "Node1_2_EB_0",
-    "Node1_2_EB_1",
-    "Node1_2_EB_2"
+DETECTORS = [
+    "e2_0",   # E6_0  (WB approach)
+    "e2_5",   # E2_1  (EB approach, lane 1)
+    "e2_6",   # E2_0  (EB approach, lane 0)
+    "e2_1",   # E3_2  (NB approach, lane 2)
+    "e2_2",   # E3_3  (NB approach, lane 3)
+    "e2_3",   # E3_1  (NB approach, lane 1)
+    "e2_4",   # E3_0  (NB approach, lane 0)
 ]
 
-DETECTORS_SB = [
-    "Node2_7_SB_0",
-    "Node2_7_SB_1",
-    "Node2_7_SB_2"
-]
+GREEN_PHASES = [0, 3]  # phases 0 and 3 are the green phases (2 is all-red)
 
-GREEN_PHASES = [0, 2]
+NUM_PHASES = 5         # must match the state encoding used during training
 
 MIN_GREEN_STEPS = 20
 
@@ -76,7 +78,7 @@ def start_sumo(gui=True):
         binary,
 
         '-c',
-        'RL.sumocfg',
+        os.path.join(SCRIPT_DIR, 'Cruzamento.sumocfg'),
 
         '--seed',
         '42',
@@ -108,7 +110,7 @@ def get_state():
 
     state = []
 
-    for d in DETECTORS_EB + DETECTORS_SB:
+    for d in DETECTORS:
 
         queue = (
             traci.lanearea.getLastStepVehicleNumber(d)
@@ -131,9 +133,12 @@ def get_state():
             occupancy
         ])
 
+    # One-hot encoding of the current phase (must match the training script).
     phase = traci.trafficlight.getPhase(TLS_ID)
-
-    state.append(phase / 10.0)
+    phase_onehot = [0.0] * NUM_PHASES
+    if 0 <= phase < NUM_PHASES:
+        phase_onehot[phase] = 1.0
+    state.extend(phase_onehot)
 
     return tuple(state)
 
@@ -142,7 +147,7 @@ def extract_total_queue(state):
 
     total = 0
 
-    values = list(state[:-1])
+    values = list(state[:-NUM_PHASES])
 
     for i in range(0, len(values), 3):
 
@@ -472,22 +477,25 @@ def run_dqn(use_gui=True):
 
 def plot_comparison(baseline, dqn):
 
-    fig = plt.figure(
-        figsize=(16, 12)
-    )
+    COLORS = {
+        "baseline": "steelblue",
+        "dqn":      "darkorange"
+    }
+
+    fig = plt.figure(figsize=(16, 14))
 
     fig.suptitle(
         "Traffic Signal Control Comparison\nFixed-Time vs Deep Q-Network",
-        fontsize=18,
-        fontweight='bold'
+        fontsize=16,
+        fontweight='bold',
+        y=1.01
     )
 
     gs = gridspec.GridSpec(
-        3,
-        2,
+        3, 2,
         figure=fig,
-        hspace=0.35,
-        wspace=0.30
+        hspace=0.55,
+        wspace=0.35
     )
 
     # =========================================================
@@ -496,45 +504,30 @@ def plot_comparison(baseline, dqn):
 
     ax1 = fig.add_subplot(gs[0, :])
 
-    baseline_queue = moving_average(
-        baseline["queue"],
-        SMOOTH_WINDOW
-    )
+    baseline_queue = moving_average(baseline["queue"], SMOOTH_WINDOW)
+    dqn_queue      = moving_average(dqn["queue"],      SMOOTH_WINDOW)
 
-    dqn_queue = moving_average(
-        dqn["queue"],
-        SMOOTH_WINDOW
-    )
-
-    ax1.plot(
+    line_base, = ax1.plot(
         baseline["step"][:len(baseline_queue)],
         baseline_queue,
         linewidth=2.5,
-        label="Fixed-Time"
+        label="Fixed-Time",
+        color=COLORS["baseline"]
     )
 
-    ax1.plot(
+    line_dqn, = ax1.plot(
         dqn["step"][:len(dqn_queue)],
         dqn_queue,
         linewidth=2.5,
-        label="DQN"
+        label="DQN",
+        color=COLORS["dqn"]
     )
 
-    ax1.set_title(
-        "Average Queue Length"
-    )
-
-    ax1.set_xlabel(
-        "Simulation Step"
-    )
-
-    ax1.set_ylabel(
-        "Vehicles"
-    )
-
-    ax1.grid(True)
-
-    ax1.legend()
+    ax1.set_title("Average Queue Length", pad=10)
+    ax1.set_xlabel("Simulation Step")
+    ax1.set_ylabel("Vehicles")
+    ax1.grid(True, alpha=0.4)
+    ax1.margins(y=0.15)
 
     # =========================================================
     # WAITING TIME
@@ -542,35 +535,16 @@ def plot_comparison(baseline, dqn):
 
     ax2 = fig.add_subplot(gs[1, 0])
 
-    ax2.plot(
-        baseline["step"],
-        baseline["waiting_time"],
-        linewidth=2,
-        label="Fixed-Time"
-    )
+    ax2.plot(baseline["step"], baseline["waiting_time"],
+             linewidth=2, color=COLORS["baseline"])
+    ax2.plot(dqn["step"],      dqn["waiting_time"],
+             linewidth=2, color=COLORS["dqn"])
 
-    ax2.plot(
-        dqn["step"],
-        dqn["waiting_time"],
-        linewidth=2,
-        label="DQN"
-    )
-
-    ax2.set_title(
-        "Vehicle Waiting Time"
-    )
-
-    ax2.set_xlabel(
-        "Simulation Step"
-    )
-
-    ax2.set_ylabel(
-        "Seconds"
-    )
-
-    ax2.grid(True)
-
-    ax2.legend()
+    ax2.set_title("Vehicle Waiting Time", pad=10)
+    ax2.set_xlabel("Simulation Step")
+    ax2.set_ylabel("Seconds")
+    ax2.grid(True, alpha=0.4)
+    ax2.margins(y=0.15)
 
     # =========================================================
     # SPEED
@@ -578,35 +552,16 @@ def plot_comparison(baseline, dqn):
 
     ax3 = fig.add_subplot(gs[1, 1])
 
-    ax3.plot(
-        baseline["step"],
-        baseline["avg_speed"],
-        linewidth=2,
-        label="Fixed-Time"
-    )
+    ax3.plot(baseline["step"], baseline["avg_speed"],
+             linewidth=2, color=COLORS["baseline"])
+    ax3.plot(dqn["step"],      dqn["avg_speed"],
+             linewidth=2, color=COLORS["dqn"])
 
-    ax3.plot(
-        dqn["step"],
-        dqn["avg_speed"],
-        linewidth=2,
-        label="DQN"
-    )
-
-    ax3.set_title(
-        "Average Vehicle Speed"
-    )
-
-    ax3.set_xlabel(
-        "Simulation Step"
-    )
-
-    ax3.set_ylabel(
-        "m/s"
-    )
-
-    ax3.grid(True)
-
-    ax3.legend()
+    ax3.set_title("Average Vehicle Speed", pad=10)
+    ax3.set_xlabel("Simulation Step")
+    ax3.set_ylabel("m/s")
+    ax3.grid(True, alpha=0.4)
+    ax3.margins(y=0.15)
 
     # =========================================================
     # REWARD
@@ -614,31 +569,15 @@ def plot_comparison(baseline, dqn):
 
     ax4 = fig.add_subplot(gs[2, 0])
 
-    ax4.plot(
-        baseline["step"],
-        baseline["reward"],
-        linewidth=2,
-        label="Fixed-Time"
-    )
+    ax4.plot(baseline["step"], baseline["reward"],
+             linewidth=2, color=COLORS["baseline"])
+    ax4.plot(dqn["step"],      dqn["reward"],
+             linewidth=2, color=COLORS["dqn"])
 
-    ax4.plot(
-        dqn["step"],
-        dqn["reward"],
-        linewidth=2,
-        label="DQN"
-    )
-
-    ax4.set_title(
-        "Cumulative Reward"
-    )
-
-    ax4.set_xlabel(
-        "Simulation Step"
-    )
-
-    ax4.grid(True)
-
-    ax4.legend()
+    ax4.set_title("Cumulative Reward", pad=10)
+    ax4.set_xlabel("Simulation Step")
+    ax4.grid(True, alpha=0.4)
+    ax4.margins(y=0.15)
 
     # =========================================================
     # BAR COMPARISON
@@ -646,54 +585,51 @@ def plot_comparison(baseline, dqn):
 
     ax5 = fig.add_subplot(gs[2, 1])
 
-    avg_baseline = np.mean(
-        baseline["queue"]
-    )
-
-    avg_dqn = np.mean(
-        dqn["queue"]
-    )
-
-    improvement = (
-        (
-            avg_baseline - avg_dqn
-        ) / avg_baseline
-    ) * 100
+    avg_baseline = np.mean(baseline["queue"])
+    avg_dqn      = np.mean(dqn["queue"])
+    improvement  = ((avg_baseline - avg_dqn) / avg_baseline) * 100
 
     bars = ax5.bar(
         ["Fixed-Time", "DQN"],
-        [
-            avg_baseline,
-            avg_dqn
-        ]
+        [avg_baseline, avg_dqn],
+        color=[COLORS["baseline"], COLORS["dqn"]],
+        width=0.5
     )
 
-    for bar, val in zip(
-        bars,
-        [
-            avg_baseline,
-            avg_dqn
-        ]
-    ):
+    max_val = max(avg_baseline, avg_dqn)
+    ax5.set_ylim(0, max_val * 1.30)
 
+    for bar, val in zip(bars, [avg_baseline, avg_dqn]):
         ax5.text(
-            bar.get_x() + bar.get_width()/2,
-            bar.get_height(),
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + max_val * 0.03,
             f"{int(val)}",
-            ha='center',
-            va='bottom',
-            fontsize=11
+            ha='center', va='bottom',
+            fontsize=11, fontweight='bold'
         )
 
-    ax5.set_title(
-        f"Queue Reduction = {improvement:.1f}%"
+    ax5.set_title(f"Queue Reduction: {improvement:.1f}%", pad=10)
+    ax5.set_ylabel("Average Vehicles")
+    ax5.grid(True, alpha=0.4, axis='y')
+
+    # =========================================================
+    # LEGENDA GLOBAL — uma só, fora dos subplots
+    # =========================================================
+
+    fig.legend(
+        handles=[line_base, line_dqn],
+        labels=["Fixed-Time", "DQN"],
+        loc='upper center',
+        bbox_to_anchor=(0.5, 0.98),   # logo abaixo do suptitle
+        ncol=2,
+        fontsize=13,
+        frameon=True,
+        framealpha=0.9
     )
 
-    ax5.set_ylabel(
-        "Average Vehicles"
-    )
-
-    ax5.grid(True)
+    # =========================================================
+    # SALVAR
+    # =========================================================
 
     plt.savefig(
         "comparison_chart.png",
@@ -710,35 +646,15 @@ def plot_comparison(baseline, dqn):
     print("\n=================================================")
     print("FINAL RESULTS")
     print("=================================================")
-
     print(f"Average Queue Fixed-Time : {avg_baseline:.1f}")
     print(f"Average Queue DQN        : {avg_dqn:.1f}")
     print(f"Queue Reduction          : {improvement:.1f}%")
-
     print()
-
-    print(
-        f"Average Waiting Fixed-Time : "
-        f"{np.mean(baseline['waiting_time']):.1f}"
-    )
-
-    print(
-        f"Average Waiting DQN        : "
-        f"{np.mean(dqn['waiting_time']):.1f}"
-    )
-
+    print(f"Average Waiting Fixed-Time : {np.mean(baseline['waiting_time']):.1f}")
+    print(f"Average Waiting DQN        : {np.mean(dqn['waiting_time']):.1f}")
     print()
-
-    print(
-        f"Average Speed Fixed-Time : "
-        f"{np.mean(baseline['avg_speed']):.2f} m/s"
-    )
-
-    print(
-        f"Average Speed DQN        : "
-        f"{np.mean(dqn['avg_speed']):.2f} m/s"
-    )
-
+    print(f"Average Speed Fixed-Time : {np.mean(baseline['avg_speed']):.2f} m/s")
+    print(f"Average Speed DQN        : {np.mean(dqn['avg_speed']):.2f} m/s")
     print("\ncomparison_chart.png saved")
 
 # =============================================================================
