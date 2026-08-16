@@ -74,6 +74,10 @@ data/*
 *.rou.alt.xml
 
 # Unity
+# Clone local de referência e relatórios exportados manualmente pelo Unity.
+sumo2unity/
+unity/TestResults_*.xml
+
 unity/**/Library/
 unity/**/Temp/
 unity/**/Obj/
