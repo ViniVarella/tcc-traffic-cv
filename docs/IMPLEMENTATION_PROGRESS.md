@@ -10,7 +10,11 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Marco 4: concluído
 - Marco 5: implementado
 - Arquitetura revisada documentada: concluído
-- Marco 6 em diante: pendentes
+- Levantamento do SUMO2Unity adicionado: concluído
+- Pré-Marco 6: em andamento (importador estático portado; cenário real pendente)
+- Marco 6: em andamento (ferramenta de câmera/ROI e exportação JSON
+  implementadas; validação no Unity Editor pendente)
+- Marco 7 em diante: pendentes
 
 ## Marco 1 — Estrutura inicial do repositório
 
@@ -295,21 +299,95 @@ Observações:
 
 ## Próximos Marcos
 
-### Marco 6 — Captura Unity -> Python
+### Pré-Marco 6 — Preparar o cenário Unity com base no SUMO2Unity
+
+Status: em andamento.
+
+Entregas realizadas:
+
+- criação de `SumoRoadNetworkImporter`, adaptado do importador estático do
+  Sumo2Unity, para gerar faixas, cruzamentos e polígonos dentro de
+  `unity/TrafficVisionUnity`;
+- criação do Inspector `SumoRoadNetworkImporterEditor`, com ações de importar,
+  regerar e limpar a rede gerada;
+- parsing numérico com `CultureInfo.InvariantCulture`, incluindo `netOffset`,
+  coordenadas, largura de faixa e polígonos;
+- alinhamento do projeto Unity ao baseline do Sumo2Unity (Unity `6000.0.53f1`
+  e URP `17.0.4`), com `manifest.json` e `packages-lock.json` idênticos aos do
+  projeto de referência;
+- preservação de `PythonStateReceiver`, `VehicleManager` e
+  `TrafficLightVisualController`; nenhum código ZeroMQ do Sumo2Unity foi
+  integrado.
+
+Escopo previsto:
+
+- receber e importar a rede SUMO real (`.net.xml` e, quando houver,
+  `.poly.xml`) no projeto Unity;
+- migrar materiais e assets necessários e validar escala, orientação e
+  transform SUMO -> Unity;
+- substituir os cubos por prefabs e interpolação de veículos;
+- manter os semáforos 3D como item visual opcional, sem bloquear a percepção
+  das câmeras;
+- não executar `Sumo2UnityTool.exe` nem os scripts ZeroMQ originais, pois o
+  Python do TCC continua sendo o único cliente TraCI;
+- validar o alinhamento visual para o mesmo `step_id` antes de capturar frames.
+
+Referência: `docs/SUMO2UNITY_INTEGRATION.md`.
+
+### Marco 6 — Calibração de câmeras e ROIs
+
+Status: em andamento.
+
+Entregas realizadas:
+
+- criação de `TrafficCameraCalibration`, componente persistente para uma
+  câmera com ID, resolução, ROI externa e ROIs de faixa normalizadas;
+- criação de `CameraRoiCalibrationWindow` em `Traffic Vision > Camera ROI
+  Calibration`, com preview por `RenderTexture` e coleta de quatro cliques;
+- validação de quadriláteros cruzados, contenção dentro da ROI externa e
+  ausência de sobreposição entre faixas;
+- criação de testes de Edit Mode para os casos válido, fora da ROI externa,
+  sobreposição e quadrilátero cruzado.
+
+Validação realizada:
+
+- verificação estática de balanceamento de chaves nos novos scripts;
+- `git diff --check` sem erros;
+- execução no Unity pendente: não há Unity Editor instalado no ambiente atual.
+
+Escopo previsto:
+
+- criar quatro câmeras (`north`, `south`, `east`, `west`) e registrar sua pose,
+  FOV e resolução;
+- criar ferramenta visual para clicar quatro cantos da ROI externa de cada
+  aproximação e quatro cantos de cada ROI de faixa;
+- salvar coordenadas normalizadas; rejeitar ROIs fora da região externa ou com
+  sobreposição entre faixas.
+
+### Marco 7 — Captura Unity -> Python
 
 Pendente.
 
 Escopo previsto:
 
-- captura Unity -> Python;
-- envio de frames da Unity;
-- validação do retorno de `step_id` no caminho inverso.
+- capturar `RenderTexture` após aplicar cada `step_id`;
+- enviar JPEGs por TCP com `step_id`, `sim_time` e `camera_id`;
+- validar que o Python recebe apenas frames correspondentes ao estado enviado.
 
-### Marco 7 em diante
+### Marco 8 — Percepção visual e estado do DQN
+
+Pendente.
+
+Escopo previsto:
+
+- executar YOLO, tracking e ROIs nos frames Unity;
+- converter as contagens por faixa em um vetor de estado visual;
+- manter E2 apenas como ground truth de avaliação;
+- treinar novamente o DQN para o novo vetor visual.
+
+### Marco 9 em diante
 
 Pendentes conforme o guia:
 
-- YOLO em frames da Unity;
-- ROI por câmera no loop integrado;
 - controlador semafórico;
 - experimentos comparativos.

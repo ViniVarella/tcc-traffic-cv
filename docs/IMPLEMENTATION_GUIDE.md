@@ -19,6 +19,12 @@ O projeto reaproveitará dois trabalhos existentes:
 
 Neste projeto, o SUMO2Unity será usado principalmente como base visual e importador de cenário Unity, mas a arquitetura de controle será centralizada no Python. A Unity não deve ser o cliente TraCI principal. O Python deve ser o único cliente TraCI responsável por avançar a simulação, extrair o estado necessário para renderização, enviar esse estado para a Unity, receber os frames das câmeras e aplicar as decisões de controle no SUMO.
 
+O levantamento da implementação adicionada ao repositório está em
+`docs/SUMO2UNITY_INTEGRATION.md`. Em particular, não executar a ponte
+`Sumo2UnityTool.exe` durante os experimentos do TCC: ela usa sua própria
+ponte ZeroMQ e assumiria a coordenação do SUMO. Reutilizar somente o
+importador, assets e convenções visuais necessários no projeto Unity do TCC.
+
 ---
 
 ## 2. Objetivo técnico
@@ -106,7 +112,9 @@ Motivação:
 
 ### 3.4 Uma ROI fixa por câmera
 
-Cada câmera terá sua própria ROI fixa, calibrada manualmente em pixels. Essa ROI representa a região da imagem onde veículos aguardando o semáforo devem ser contados.
+Cada câmera terá uma ROI externa e ROIs de faixa, calibradas visualmente no
+Unity e armazenadas em coordenadas normalizadas. Elas representam as regiões
+da imagem onde veículos aguardando o semáforo devem ser contados.
 
 Regra metodológica:
 
@@ -1071,7 +1079,31 @@ Critério de sucesso:
 - Unity não conecta diretamente ao SUMO.
 ```
 
-### Marco 6 — Criar captura Unity → Python
+### Pré-Marco 6 — Importar cenário real e renderização dinâmica
+
+Critério de sucesso:
+
+```text
+- a rede SUMO real é importada no projeto Unity;
+- faixas, cruzamentos, escala, orientação e netOffset são validados;
+- veículos passam de cubos para prefabs e são interpolados por ID;
+- Python continua como único cliente TraCI;
+- semáforos 3D permanecem opcionais para a primeira versão de percepção.
+```
+
+### Marco 6 — Calibrar câmeras e ROIs
+
+Critério de sucesso:
+
+```text
+- quatro câmeras possuem posição, rotação, FOV e resolução persistidos;
+- a ROI externa é criada com quatro cliques na imagem renderizada;
+- ROIs de faixa são criadas dentro da ROI externa;
+- ROIs inválidas ou sobrepostas são rejeitadas;
+- coordenadas são normalizadas para permanecerem válidas em outra resolução.
+```
+
+### Marco 7 — Criar captura Unity → Python
 
 Critério de sucesso:
 
@@ -1083,7 +1115,7 @@ Critério de sucesso:
 - step_id recebido é igual ao step enviado.
 ```
 
-### Marco 7 — YOLO nos frames da Unity
+### Marco 8 — YOLO nos frames da Unity
 
 Critério de sucesso:
 
@@ -1095,7 +1127,7 @@ Critério de sucesso:
 - a qualidade de detecção em frames sintéticos é validada cedo.
 ```
 
-### Marco 8 — ROI + agregação NS/EW
+### Marco 9 — ROI + agregação e estado visual
 
 Critério de sucesso:
 
@@ -1104,9 +1136,10 @@ Critério de sucesso:
 - ROIs são desenhadas no debug frame;
 - contagem agregada NS/EW é salva no CSV;
 - SORT pode ser usado como apoio sem ser dependência crítica da decisão.
+- o vetor visual substitui as entradas de detector usadas pelo DQN.
 ```
 
-### Marco 9 — Controlador semafórico
+### Marco 10 — Controlador semafórico e DQN retreinado
 
 Critério de sucesso:
 
@@ -1116,9 +1149,10 @@ Critério de sucesso:
 - controlador respeita amarelo;
 - controlador respeita all-red;
 - controlador aplica fase no SUMO.
+- o modelo DQN é carregado pelo Python, não pela Unity.
 ```
 
-### Marco 10 — Experimentos
+### Marco 11 — Experimentos
 
 Critério de sucesso:
 
