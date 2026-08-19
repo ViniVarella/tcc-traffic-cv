@@ -11,9 +11,11 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Marco 5: implementado
 - Arquitetura revisada documentada: concluído
 - Levantamento do SUMO2Unity adicionado: concluído
-- Pré-Marco 6: em andamento (importador estático portado; cenário real pendente)
+- Pré-Marco 6: em andamento (importador estático portado; cenário SP e modelo
+  DQN adicionados; importação e validação visual no Unity pendentes)
 - Marco 6: em andamento (ferramenta de câmera/ROI e exportação JSON
-  implementadas; validação no Unity Editor pendente)
+  implementadas e validadas por testes de Edit Mode; calibração do cenário SP
+  pendente)
 - Marco 7 em diante: pendentes
 
 ## Marco 1 — Estrutura inicial do repositório
@@ -142,7 +144,7 @@ Validação realizada:
 Resultado da validação atual:
 
 - o script `python -m experiments.test_sumo_traci` roda com a configuração atual do projeto;
-- o cenário SUMO configurado atualmente é `sumo/configs/RL.sumocfg`;
+- o cenário SUMO configurado atualmente é `../sumo/fictional/RL.sumocfg`;
 - o semáforo monitorado atualmente é `Node2`;
 - a execução de validação avançou steps da simulação com sucesso e retornou:
   - `sim_time` crescente de `0.10` até `0.50`;
@@ -159,7 +161,7 @@ Resultado da validação atual:
 Observações:
 
 - o nome do cenário SUMO atual do projeto é `RL`, não `intersection`;
-- o caminho configurado em `python/config.yaml` é `../sumo/configs/RL.sumocfg`;
+- o caminho configurado em `python/config.yaml` é `../sumo/fictional/RL.sumocfg`;
 - o teste TraCI já está funcional no caminho feliz com a configuração atual do repositório;
 - `ground_truth.py` continua reservado para avaliação futura, sem alimentar qualquer controlador.
 
@@ -318,11 +320,15 @@ Entregas realizadas:
 - preservação de `PythonStateReceiver`, `VehicleManager` e
   `TrafficLightVisualController`; nenhum código ZeroMQ do Sumo2Unity foi
   integrado.
+- adição do cenário SP em `sumo/sp/`, composto por `Cruzamento.sumocfg`,
+  `Cruzamento.net.xml`, `Cruzamento.rou.xml` e `Cruzamento.add.xml`;
+- adição do modelo treinado em `models/dqn_traffic_model.keras`; ele ainda usa
+  os sete detectores E2 definidos no cenário como entrada de referência.
 
 Escopo previsto:
 
-- receber e importar a rede SUMO real (`.net.xml` e, quando houver,
-  `.poly.xml`) no projeto Unity;
+- importar a rede real `sumo/sp/Cruzamento.net.xml` no projeto Unity; não há
+  arquivo `.poly.xml` fornecido para este cenário;
 - migrar materiais e assets necessários e validar escala, orientação e
   transform SUMO -> Unity;
 - substituir os cubos por prefabs e interpolação de veículos;
@@ -352,8 +358,10 @@ Entregas realizadas:
 Validação realizada:
 
 - verificação estática de balanceamento de chaves nos novos scripts;
-- `git diff --check` sem erros;
-- execução no Unity pendente: não há Unity Editor instalado no ambiente atual.
+- execução manual do Test Runner de Edit Mode em 2026-08-19;
+- relatório `unity/TestResults_20260819_133851.xml`: 13 testes executados,
+  13 aprovados e nenhuma falha, incluindo os casos de lados cruzados,
+  sobreposição e pontos fora da ROI principal.
 
 Escopo previsto:
 

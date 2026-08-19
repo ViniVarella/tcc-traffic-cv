@@ -83,17 +83,19 @@ originou a decisão.
 - O importador estático organizado para o projeto do TCC já foi iniciado em
   `SumoRoadNetworkImporter`; ele cobre faixas, cruzamentos, polígonos e o
   `netOffset` com parsing invariável à cultura.
-- Os arquivos SUMO definitivos ainda serão fornecidos. A validação visual da
-  importação depende, portanto, desse cenário real.
+- O cenário SP já está disponível em `sumo/sp/`: `Cruzamento.sumocfg`,
+  `Cruzamento.net.xml`, `Cruzamento.rou.xml` e `Cruzamento.add.xml`. Não há
+  `.poly.xml`; a primeira importação deve usar a geometria da rede.
+- O cenário ainda não foi importado nem validado visualmente no Unity.
 - A comunicação Python -> Unity existente continua preservada. Não há ponte
   ZeroMQ nem segundo cliente TraCI no projeto do TCC.
 
 ### Fase A — Cenário estático real
 
-Quando os arquivos forem recebidos, importar no projeto Unity o `.net.xml` e,
-quando houver, o `.poly.xml`; migrar somente os materiais e assets visuais
-necessários do Sumo2Unity; e validar escala, orientação e `netOffset` no
-cruzamento real.
+Importar no projeto Unity `sumo/sp/Cruzamento.net.xml`; migrar somente os
+materiais e assets visuais necessários do Sumo2Unity; e validar escala,
+orientação e `netOffset` no cruzamento SP. Um `.poly.xml` poderá ser adicionado
+no futuro como enriquecimento visual, mas não bloqueia essa primeira etapa.
 
 O importador de rede não cria automaticamente árvores, prédios ou postes. Eles
 são enriquecimento visual e podem ser adicionados depois que o piso viário e a
@@ -148,8 +150,9 @@ A primeira entrega dessa ferramenta já existe no projeto:
 - a exportação JSON versionada entrega ao Python `camera_id`, resolução, pose,
   FOV, ROI externa e ROIs de faixa normalizadas.
 
-A execução dos testes de Edit Mode permanece pendente apenas porque não há um
-Unity Editor instalado no ambiente atual.
+Os testes de Edit Mode foram executados manualmente em 2026-08-19. O relatório
+`unity/TestResults_20260819_133851.xml` registrou 13 testes aprovados e nenhuma
+falha, incluindo a rejeição de quadriláteros com lados cruzados.
 
 ### Fase D — Frames, percepção e decisão
 
@@ -158,15 +161,16 @@ Após aplicar o estado de um `step_id`, a Unity renderiza as quatro câmeras em
 `sim_time` e `camera_id`. O Python executa YOLO, tracking e ROIs, agrega as
 contagens e só então decide a ação do semáforo via TraCI.
 
-O arquivo do modelo DQN treinado pertence ao processo Python, não à Unity. Ele
-será carregado uma vez no início da execução. Como o DQN atual foi treinado com
-detectores E2, ele só poderá ser usado no pipeline visual depois que o vetor de
-estado visual estiver definido e o modelo tiver sido retreinado com essa mesma
-semântica.
+O arquivo do modelo DQN treinado está em `models/dqn_traffic_model.keras` e
+pertence ao processo Python, não à Unity. Ele será carregado uma vez no início
+da execução. Como o DQN atual foi treinado com detectores E2, ele só poderá ser
+usado no pipeline visual depois que o vetor de estado visual estiver definido e
+o modelo tiver sido retreinado com essa mesma semântica.
 
 ## Contrato da percepção e do DQN
 
-O DQN atual em `optimization/SP/traci8.DQN.py` usa 26 entradas: para cada um
+O script de treinamento de referência em `optimization/sp/traci8.DQN.py` usa
+26 entradas: para cada um
 dos sete detectores E2, quantidade de veículos, quantidade parada e ocupação,
 mais a fase do semáforo em one-hot. Portanto, uma contagem visual simples não
 é intercambiável com o modelo atual.
@@ -201,7 +205,8 @@ alimentar a decisão online.
 
 ## Próximo marco técnico
 
-Antes de implementar o envio de imagens, importar o cenário SUMO real e
-validar visualmente, para um mesmo `step_id`, o alinhamento entre pista, carro,
-semáforo e a região vista por cada câmera. Esse teste elimina o maior risco de
-integração: uma contagem visual correta em uma coordenada ou abordagem errada.
+Antes de implementar o envio de imagens, importar `sumo/sp/Cruzamento.net.xml`
+e validar visualmente, para um mesmo `step_id`, o alinhamento entre pista,
+carro, semáforo e a região vista por cada câmera. Esse teste elimina o maior
+risco de integração: uma contagem visual correta em uma coordenada ou
+abordagem errada.
