@@ -13,10 +13,14 @@ namespace TccTrafficVision
                 return;
             }
 
+        if (targetRenderer == null)
+        {
+            targetRenderer = GetComponent<Renderer>();
             if (targetRenderer == null)
             {
-                targetRenderer = GetComponent<Renderer>();
+                targetRenderer = GetComponentInChildren<Renderer>();
             }
+        }
 
             if (targetRenderer == null || targetRenderer.material == null)
             {

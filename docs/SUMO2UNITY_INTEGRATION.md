@@ -94,14 +94,18 @@ originou a decisão.
   TLS, as cinco fases e os sete detectores E2 estão acessíveis pelo Python.
 - A comunicação Python -> Unity existente continua preservada. Não há ponte
   ZeroMQ nem segundo cliente TraCI no projeto do TCC.
+- A sincronização SP foi validada manualmente em 2026-08-20: o Python avançou
+  o SUMO via TraCI e enviou estados UDP/JSON até o `step_id` 120; a Unity
+  atualizou 24--29 veículos por estado sobre a rede importada. As linhas
+  tracejadas e materiais básicos agora são gerados pelo importador do TCC.
 
 ### Fase A — Cenário estático real
 
-A importação estática de `sumo/sp/Cruzamento.net.xml` já foi validada no Unity.
-Agora, migrar somente os materiais e assets visuais necessários do Sumo2Unity e
-validar escala, orientação e `netOffset` quando veículos e semáforos dinâmicos
-forem sincronizados. Um `.poly.xml` poderá ser adicionado no futuro como
-enriquecimento visual, mas não bloqueia essa primeira etapa.
+A importação estática de `sumo/sp/Cruzamento.net.xml` e seu alinhamento com o
+estado dinâmico já foram validados no Unity. O importador do TCC gera materiais
+básicos e linhas tracejadas; os prefabs completos continuam sendo um
+enriquecimento futuro. Um `.poly.xml` poderá ser adicionado no futuro, mas não
+bloqueia essa primeira etapa.
 
 O importador de rede não cria automaticamente árvores, prédios ou postes. Eles
 são enriquecimento visual e podem ser adicionados depois que o piso viário e a
@@ -109,8 +113,9 @@ geometria das faixas estiverem corretos.
 
 ### Fase B — Estado dinâmico renderizado
 
-Evoluir `VehicleManager` para escolher prefabs por `vehicle.type`, criar e
-remover objetos por ID e interpolar o movimento entre os estados recebidos.
+`VehicleManager` já cria e oculta veículos por ID e mostra uma geometria
+temporária colorida, com marcador de frente. O próximo refinamento é escolher
+prefabs por `vehicle.type` e interpolar o movimento entre os estados recebidos.
 Isso substitui, no nosso projeto, apenas a parte visual de veículos do
 `SimulationController` e `VehicleController` originais.
 
@@ -211,7 +216,7 @@ alimentar a decisão online.
 
 ## Próximo marco técnico
 
-Antes de implementar o envio de imagens, sincronizar veículos e semáforo SP e
-validar visualmente, para um mesmo `step_id`, o alinhamento entre pista, carro,
-semáforo e a região vista por cada câmera. Esse teste elimina o maior risco de
-integração: uma contagem visual correta em uma coordenada ou abordagem errada.
+Criar e calibrar a primeira câmera de tráfego do SP usando a ferramenta de ROI
+já existente. A câmera deve enquadrar uma aproximação, ter sua ROI principal e
+ROIs de faixa salvas na cena e permitir validar, sobre os veículos sincronizados,
+que a região útil corresponde à fila observada.

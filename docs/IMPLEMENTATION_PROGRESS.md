@@ -11,8 +11,9 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Marco 5: implementado
 - Arquitetura revisada documentada: concluído
 - Levantamento do SUMO2Unity adicionado: concluído
-- Pré-Marco 6: em andamento (cenário SP importado e validado estaticamente no
-  Unity; materiais, veículos e validação dinâmica pendentes)
+- Pré-Marco 6: em andamento (cenário SP importado, materializado e validado
+  dinamicamente no Unity; prefabs finais, interpolação e calibração das câmeras
+  pendentes)
 - Marco 6: em andamento (ferramenta de câmera/ROI e exportação JSON
   implementadas e validadas por testes de Edit Mode; calibração do cenário SP
   pendente)
@@ -335,6 +336,16 @@ Entregas realizadas:
   a ordem dos sete detectores E2 e o contrato de 26 entradas do DQN;
 - criação de `python -m experiments.test_sp_traci`, que valida o cenário SP via
   TraCI sem iniciar Unity ou inferência do DQN.
+- configuração `unity` no perfil SP e extensão de
+  `python -m experiments.test_sumo_to_unity` para selecionar esse perfil,
+  duração e intervalo de envio;
+- criação da ação `Traffic Vision > SUMO > Configure SP Dynamic Sync`, que
+  configura o receptor UDP, raiz de veículos e marcador visual do TLS na cena;
+- criação da ação `Traffic Vision > SUMO > Configure SP Visuals`, com materiais
+  persistentes de asfalto, junção e marcação, além de linhas tracejadas geradas
+  a partir das geometrias das faixas;
+- atualização dos veículos temporários: cor por tipo, marcador de frente e
+  orientação compatível com os ângulos navegacionais do SUMO.
 
 Validação realizada:
 
@@ -347,12 +358,16 @@ Validação realizada:
   com 22 faixas e 1 cruzamento; a câmera aérea renderizou a geometria; a ação
   `Clear generated road network` removeu toda a rede e uma nova importação a
   recriou uma única vez, sem duplicação no `Hierarchy`.
+- validação manual da sincronização SUMO -> Python/TraCI -> UDP/JSON -> Unity
+  em 2026-08-20: a Unity recebeu estados até o `step_id` 120, com 24--29
+  veículos por estado, e os veículos permaneceram alinhados às vias SP.
+- validação manual visual em 2026-08-20: as linhas tracejadas, os materiais de
+  via e os veículos orientados foram renderizados durante a mesma simulação.
 
 Escopo previsto:
 
-- migrar materiais e assets necessários e validar escala, orientação e
-  transform SUMO -> Unity;
-- substituir os cubos por prefabs e interpolação de veículos;
+- substituir os cubos temporários por prefabs de veículos e interpolação entre
+  estados;
 - manter os semáforos 3D como item visual opcional, sem bloquear a percepção
   das câmeras;
 - não executar `Sumo2UnityTool.exe` nem os scripts ZeroMQ originais, pois o

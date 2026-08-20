@@ -1086,7 +1086,8 @@ Critério de sucesso:
 ```text
 - a rede SUMO real é importada no projeto Unity;
 - faixas, cruzamentos, escala, orientação e netOffset são validados;
-- veículos passam de cubos para prefabs e são interpolados por ID;
+- veículos são atualizados por ID; inicialmente podem usar geometria temporária
+  orientada, antes da migração para prefabs e interpolação;
 - Python continua como único cliente TraCI;
 - semáforos 3D permanecem opcionais para a primeira versão de percepção.
 ```

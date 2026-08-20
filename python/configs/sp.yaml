@@ -8,6 +8,14 @@ sumo:
   step_length: 1.0
   traci_port: 8873
 
+unity:
+  state_host: "127.0.0.1"
+  state_port: 5004
+  frame_host: "127.0.0.1"
+  frame_port: 5005
+  frame_timeout: 2.0
+  frame_transport: "tcp"
+
 traffic_light:
   id: "clusterJ0_J14_J2_J7"
   phase_count: 5

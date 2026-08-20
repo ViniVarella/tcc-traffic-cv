@@ -23,7 +23,12 @@ namespace TccTrafficVision.SumoImport
         [SerializeField] private Material roadMaterial;
         [SerializeField] private Material junctionMaterial;
         [SerializeField] private Material polygonMaterial;
+        [SerializeField] private Material laneMarkingMaterial;
         [SerializeField] private float defaultLaneWidth = 3.2f;
+        [SerializeField] private bool generateLaneCenterLines = true;
+        [SerializeField, Min(0.01f)] private float laneMarkingWidth = 0.16f;
+        [SerializeField, Min(0.1f)] private float laneMarkingDashLength = 2.5f;
+        [SerializeField, Min(0f)] private float laneMarkingGapLength = 4f;
 
         [Header("Generated scene")]
         [SerializeField, HideInInspector] private Transform generatedRoot;
@@ -57,6 +62,7 @@ namespace TccTrafficVision.SumoImport
             Material road = roadMaterial != null ? roadMaterial : CreateFallbackMaterial();
             Material junction = junctionMaterial != null ? junctionMaterial : road;
             Material polygon = polygonMaterial != null ? polygonMaterial : road;
+            Material laneMarking = laneMarkingMaterial != null ? laneMarkingMaterial : CreateLaneMarkingFallbackMaterial();
 
             int laneCount = 0;
             foreach (XElement lane in network.Descendants("lane"))
@@ -70,6 +76,19 @@ namespace TccTrafficVision.SumoImport
                 float width = ParseFloat(lane.Attribute("width")?.Value, defaultLaneWidth);
                 Mesh mesh = CreateLaneMesh(points, width);
                 CreateMeshObject($"Lane_{laneCount++}_{lane.Attribute("id")?.Value}", mesh, road, generatedRoot);
+
+                if (generateLaneCenterLines)
+                {
+                    Mesh markings = CreateDashedLaneCenterLine(
+                        points,
+                        laneMarkingWidth,
+                        laneMarkingDashLength,
+                        laneMarkingGapLength);
+                    if (markings != null)
+                    {
+                        CreateMeshObject($"LaneMarking_{laneCount - 1}_{lane.Attribute("id")?.Value}", markings, laneMarking, generatedRoot);
+                    }
+                }
             }
 
             int junctionCount = 0;
@@ -263,6 +282,95 @@ namespace TccTrafficVision.SumoImport
             return mesh;
         }
 
+        private static Mesh CreateDashedLaneCenterLine(
+            IReadOnlyList<Vector3> points,
+            float width,
+            float dashLength,
+            float gapLength)
+        {
+            List<Vector3> vertices = new List<Vector3>();
+            List<int> triangles = new List<int>();
+            float patternLength = dashLength + gapLength;
+            if (points.Count < 2 || patternLength <= Mathf.Epsilon)
+            {
+                return null;
+            }
+
+            float totalDistance = 0f;
+            for (int segment = 0; segment < points.Count - 1; segment++)
+            {
+                Vector3 from = points[segment];
+                Vector3 to = points[segment + 1];
+                Vector3 delta = to - from;
+                float segmentLength = delta.magnitude;
+                if (segmentLength <= Mathf.Epsilon)
+                {
+                    continue;
+                }
+
+                Vector3 direction = delta / segmentLength;
+                Vector3 perpendicular = new Vector3(-direction.z, 0f, direction.x) * (width * 0.5f);
+                float localDistance = 0f;
+                while (localDistance < segmentLength)
+                {
+                    float patternOffset = (totalDistance + localDistance) % patternLength;
+                    if (patternOffset >= dashLength)
+                    {
+                        localDistance += patternLength - patternOffset;
+                        continue;
+                    }
+
+                    float dashEnd = Mathf.Min(localDistance + dashLength - patternOffset, segmentLength);
+                    AddLineQuad(
+                        vertices,
+                        triangles,
+                        from + direction * localDistance + perpendicular + Vector3.up * 0.015f,
+                        from + direction * localDistance - perpendicular + Vector3.up * 0.015f,
+                        from + direction * dashEnd + perpendicular + Vector3.up * 0.015f,
+                        from + direction * dashEnd - perpendicular + Vector3.up * 0.015f);
+                    localDistance = dashEnd;
+                }
+
+                totalDistance += segmentLength;
+            }
+
+            if (vertices.Count == 0)
+            {
+                return null;
+            }
+
+            Mesh mesh = new Mesh
+            {
+                name = "SumoLaneMarkingMesh",
+                vertices = vertices.ToArray(),
+                triangles = triangles.ToArray(),
+            };
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        private static void AddLineQuad(
+            List<Vector3> vertices,
+            List<int> triangles,
+            Vector3 fromLeft,
+            Vector3 fromRight,
+            Vector3 toLeft,
+            Vector3 toRight)
+        {
+            int index = vertices.Count;
+            vertices.Add(fromLeft);
+            vertices.Add(fromRight);
+            vertices.Add(toLeft);
+            vertices.Add(toRight);
+            triangles.Add(index);
+            triangles.Add(index + 2);
+            triangles.Add(index + 1);
+            triangles.Add(index + 2);
+            triangles.Add(index + 3);
+            triangles.Add(index + 1);
+        }
+
         private static List<int> Triangulate(IReadOnlyList<Vector2> points)
         {
             List<int> result = new List<int>();
@@ -362,6 +470,12 @@ namespace TccTrafficVision.SumoImport
         {
             Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
             return new Material(shader) { color = new Color(0.16f, 0.16f, 0.16f) };
+        }
+
+        private static Material CreateLaneMarkingFallbackMaterial()
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+            return new Material(shader) { color = new Color(0.95f, 0.93f, 0.82f) };
         }
     }
 }
