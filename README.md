@@ -95,6 +95,32 @@ Observações:
 - se o arquivo configurado em `sumo.config_path` não existir, o teste falha com uma mensagem clara explicando que o `.sumocfg` não foi encontrado;
 - o módulo `python/sumo/ground_truth.py` existe apenas para avaliação futura, não para decisão de controle.
 
+## Validação TraCI do cenário SP
+
+O cenário SP possui um perfil independente em `python/configs/sp.yaml`. O teste
+inicia `sumo/sp/Cruzamento.sumocfg`, valida o semáforo
+`clusterJ0_J14_J2_J7`, os sete detectores E2 e uma troca controlada para a
+fase verde secundária. Ele não inicia Unity nem executa inferência do DQN.
+
+```powershell
+cd python
+python -m experiments.test_sp_traci
+```
+
+O perfil usa a porta TraCI local `8873`, para tornar a conexão explícita e
+facilitar diagnósticos de inicialização.
+
+## Teste de importação SP no Unity
+
+No Unity, execute `Traffic Vision > SUMO > Create SP Import Scene`. A ação cria
+e seleciona `SP Road Network Importer`, já configurado com
+`Cruzamento.net.xml`. No Inspector, clique em `Import / rebuild SUMO road
+network`; a cena resultante é salva como `Assets/Scenes/SPImport.unity`.
+
+O teste esperado confirma 22 faixas e um cruzamento. O botão `Clear generated
+road network` deve remover a geometria e uma nova importação deve recriá-la sem
+duplicar objetos.
+
 ## Teste inicial Python -> Unity
 
 O primeiro teste de comunicação Python -> Unity envia estados JSON fake via UDP. Ele valida apenas o lado Python da ponte e a recepção manual do `step` ou `step_id` no log da Unity.

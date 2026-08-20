@@ -86,16 +86,22 @@ originou a decisão.
 - O cenário SP já está disponível em `sumo/sp/`: `Cruzamento.sumocfg`,
   `Cruzamento.net.xml`, `Cruzamento.rou.xml` e `Cruzamento.add.xml`. Não há
   `.poly.xml`; a primeira importação deve usar a geometria da rede.
-- O cenário ainda não foi importado nem validado visualmente no Unity.
+- A rede foi copiada para os assets Unity, importada e salva em
+  `Assets/Scenes/SPImport.unity`. A validação manual confirmou 22 faixas, um
+  cruzamento e a câmera aérea; limpar e reconstruir a rede não duplicou objetos.
+- O perfil `python/configs/sp.yaml` e o teste
+  `python -m experiments.test_sp_traci` já validaram o cenário por TraCI: o
+  TLS, as cinco fases e os sete detectores E2 estão acessíveis pelo Python.
 - A comunicação Python -> Unity existente continua preservada. Não há ponte
   ZeroMQ nem segundo cliente TraCI no projeto do TCC.
 
 ### Fase A — Cenário estático real
 
-Importar no projeto Unity `sumo/sp/Cruzamento.net.xml`; migrar somente os
-materiais e assets visuais necessários do Sumo2Unity; e validar escala,
-orientação e `netOffset` no cruzamento SP. Um `.poly.xml` poderá ser adicionado
-no futuro como enriquecimento visual, mas não bloqueia essa primeira etapa.
+A importação estática de `sumo/sp/Cruzamento.net.xml` já foi validada no Unity.
+Agora, migrar somente os materiais e assets visuais necessários do Sumo2Unity e
+validar escala, orientação e `netOffset` quando veículos e semáforos dinâmicos
+forem sincronizados. Um `.poly.xml` poderá ser adicionado no futuro como
+enriquecimento visual, mas não bloqueia essa primeira etapa.
 
 O importador de rede não cria automaticamente árvores, prédios ou postes. Eles
 são enriquecimento visual e podem ser adicionados depois que o piso viário e a
@@ -205,8 +211,7 @@ alimentar a decisão online.
 
 ## Próximo marco técnico
 
-Antes de implementar o envio de imagens, importar `sumo/sp/Cruzamento.net.xml`
-e validar visualmente, para um mesmo `step_id`, o alinhamento entre pista,
-carro, semáforo e a região vista por cada câmera. Esse teste elimina o maior
-risco de integração: uma contagem visual correta em uma coordenada ou
-abordagem errada.
+Antes de implementar o envio de imagens, sincronizar veículos e semáforo SP e
+validar visualmente, para um mesmo `step_id`, o alinhamento entre pista, carro,
+semáforo e a região vista por cada câmera. Esse teste elimina o maior risco de
+integração: uma contagem visual correta em uma coordenada ou abordagem errada.

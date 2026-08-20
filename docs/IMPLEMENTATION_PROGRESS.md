@@ -11,8 +11,8 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Marco 5: implementado
 - Arquitetura revisada documentada: concluído
 - Levantamento do SUMO2Unity adicionado: concluído
-- Pré-Marco 6: em andamento (importador estático portado; cenário SP e modelo
-  DQN adicionados; importação e validação visual no Unity pendentes)
+- Pré-Marco 6: em andamento (cenário SP importado e validado estaticamente no
+  Unity; materiais, veículos e validação dinâmica pendentes)
 - Marco 6: em andamento (ferramenta de câmera/ROI e exportação JSON
   implementadas e validadas por testes de Edit Mode; calibração do cenário SP
   pendente)
@@ -310,6 +310,13 @@ Entregas realizadas:
 - criação de `SumoRoadNetworkImporter`, adaptado do importador estático do
   Sumo2Unity, para gerar faixas, cruzamentos e polígonos dentro de
   `unity/TrafficVisionUnity`;
+- cópia da rede SP para
+  `unity/TrafficVisionUnity/Assets/Sumo/SP/Cruzamento.net.xml`;
+- criação da ação de Editor `Traffic Vision > SUMO > Create SP Import Scene`,
+  que prepara uma cena com luz, câmera de visão geral e o
+  `SumoRoadNetworkImporter` apontando para a rede SP;
+- criação e salvamento da cena `Assets/Scenes/SPImport.unity`, contendo a rede
+  SP importada e a câmera aérea de inspeção;
 - criação do Inspector `SumoRoadNetworkImporterEditor`, com ações de importar,
   regerar e limpar a rede gerada;
 - parsing numérico com `CultureInfo.InvariantCulture`, incluindo `netOffset`,
@@ -324,11 +331,25 @@ Entregas realizadas:
   `Cruzamento.net.xml`, `Cruzamento.rou.xml` e `Cruzamento.add.xml`;
 - adição do modelo treinado em `models/dqn_traffic_model.keras`; ele ainda usa
   os sete detectores E2 definidos no cenário como entrada de referência.
+- criação do perfil isolado `python/configs/sp.yaml`, com o TLS, as cinco fases,
+  a ordem dos sete detectores E2 e o contrato de 26 entradas do DQN;
+- criação de `python -m experiments.test_sp_traci`, que valida o cenário SP via
+  TraCI sem iniciar Unity ou inferência do DQN.
+
+Validação realizada:
+
+- inicialização direta de `sumo/sp/Cruzamento.sumocfg` até o tempo simulado de
+  2 segundos, concluída com `exit 0`;
+- execução de `python -m experiments.test_sp_traci` em 2026-08-19: TLS
+  `clusterJ0_J14_J2_J7` encontrado, sete E2 encontrados, fase inicial `0` e
+  troca controlada confirmada para a fase `3`.
+- validação manual no Unity em 2026-08-20: a cena `SPImport` carregou a rede
+  com 22 faixas e 1 cruzamento; a câmera aérea renderizou a geometria; a ação
+  `Clear generated road network` removeu toda a rede e uma nova importação a
+  recriou uma única vez, sem duplicação no `Hierarchy`.
 
 Escopo previsto:
 
-- importar a rede real `sumo/sp/Cruzamento.net.xml` no projeto Unity; não há
-  arquivo `.poly.xml` fornecido para este cenário;
 - migrar materiais e assets necessários e validar escala, orientação e
   transform SUMO -> Unity;
 - substituir os cubos por prefabs e interpolação de veículos;
