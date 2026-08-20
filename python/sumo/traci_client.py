@@ -19,12 +19,14 @@ class SumoClient:
         gui: bool = True,
         seed: int | None = None,
         step_length: float | None = None,
+        traci_port: int | None = None,
     ) -> None:
         self.sumo_binary = sumo_binary
         self.config_path = str(Path(config_path))
         self.gui = gui
         self.seed = seed
         self.step_length = step_length
+        self.traci_port = traci_port
         self._started = False
 
     @classmethod
@@ -43,6 +45,7 @@ class SumoClient:
             gui=gui,
             seed=experiment_config.get("seed"),
             step_length=sumo_config.get("step_length"),
+            traci_port=sumo_config.get("traci_port"),
         )
 
     def start(self) -> None:
@@ -63,7 +66,7 @@ class SumoClient:
         if self.step_length is not None:
             sumo_cmd.extend(["--step-length", str(float(self.step_length))])
 
-        traci.start(sumo_cmd)
+        traci.start(sumo_cmd, port=self.traci_port)
         self._started = True
 
     def step(self) -> float:
@@ -112,6 +115,20 @@ class SumoClient:
         """Retorna os identificadores de semaforos disponiveis na simulacao."""
         self._ensure_started()
         return list(traci.trafficlight.getIDList())
+
+    def get_lane_area_detector_ids(self) -> list[str]:
+        """Retorna os identificadores dos detectores E2 disponiveis."""
+        self._ensure_started()
+        return list(traci.lanearea.getIDList())
+
+    def get_lane_area_detector_metrics(self, detector_id: str) -> dict[str, float | int]:
+        """Retorna as metricas usadas pelo estado DQN de um detector E2."""
+        self._ensure_started()
+        return {
+            "vehicle_count": int(traci.lanearea.getLastStepVehicleNumber(detector_id)),
+            "halting_count": int(traci.lanearea.getLastStepHaltingNumber(detector_id)),
+            "occupancy": float(traci.lanearea.getLastStepOccupancy(detector_id)),
+        }
 
     def set_traffic_light_phase(self, tls_id: str, phase: int) -> None:
         """Define a fase corrente de um semaforo no SUMO."""

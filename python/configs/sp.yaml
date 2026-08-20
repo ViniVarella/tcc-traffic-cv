@@ -1,0 +1,37 @@
+experiment:
+  scenario: "sp"
+  seed: 42
+
+sumo:
+  config_path: "../sumo/sp/Cruzamento.sumocfg"
+  gui: false
+  step_length: 1.0
+  traci_port: 8873
+
+traffic_light:
+  id: "clusterJ0_J14_J2_J7"
+  phase_count: 5
+  phases:
+    primary_green: 0
+    primary_yellow: 1
+    all_red: 2
+    secondary_green: 3
+    secondary_yellow: 4
+
+detectors:
+  ids:
+    - "e2_0" # E6_0
+    - "e2_5" # E2_1
+    - "e2_6" # E2_0
+    - "e2_1" # E3_2
+    - "e2_2" # E3_3
+    - "e2_3" # E3_1
+    - "e2_4" # E3_0
+
+dqn:
+  model_path: "../models/dqn_traffic_model.keras"
+  state_size: 26
+  detector_features:
+    - "vehicle_count"
+    - "halting_count"
+    - "occupancy"
