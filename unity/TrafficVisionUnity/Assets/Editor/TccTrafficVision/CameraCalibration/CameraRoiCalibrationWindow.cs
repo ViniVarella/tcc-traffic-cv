@@ -47,31 +47,42 @@ namespace TccTrafficVision.Editor.CameraCalibration
                 "Use o botão direito para desfazer o último ponto ainda pendente.",
                 MessageType.Info);
 
+            if (Application.isPlaying)
+            {
+                EditorGUILayout.HelpBox(
+                    "Pare o Play Mode antes de alterar ou salvar ROIs. Alterações na calibração precisam " +
+                    "ser persistidas na cena e o Unity não permite salvar a cena durante a simulação.",
+                    MessageType.Warning);
+            }
+
             calibration = (TrafficCameraCalibration)EditorGUILayout.ObjectField(
                 "Camera calibration", calibration, typeof(TrafficCameraCalibration), true);
 
-            using (new EditorGUILayout.HorizontalScope())
+            using (new EditorGUI.DisabledScope(Application.isPlaying))
             {
-                if (GUILayout.Button("Use selected camera"))
+                using (new EditorGUILayout.HorizontalScope())
                 {
-                    UseSelectedCamera();
-                }
-
-                using (new EditorGUI.DisabledScope(calibration == null))
-                {
-                    if (GUILayout.Button("Align with Scene View"))
+                    if (GUILayout.Button("Use selected camera"))
                     {
-                        AlignWithSceneView();
+                        UseSelectedCamera();
                     }
 
-                    if (GUILayout.Button("Render preview"))
+                    using (new EditorGUI.DisabledScope(calibration == null))
                     {
-                        RenderPreview();
-                    }
+                        if (GUILayout.Button("Align with Scene View"))
+                        {
+                            AlignWithSceneView();
+                        }
 
-                    if (GUILayout.Button("Export calibration JSON"))
-                    {
-                        ExportCalibrationJson();
+                        if (GUILayout.Button("Render preview"))
+                        {
+                            RenderPreview();
+                        }
+
+                        if (GUILayout.Button("Export calibration JSON"))
+                        {
+                            ExportCalibrationJson();
+                        }
                     }
                 }
             }
@@ -82,10 +93,16 @@ namespace TccTrafficVision.Editor.CameraCalibration
                 return;
             }
 
-            DrawControls();
+            using (new EditorGUI.DisabledScope(Application.isPlaying))
+            {
+                DrawControls();
+            }
             Rect imageRect = DrawPreview();
             DrawPolygons(imageRect);
-            HandleImageClick(imageRect);
+            if (!Application.isPlaying)
+            {
+                HandleImageClick(imageRect);
+            }
             DrawFeedback();
         }
 
@@ -97,12 +114,9 @@ namespace TccTrafficVision.Editor.CameraCalibration
             string approachButton = calibration.ApproachRoi.IsDefined
                 ? "Redefine approach ROI (clears lanes)"
                 : "Define approach ROI";
-            using (new EditorGUI.DisabledScope(editMode != EditMode.None))
+            if (GUILayout.Button(approachButton))
             {
-                if (GUILayout.Button(approachButton))
-                {
-                    Begin(EditMode.Approach, null);
-                }
+                BeginApproachRedefinition();
             }
 
             using (new EditorGUILayout.HorizontalScope())
@@ -376,6 +390,15 @@ namespace TccTrafficVision.Editor.CameraCalibration
             editingLaneId = existingLaneId;
             pendingPoints.Clear();
             feedback = null;
+        }
+
+        private void BeginApproachRedefinition()
+        {
+            bool discardedLaneDraft = editMode == EditMode.Lane && pendingPoints.Count > 0;
+            Begin(EditMode.Approach, null);
+            feedback = discardedLaneDraft
+                ? "Rascunho da faixa descartado. Clique quatro pontos para a nova ROI principal."
+                : "Clique quatro pontos para a nova ROI principal. As faixas atuais só serão removidas após salvar uma ROI válida.";
         }
 
         private void CancelEdit()

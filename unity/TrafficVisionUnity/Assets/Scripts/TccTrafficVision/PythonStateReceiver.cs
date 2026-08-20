@@ -51,6 +51,13 @@ namespace TccTrafficVision
         private readonly Queue<SimulationStateMessage> pendingStates = new Queue<SimulationStateMessage>();
         private int lastAppliedStep = -1;
 
+        /// <summary>
+        /// Raised on the Unity main thread after all visual consumers received a
+        /// new SUMO state. Frame capture components use this to associate one
+        /// rendered image with the exact step that produced it.
+        /// </summary>
+        public event Action<SimulationStateMessage> StateApplied;
+
         private void Start()
         {
             if (vehicleManager == null)
@@ -95,6 +102,7 @@ namespace TccTrafficVision
 
             vehicleManager?.ApplyState(stateToApply.vehicles);
             trafficLightVisualController?.ApplyState(stateToApply.traffic_lights);
+            StateApplied?.Invoke(stateToApply);
         }
 
         private void ReceiveLoop()

@@ -97,6 +97,7 @@ unity/**/*.pdb
 unity/**/*.mdb
 unity/**/*.opendb
 unity/**/*.VC.db
+unity/**/mono_crash.*.json
 
 # IDE
 .idea/

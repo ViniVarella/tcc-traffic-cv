@@ -39,6 +39,17 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
         default=0.05,
         help="Pausa em segundos entre mensagens UDP, para inspeção visual.",
     )
+    parser.add_argument(
+        "--receive-frames",
+        action="store_true",
+        help="Abre o listener TCP, recebe um JPEG Unity por step e o salva para depuração.",
+    )
+    parser.add_argument(
+        "--frame-output-dir",
+        type=Path,
+        default=base_dir.parent / "results" / "frames" / "unity",
+        help="Diretório para JPEGs recebidos quando --receive-frames está ativo.",
+    )
     return parser.parse_args()
 
 
@@ -59,6 +70,14 @@ def main() -> None:
     tls_id = str(config["traffic_light"]["id"])
 
     try:
+        if args.receive_frames:
+            args.frame_output_dir.mkdir(parents=True, exist_ok=True)
+            unity_bridge.start_frame_server()
+            print(
+                f"frame_listener host={unity_bridge.frame_host} port={unity_bridge.frame_port} "
+                f"output={args.frame_output_dir}"
+            )
+
         sumo_client.start()
         tls_ids = sumo_client.get_traffic_light_ids()
         if tls_id not in tls_ids:
@@ -84,6 +103,19 @@ def main() -> None:
                 f"vehicles={len(state.vehicles)} "
                 f"traffic_lights={len(state.traffic_lights)}"
             )
+            if args.receive_frames:
+                received_frame = unity_bridge.receive_frame()
+                if received_frame is None:
+                    print(f"frame_missing expected_step_id={state.step}")
+                else:
+                    jpeg, packet = received_frame
+                    output_path = args.frame_output_dir / f"{packet.camera_id}_step_{packet.step_id:06d}.jpg"
+                    output_path.write_bytes(jpeg)
+                    match = packet.step_id == state.step
+                    print(
+                        f"frame_received step_id={packet.step_id} expected_step_id={state.step} "
+                        f"match={match} bytes={packet.payload_size} output={output_path}"
+                    )
             sleep(args.send_interval)
     finally:
         sumo_client.close()

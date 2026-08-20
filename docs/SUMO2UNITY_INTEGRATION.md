@@ -98,6 +98,11 @@ originou a decisão.
   o SUMO via TraCI e enviou estados UDP/JSON até o `step_id` 120; a Unity
   atualizou 24--29 veículos por estado sobre a rede importada. As linhas
   tracejadas e materiais básicos agora são gerados pelo importador do TCC.
+- A primeira câmera de tráfego, `south`, foi calibrada e exportada em
+  `Assets/Calibration/south-calibration.json`. Para cada estado recebido, a
+  Unity captura JPEG após a atualização visual e o envia por TCP ao listener
+  Python com `step_id`, `sim_time` e `camera_id`; a validação manual confirmou
+  o recebimento de frames correspondentes aos steps SP.
 
 ### Fase A — Cenário estático real
 
@@ -216,7 +221,6 @@ alimentar a decisão online.
 
 ## Próximo marco técnico
 
-Criar e calibrar a primeira câmera de tráfego do SP usando a ferramenta de ROI
-já existente. A câmera deve enquadrar uma aproximação, ter sua ROI principal e
-ROIs de faixa salvas na cena e permitir validar, sobre os veículos sincronizados,
-que a região útil corresponde à fila observada.
+Repetir a calibração e a captura para `north`, `east` e `west`, transformando o
+emissor atual de uma câmera em um catálogo de câmeras. Com os quatro fluxos
+validados, o Python poderá encaminhar os JPEGs ao primeiro detector visual.

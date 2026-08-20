@@ -12,8 +12,8 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Arquitetura revisada documentada: concluído
 - Levantamento do SUMO2Unity adicionado: concluído
 - Pré-Marco 6: em andamento (cenário SP importado, materializado e validado
-  dinamicamente no Unity; prefabs finais, interpolação e calibração das câmeras
-  pendentes)
+  dinamicamente; câmera `south` calibrada e captura Unity -> Python validada;
+  prefabs finais, interpolação e outras câmeras pendentes)
 - Marco 6: em andamento (ferramenta de câmera/ROI e exportação JSON
   implementadas e validadas por testes de Edit Mode; calibração do cenário SP
   pendente)
@@ -346,6 +346,15 @@ Entregas realizadas:
   a partir das geometrias das faixas;
 - atualização dos veículos temporários: cor por tipo, marcador de frente e
   orientação compatível com os ângulos navegacionais do SUMO.
+- criação da câmera de tráfego `south`, com pose, resolução e ROIs persistentes
+  na cena `SPImport`; a calibração exportada está em
+  `Assets/Calibration/south-calibration.json`;
+- captura da câmera após cada estado aplicado, codificação JPEG e envio TCP
+  length-prefixed com `step_id`, `sim_time`, `camera_id` e tamanho do payload;
+- listener TCP no `UnityBridge` e opção `--receive-frames` no experimento SP,
+  que salva os JPEGs recebidos em `results/frames/unity/`;
+- bloqueio explícito da edição de ROIs durante Play Mode, pois alterações da
+  calibração só podem ser persistidas fora da simulação.
 
 Validação realizada:
 
@@ -363,11 +372,16 @@ Validação realizada:
   veículos por estado, e os veículos permaneceram alinhados às vias SP.
 - validação manual visual em 2026-08-20: as linhas tracejadas, os materiais de
   via e os veículos orientados foram renderizados durante a mesma simulação.
+- validação manual em 2026-08-20 da câmera `south`: pose final
+  `(2.984, 5.25, -16.34)`, FOV de `48°`, ROI externa e quatro ROIs de faixa
+  foram exportadas; os frames JPEG associados aos steps chegaram ao Python via
+  TCP e foram salvos para depuração.
 
 Escopo previsto:
 
 - substituir os cubos temporários por prefabs de veículos e interpolação entre
   estados;
+- repetir a calibração e a captura para as câmeras `north`, `east` e `west`.
 - manter os semáforos 3D como item visual opcional, sem bloquear a percepção
   das câmeras;
 - não executar `Sumo2UnityTool.exe` nem os scripts ZeroMQ originais, pois o
