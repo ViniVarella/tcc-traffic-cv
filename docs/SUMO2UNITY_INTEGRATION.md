@@ -66,7 +66,7 @@ copiar `ExchangeData` ou `SimulationController` do Sumo2Unity.
    a `vehicle.type`, e aplicar o transform SUMO -> Unity centralizado.
 3. Criar os modelos de semáforo e um mapeamento explícito entre o TLS do SUMO,
    cada índice da string de estado e cada `Head` Unity.
-4. Instalar quatro câmeras fixas (`north`, `south`, `east`, `west`) com
+4. Instalar três câmeras fixas de entrada (`south`, `east`, `west`) com
    posição, rotação, resolução e ROI versionadas no cenário.
 5. Depois de aplicar o estado de um `step_id`, renderizar cada câmera em
    `RenderTexture`, codificar JPEG e devolver um pacote TCP contendo
@@ -136,8 +136,8 @@ Será criada uma ferramenta de calibração no Editor Unity, em vez de exigir
 posicionamento e coordenadas feitos manualmente em código:
 
 1. o usuário navega até a perspectiva desejada na Scene View e registra a
-   posição, rotação, FOV e resolução de cada câmera (`north`, `south`, `east`,
-   `west`);
+   posição, rotação, FOV e resolução de cada câmera de entrada (`south`,
+   `east`, `west`);
 2. a ferramenta mostra a imagem renderizada por aquela câmera;
 3. quatro cliques definem a ROI externa da aproximação;
 4. novos grupos de quatro cliques criam uma prévia de cada ROI de faixa dentro
@@ -172,7 +172,8 @@ falha, incluindo a rejeição de quadriláteros com lados cruzados.
 
 ### Fase D — Frames, percepção e decisão
 
-Após aplicar o estado de um `step_id`, a Unity renderiza as quatro câmeras em
+Após aplicar o estado de um `step_id`, a Unity renderiza as três câmeras de
+entrada em
 `RenderTexture`, codifica JPEG e envia cada frame via TCP com `step_id`,
 `sim_time` e `camera_id`. O Python executa YOLO, tracking e ROIs, agrega as
 contagens e só então decide a ação do semáforo via TraCI.
@@ -221,6 +222,8 @@ alimentar a decisão online.
 
 ## Próximo marco técnico
 
-Repetir a calibração e a captura para `north`, `east` e `west`, transformando o
-emissor atual de uma câmera em um catálogo de câmeras. Com os quatro fluxos
-validados, o Python poderá encaminhar os JPEGs ao primeiro detector visual.
+Repetir a calibração e a captura para `east` e `west`, transformando o emissor
+atual de uma câmera em um catálogo de câmeras. O ramo norte é apenas saída da
+mão única iniciada no sul e, portanto, não recebe câmera. Com os três fluxos
+de entrada validados, o Python poderá encaminhar os JPEGs ao primeiro detector
+visual.

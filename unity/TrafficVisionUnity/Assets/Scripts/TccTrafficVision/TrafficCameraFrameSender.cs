@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -12,13 +13,16 @@ using UnityEngine.Rendering.Universal;
 namespace TccTrafficVision
 {
     /// <summary>
-    /// Captures a calibrated Unity camera after a received SUMO state and sends
-    /// its JPEG payload to Python through one length-prefixed TCP connection.
+    /// Captures every calibrated Unity camera after a received SUMO state and
+    /// sends one JPEG per camera through length-prefixed TCP connections.
     /// </summary>
     public sealed class TrafficCameraFrameSender : MonoBehaviour
     {
         [SerializeField] private PythonStateReceiver stateReceiver;
-        [SerializeField] private TrafficCameraCalibration cameraCalibration;
+        // Kept during the transition from the original single-camera scene.
+        // New scenes must use cameraCalibrations.
+        [SerializeField, HideInInspector] private TrafficCameraCalibration cameraCalibration;
+        [SerializeField] private List<TrafficCameraCalibration> cameraCalibrations = new List<TrafficCameraCalibration>();
         [SerializeField] private string destinationHost = "127.0.0.1";
         [SerializeField] private int destinationPort = 5005;
         [SerializeField, Range(1, 100)] private int jpegQuality = 90;
@@ -30,17 +34,35 @@ namespace TccTrafficVision
         private void Start()
         {
             stateReceiver ??= FindFirstObjectByType<PythonStateReceiver>();
-            cameraCalibration ??= FindFirstObjectByType<TrafficCameraCalibration>();
-            if (stateReceiver == null || cameraCalibration == null)
+            EnsureCameraCalibrations();
+            if (stateReceiver == null || cameraCalibrations.Count == 0)
             {
                 Debug.LogError(
-                    "TrafficCameraFrameSender needs a PythonStateReceiver and a TrafficCameraCalibration.",
+                    "TrafficCameraFrameSender needs a PythonStateReceiver and at least one TrafficCameraCalibration.",
                     this);
                 enabled = false;
                 return;
             }
 
             stateReceiver.StateApplied += ScheduleCapture;
+        }
+
+        private void EnsureCameraCalibrations()
+        {
+            cameraCalibrations.RemoveAll(calibration => calibration == null);
+            if (cameraCalibration != null && !cameraCalibrations.Contains(cameraCalibration))
+            {
+                cameraCalibrations.Add(cameraCalibration);
+            }
+
+            TrafficCameraCalibration[] discovered = FindObjectsByType<TrafficCameraCalibration>(FindObjectsSortMode.None);
+            foreach (TrafficCameraCalibration calibration in discovered)
+            {
+                if (calibration != null && !cameraCalibrations.Contains(calibration))
+                {
+                    cameraCalibrations.Add(calibration);
+                }
+            }
         }
 
         private void OnDestroy()
@@ -68,30 +90,40 @@ namespace TccTrafficVision
             yield return new WaitForEndOfFrame();
             captureScheduled = false;
 
-            byte[] jpeg;
-            try
+            foreach (TrafficCameraCalibration calibration in cameraCalibrations)
             {
-                jpeg = CaptureJpeg();
-            }
-            catch (Exception exception)
-            {
-                Debug.LogError($"Could not capture frame for step {state.step_id}: {exception.Message}", this);
-                yield break;
-            }
+                if (calibration == null)
+                {
+                    continue;
+                }
 
-            _ = SendFrameAsync(state, jpeg);
+                byte[] jpeg;
+                try
+                {
+                    jpeg = CaptureJpeg(calibration);
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogError(
+                        $"Could not capture frame for camera {calibration.CameraId} at step {state.step_id}: {exception.Message}",
+                        this);
+                    continue;
+                }
+
+                _ = SendFrameAsync(state, calibration.CameraId, jpeg);
+            }
         }
 
-        private byte[] CaptureJpeg()
+        private byte[] CaptureJpeg(TrafficCameraCalibration calibration)
         {
-            Camera sourceCamera = cameraCalibration.CameraComponent;
+            Camera sourceCamera = calibration.CameraComponent;
             if (sourceCamera == null)
             {
                 throw new InvalidOperationException("The calibrated camera has no Camera component.");
             }
 
-            int width = cameraCalibration.CaptureWidth;
-            int height = cameraCalibration.CaptureHeight;
+            int width = calibration.CaptureWidth;
+            int height = calibration.CaptureHeight;
             RenderTexture renderTexture = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32);
             Texture2D texture = new Texture2D(width, height, TextureFormat.RGB24, false);
             RenderTexture previousActive = RenderTexture.active;
@@ -135,13 +167,13 @@ namespace TccTrafficVision
             }
         }
 
-        private async Task SendFrameAsync(SimulationStateMessage state, byte[] jpeg)
+        private async Task SendFrameAsync(SimulationStateMessage state, string cameraId, byte[] jpeg)
         {
             FrameHeader header = new FrameHeader
             {
                 step_id = state.step_id,
                 sim_time = state.sim_time,
-                camera_id = cameraCalibration.CameraId,
+                camera_id = cameraId,
                 image_format = "jpeg",
                 payload_size = jpeg.Length
             };

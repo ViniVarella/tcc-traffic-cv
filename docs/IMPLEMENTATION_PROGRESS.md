@@ -91,7 +91,8 @@ Observações:
 - na primeira execução, o `ultralytics` pode baixar `yolov8n.pt`;
 - modelos `.pt`, vídeos, imagens e frames gerados permanecem fora de versionamento pelo `.gitignore`.
 - esse teste continua sendo apenas preliminar, com vídeo ou imagem local;
-- a arquitetura final documentada passa a usar quatro câmeras Unity com ROIs por câmera;
+- a arquitetura final documentada passa a usar três câmeras Unity de entrada (`south`,
+  `east`, `west`) com ROIs por câmera;
 - a visão final deve rodar a cada `N` steps simulados, com `update_every_steps` configurável;
 - o protocolo final de frames deve identificar `step_id` e `camera_id`;
 - ground truth do SUMO continua reservado para avaliação, nunca para decisão online.
@@ -346,15 +347,33 @@ Entregas realizadas:
   a partir das geometrias das faixas;
 - atualização dos veículos temporários: cor por tipo, marcador de frente e
   orientação compatível com os ângulos navegacionais do SUMO.
-- criação da câmera de tráfego `south`, com pose, resolução e ROIs persistentes
-  na cena `SPImport`; a calibração exportada está em
-  `Assets/Calibration/south-calibration.json`;
+- criação das câmeras de tráfego `south`, `east` e `west`, com poses,
+  resolução e ROIs persistentes na cena `SPImport`; a calibração `south` foi
+  exportada em `Assets/Calibration/south-calibration.json`;
 - captura da câmera após cada estado aplicado, codificação JPEG e envio TCP
   length-prefixed com `step_id`, `sim_time`, `camera_id` e tamanho do payload;
 - listener TCP no `UnityBridge` e opção `--receive-frames` no experimento SP,
-  que salva os JPEGs recebidos em `results/frames/unity/`;
+  que salva os JPEGs recebidos em subpastas por câmera, como
+  `results/frames/unity/south/`;
 - bloqueio explícito da edição de ROIs durante Play Mode, pois alterações da
   calibração só podem ser persistidas fora da simulação.
+
+Comando de captura multícâmera de referência (100 steps):
+
+```bash
+cd /Users/vmvarella/PycharmProjects/tcc-traffic-cv/python
+../.venv/bin/python -m experiments.test_sumo_to_unity \
+  --config configs/sp.yaml \
+  --steps 100 \
+  --send-interval 0.1 \
+  --receive-frames \
+  --expected-cameras south,west,east
+```
+
+Antes de abrir o listener TCP, o experimento limpa somente as subpastas das
+câmeras esperadas (`results/frames/unity/south/`, `west/` e `east/`). Assim,
+cada execução inicia com até 100 JPEGs novos por câmera, sem misturar frames de
+execuções anteriores.
 
 Validação realizada:
 
@@ -376,12 +395,18 @@ Validação realizada:
   `(2.984, 5.25, -16.34)`, FOV de `48°`, ROI externa e quatro ROIs de faixa
   foram exportadas; os frames JPEG associados aos steps chegaram ao Python via
   TCP e foram salvos para depuração.
+- calibração manual posterior das três câmeras de entrada: `south` em
+  `(4.8, 5.25, -13.2)` com rotação `(22.613, -160, 0)` e quatro ROIs de faixa;
+  `east` em `(12.1, 5.07, -1.6)` com rotação `(21.1, 130, 0)` e duas ROIs; e
+  `west` em `(-17.46, 5, -4.75)` com rotação `(25.153, -48.282, -1.867)` e uma
+  ROI. Todas usam FOV de `48°` e resolução `1280x720`.
 
 Escopo previsto:
 
 - substituir os cubos temporários por prefabs de veículos e interpolação entre
   estados;
-- repetir a calibração e a captura para as câmeras `north`, `east` e `west`.
+- repetir a calibração e a captura para as câmeras `east` e `west`; o ramo
+  `north` é saída da mão única do `south` e não será observado por câmera.
 - manter os semáforos 3D como item visual opcional, sem bloquear a percepção
   das câmeras;
 - não executar `Sumo2UnityTool.exe` nem os scripts ZeroMQ originais, pois o
@@ -415,8 +440,8 @@ Validação realizada:
 
 Escopo previsto:
 
-- criar quatro câmeras (`north`, `south`, `east`, `west`) e registrar sua pose,
-  FOV e resolução;
+- criar três câmeras de entrada (`south`, `east`, `west`) e registrar sua pose,
+  FOV e resolução; o ramo `north` é apenas saída e não terá câmera;
 - criar ferramenta visual para clicar quatro cantos da ROI externa de cada
   aproximação e quatro cantos de cada ROI de faixa;
 - salvar coordenadas normalizadas; rejeitar ROIs fora da região externa ou com
