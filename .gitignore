@@ -25,11 +25,19 @@ results/frames/*
 results/videos/*
 results/plots/*
 results/tables/*
+results/vision/*
+results/evaluation/*
+results/ground_truth/*
+results/datasets/
 !results/logs/.gitkeep
 !results/frames/.gitkeep
 !results/videos/.gitkeep
 !results/plots/.gitkeep
 !results/tables/.gitkeep
+!results/vision/.gitkeep
+!results/evaluation/.gitkeep
+!results/ground_truth/.gitkeep
+!results/datasets/.gitkeep
 
 # Local samples / datasets
 samples/*
@@ -40,6 +48,8 @@ data/*
 !data/.gitkeep
 
 # YOLO / model files
+# Training-run metadata and checkpoints are reproducible experiment artifacts.
+runs/
 *.pt
 *.pth
 *.onnx
@@ -102,6 +112,9 @@ unity/**/mono_crash.*.json
 # IDE
 .idea/
 .vscode/
+
+# Local copy-and-paste commands for one-off experiments
+TEMP_*.txt
 
 # OS
 .DS_Store

@@ -14,6 +14,39 @@ def _bbox_center(bbox: list[float]) -> tuple[float, float]:
     return ((x1 + x2) / 2.0, (y1 + y2) / 2.0)
 
 
+def filter_detections_to_roi(
+    detections: list[dict[str, Any]],
+    roi: list[list[int | float]],
+) -> list[dict[str, Any]]:
+    """Mantém somente detecções cujo centro está na ROI principal.
+
+    Corresponde à etapa ``filter_detections_to_polygon(..., CENTER)`` do
+    SimJamCV e deve ocorrer antes de entregar detecções ao ByteTrack.
+    """
+    polygon = np.asarray(roi, dtype=np.int32)
+    return [
+        detection
+        for detection in detections
+        if cv2.pointPolygonTest(polygon, _bbox_center(detection["bbox"]), measureDist=False) >= 0
+    ]
+
+
+def select_counting_objects(
+    detections: list[dict[str, Any]],
+    tracks: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], str]:
+    """Prefere tracks, mas mantém a contagem em fluxo livre sem track.
+
+    ByteTrack oferece IDs persistentes quando há associação temporal. Em uma
+    câmera com veículos rápidos ou amostragem esparsa, ele pode não confirmar
+    nenhum ID apesar de haver detecções válidas no frame. Nesse caso, as
+    detecções já filtradas pela ROI principal são usadas somente naquele step.
+    """
+    if tracks:
+        return tracks, "tracks"
+    return detections, "detections_fallback"
+
+
 class ROICounter:
     """Conta veiculos dentro de ROIs poligonais associadas a cada aproximacao.
 
@@ -32,7 +65,7 @@ class ROICounter:
         }
 
     def count(self, tracks: list[dict[str, Any]]) -> dict[str, int]:
-        """Conta tracks cujo centro da bbox cai dentro de cada poligono ROI."""
+        """Conta tracks ou detecções cujo centro cai dentro de cada ROI."""
         counts = {name: 0 for name in self.rois}
         seen_track_ids: dict[str, set[int]] = {name: set() for name in self.rois}
 
@@ -40,9 +73,11 @@ class ROICounter:
             center = _bbox_center(track["bbox"])
             for name, polygon in self._roi_arrays.items():
                 if cv2.pointPolygonTest(polygon, center, measureDist=False) >= 0:
-                    track_id = int(track["track_id"])
-                    if track_id not in seen_track_ids[name]:
-                        seen_track_ids[name].add(track_id)
+                    track_id = track.get("track_id")
+                    if track_id is None:
+                        counts[name] += 1
+                    elif int(track_id) not in seen_track_ids[name]:
+                        seen_track_ids[name].add(int(track_id))
                         counts[name] += 1
 
         return counts

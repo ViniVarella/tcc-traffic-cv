@@ -14,12 +14,15 @@ namespace TccTrafficVision.CameraCalibration
     public sealed class TrafficCameraCalibration : MonoBehaviour
     {
         [SerializeField] private string cameraId = "north";
+        [SerializeField] private bool captureEnabled = true;
         [SerializeField, Min(1)] private int captureWidth = 1280;
         [SerializeField, Min(1)] private int captureHeight = 720;
         [SerializeField] private RoiPolygon approachRoi = new RoiPolygon("approach", null);
         [SerializeField] private List<RoiPolygon> laneRois = new List<RoiPolygon>();
 
         public string CameraId => cameraId;
+        /// <summary>Whether this camera participates in the TCP frame stream.</summary>
+        public bool CaptureEnabled => captureEnabled;
         public int CaptureWidth => captureWidth;
         public int CaptureHeight => captureHeight;
         public RoiPolygon ApproachRoi => approachRoi;

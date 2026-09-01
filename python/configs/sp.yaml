@@ -36,6 +36,21 @@ detectors:
     - "e2_3" # E3_1
     - "e2_4" # E3_0
 
+# Mapeamento explícito entre as ROIs calibradas no Unity e os detectores E2.
+# Serve somente para comparar visão vs. verdade de terreno em avaliação offline.
+vision_evaluation:
+  lane_detector_mapping:
+    south:
+      lane_0: "e2_4" # E3_0
+      lane_1: "e2_3" # E3_1
+      lane_2: "e2_1" # E3_2
+      lane_3: "e2_2" # E3_3
+    east:
+      lane_0: "e2_6" # E2_0
+      lane_1: "e2_5" # E2_1
+    west:
+      lane_0: "e2_0" # E6_0
+
 dqn:
   model_path: "../models/dqn_traffic_model.keras"
   state_size: 26

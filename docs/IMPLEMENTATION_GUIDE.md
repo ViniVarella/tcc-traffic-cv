@@ -7,14 +7,14 @@ Este projeto tem como objetivo desenvolver um sistema de controle semafórico ad
 O sistema deve ser construído com a seguinte arquitetura principal:
 
 ```text
-SUMO → Python/TraCI → Unity/SUMO2Unity → 4 câmeras → Python/YOLO+ROI(+SORT) → controlador → SUMO
+SUMO → Python/TraCI → Unity/SUMO2Unity → 3 câmeras de entrada → Python/YOLO+ROI+ByteTrack → controlador → SUMO
 ```
 
-O ponto central do projeto é que a decisão semafórica deve ser tomada a partir da imagem renderizada pela Unity, não diretamente a partir dos sensores internos do SUMO. O SUMO será usado para gerar a dinâmica do tráfego, controlar a simulação e fornecer ground truth para avaliação posterior. A Unity será usada como ambiente visual 3D. O YOLO será usado para detectar veículos a partir da imagem, as ROIs por câmera serão a base da contagem usada pelo controlador e o SORT poderá ser usado como apoio de tracking e debug.
+O ponto central do projeto é que a decisão semafórica deve ser tomada a partir da imagem renderizada pela Unity, não diretamente a partir dos sensores internos do SUMO. O SUMO é usado para gerar a dinâmica, controlar a simulação e fornecer ground truth para avaliação posterior. A Unity é o ambiente visual 3D. O YOLO detecta veículos no frame completo; o ByteTrack associa as detecções entre frames; e as ROIs de aproximação e de faixa produzem as contagens usadas pelo controlador.
 
 O projeto reaproveitará dois trabalhos existentes:
 
-1. O repositório `car-counter`, que já contém uma implementação em Python de detecção e contagem de veículos usando YOLOv8 e SORT.
+1. O repositório `car-counter`, usado como referência inicial para detecção e contagem; a implementação atual usa YOLOv8 e ByteTrack.
 2. O projeto SUMO2Unity, que fornece uma base de integração entre SUMO e Unity.
 
 Neste projeto, o SUMO2Unity será usado principalmente como base visual e importador de cenário Unity, mas a arquitetura de controle será centralizada no Python. A Unity não deve ser o cliente TraCI principal. O Python deve ser o único cliente TraCI responsável por avançar a simulação, extrair o estado necessário para renderização, enviar esse estado para a Unity, receber os frames das câmeras e aplicar as decisões de controle no SUMO.
@@ -37,10 +37,10 @@ Construir um sistema completo capaz de:
 3. Extrair posições, rotações e estados de veículos/semaforos do SUMO.
 4. Enviar esse estado para Unity.
 5. Atualizar a cena 3D na Unity usando a base do SUMO2Unity.
-6. Renderizar quatro câmeras virtuais.
+6. Renderizar três câmeras virtuais de entrada (`south`, `east`, `west`).
 7. Enviar os frames das câmeras de volta para Python.
 8. Detectar veículos nos frames usando YOLO.
-9. Opcionalmente rastrear veículos usando SORT.
+9. Rastrear veículos com ByteTrack, de forma equivalente ao SimJamCV.
 10. Estimar filas por região de interesse em cada câmera.
 11. Agregar contagens em grupos NS e EW.
 12. Tomar uma decisão semafórica.
@@ -88,9 +88,9 @@ Regra operacional:
 - determinismo, simplicidade e reprodutibilidade têm prioridade sobre tempo real estrito.
 ```
 
-### 3.3 Quatro câmeras virtuais na Unity
+### 3.3 Três câmeras virtuais na Unity
 
-A arquitetura final deve usar quatro câmeras virtuais fixas:
+A arquitetura final deve usar três câmeras virtuais fixas:
 
 ```text
 - north
@@ -120,7 +120,10 @@ Regra metodológica:
 
 ```text
 YOLO detecta no frame inteiro.
-O controlador usa apenas a contagem dos veículos dentro da ROI relevante.
+Detecções cujo centro não está na ROI externa são descartadas antes do ByteTrack.
+O controlador prefere a contagem dos tracks dentro das ROIs de faixa relevantes.
+Se nenhum track for confirmado no step, usa as detecções filtradas como fallback
+e registra explicitamente essa fonte de contagem.
 ```
 
 ### 3.5 Estrutura inicial do controle
@@ -143,7 +146,7 @@ step_length = 0.1 s
 update_every_steps = 5
 ```
 
-Isso equivale a executar a percepção a cada `0,5 s` simulados. Se o custo computacional ficar alto com quatro câmeras, esse intervalo pode ser aumentado para `1,0 s` simulado ou outro valor adequado.
+Isso equivale a executar a percepção a cada `0,5 s` simulados. Se o custo computacional ficar alto com três câmeras, esse intervalo pode ser aumentado para `1,0 s` simulado ou outro valor adequado.
 
 ### 3.7 Frames Unity → Python via TCP
 
@@ -404,7 +407,7 @@ Observação arquitetural:
 
 ```text
 o estado enviado pelo Python é global para o step;
-a Unity é responsável por renderizar esse estado nas quatro câmeras;
+a Unity é responsável por renderizar esse estado nas três câmeras;
 o Python continua sendo o orquestrador do avanço da simulação.
 ```
 
@@ -530,12 +533,12 @@ Responsabilidade:
 - retornar detecções em formato padronizado.
 ```
 
-#### Arquivo: `python/vision/sort_tracker.py`
+#### Arquivo: `python/vision/byte_track_tracker.py`
 
 Responsabilidade:
 
 ```text
-- adaptar o SORT do car-counter;
+- associar as detecções YOLO com ByteTrack;
 - receber detecções YOLO;
 - retornar tracks com IDs persistentes;
 - manter compatibilidade com o formato usado pelo contador de ROI.
@@ -544,7 +547,7 @@ Responsabilidade:
 Importante:
 
 ```text
-o SORT é auxiliar, não requisito crítico da decisão;
+o ByteTrack é auxiliar, não requisito crítico da decisão;
 trocas pontuais de ID não devem comprometer o controlador inicial;
 a métrica principal continua sendo a contagem em ROI por câmera.
 ```
@@ -742,7 +745,7 @@ Fluxo Unity:
 1. Recebe estado step N.
 2. Atualiza veículos e semáforos.
 3. Aguarda fim do frame/renderização, se necessário.
-4. Captura as quatro câmeras.
+4. Captura as três câmeras.
 5. Envia as imagens com step N e respectivos camera_id para Python.
 ```
 
@@ -861,7 +864,7 @@ Responsabilidade:
 - carregar config;
 - iniciar SUMO;
 - iniciar comunicação com Unity;
-- iniciar YOLO e SORT;
+- iniciar YOLO e ByteTrack;
 - executar loop principal;
 - salvar logs;
 - fechar recursos corretamente.
@@ -976,7 +979,7 @@ Para cada cenário, executar:
 
 ```text
 1. Controle fixo.
-2. Controle por YOLO + ROI (+ SORT opcional).
+2. Controle por YOLO + ROI (+ ByteTrack opcional).
 3. Controle idealizado por ground truth TraCI, opcional, apenas como limite superior.
 ```
 
@@ -1097,7 +1100,7 @@ Critério de sucesso:
 Critério de sucesso:
 
 ```text
-- quatro câmeras possuem posição, rotação, FOV e resolução persistidos;
+- três câmeras possuem posição, rotação, FOV e resolução persistidos;
 - a ROI externa é criada com quatro cliques na imagem renderizada;
 - ROIs de faixa são criadas dentro da ROI externa;
 - ROIs inválidas ou sobrepostas são rejeitadas;
@@ -1109,7 +1112,7 @@ Critério de sucesso:
 Critério de sucesso:
 
 ```text
-- Unity captura frames das quatro câmeras;
+- Unity captura frames das três câmeras;
 - Unity envia frame com step_id e camera_id;
 - Python recebe os frames;
 - Python salva debug frames quando configurado;
@@ -1136,7 +1139,11 @@ Critério de sucesso:
 - contagem por câmera é produzida;
 - ROIs são desenhadas no debug frame;
 - contagem agregada NS/EW é salva no CSV;
-- SORT pode ser usado como apoio sem ser dependência crítica da decisão.
+- ByteTrack é usado como apoio temporal, sem ser dependência crítica da decisão.
+- cada faixa visual pode ser comparada, offline, ao seu detector E2
+  correspondente pelo mesmo `step_id`;
+- o relatório registra MAE, RMSE, viés e taxa de acerto, sem tornar o E2 uma
+  entrada da decisão online;
 - o vetor visual substitui as entradas de detector usadas pelo DQN.
 ```
 
@@ -1196,9 +1203,9 @@ Antes de considerar o projeto pronto, verificar:
 [ ] Unity não chama TraCI diretamente.
 [ ] A simulação opera em modo step-based, não em tempo real estrito.
 [ ] Unity renderiza a partir do estado enviado pelo Python.
-[ ] Existem quatro câmeras virtuais fixas: north, south, east e west.
+[ ] Existem três câmeras virtuais fixas: south, east e west.
 [ ] YOLO processa frames reais da Unity.
-[ ] SORT rastreia veículos entre frames.
+[ ] ByteTrack rastreia veículos entre frames.
 [ ] Contagem é feita por ROI por câmera, não por sensores SUMO.
 [ ] Decisão semafórica usa apenas contagem visual.
 [ ] Ground truth SUMO é usado somente para avaliação.
@@ -1219,8 +1226,8 @@ A direção final recomendada é:
 - código do car-counter adaptado para a pasta python/vision;
 - SUMO2Unity usado como base visual/importador Unity;
 - Python como único cliente TraCI;
-- Unity como renderizador de quatro câmeras virtuais;
-- YOLO + ROI como base da decisão, com SORT como apoio opcional;
+- Unity como renderizador de três câmeras virtuais;
+- YOLO + ROI como base da decisão, com ByteTrack como apoio opcional;
 - visão executada a cada N steps simulados;
 - TraCI usado para simulação, controle e avaliação, não como sensor perfeito do controlador.
 ```

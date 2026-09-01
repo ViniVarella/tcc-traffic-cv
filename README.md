@@ -8,20 +8,20 @@ A simulação 3D no Unity ainda não foi finalizada. Neste momento, os dados uti
 
 Sistema experimental de controle semafórico adaptativo baseado em visão computacional.
 
-O projeto integra SUMO, Unity, YOLOv8 e SORT para avaliar uma abordagem de otimização de tráfego urbano em ambiente simulado. O SUMO gera a dinâmica do tráfego, a Unity renderiza a cena 3D, o YOLO detecta veículos nos frames das câmeras virtuais, o SORT pode auxiliar no rastreamento e um controlador semafórico toma decisões com base na estimativa visual de filas.
+O projeto integra SUMO, Unity, YOLOv8 e ByteTrack para avaliar uma abordagem de otimização de tráfego urbano em ambiente simulado. O SUMO gera a dinâmica do tráfego, a Unity renderiza a cena 3D, o YOLO detecta veículos nos frames das câmeras virtuais, o ByteTrack associa detecções entre frames e um controlador semafórico tomará decisões com base na estimativa visual de filas.
 
 A decisão de controle não usa sensores perfeitos do SUMO. Os dados internos do SUMO são usados para renderização, sincronização e avaliação posterior.
 
 ## Arquitetura
 
-`SUMO -> Python/TraCI -> Unity/SUMO2Unity -> 4 cameras -> Python/YOLO+ROI -> controlador -> SUMO`
+`SUMO -> Python/TraCI -> Unity/SUMO2Unity -> 3 câmeras de entrada -> Python/YOLO+ByteTrack+ROI -> controlador -> SUMO`
 
 ## Decisões arquiteturais revisadas
 
 - Simulação `step-based`: o Python avança o SUMO com `simulationStep()` em modo síncrono. O tempo de referência para métricas é o tempo simulado, não o relógio de parede.
 - Python como único cliente TraCI: a Unity não se conecta diretamente ao SUMO.
-- Quatro câmeras virtuais na Unity: `north`, `south`, `east` e `west`.
-- Uma ROI fixa por câmera: a contagem relevante para o controlador é a quantidade de veículos aguardando dentro da ROI daquela aproximação.
+- Três câmeras virtuais operacionais na Unity: `south`, `east` e `west`. A aproximação `north` é apenas de saída no cenário SP e não é observada.
+- Cada câmera possui uma ROI de aproximação e ROIs por faixa. Elas são a medida operacional para o controlador; os E2 cobrem outro trecho físico e servem apenas como referência de avaliação.
 - Visão a cada `N` steps: a configuração inicial usa `step_length = 0.1s` e `update_every_steps = 5`, o que equivale a rodar a visão a cada `0.5s` simulados.
 - Frames Unity -> Python via TCP: a confiabilidade do transporte é prioritária para imagens JPEG completas em localhost.
 - Cada frame deve carregar `step_id`, `sim_time`, `camera_id`, `image_format` e `payload_size`.
@@ -33,8 +33,8 @@ A decisão de controle não usa sensores perfeitos do SUMO. Os dados internos do
 
 - uma interseção;
 - duas fases principais: `NS` e `EW`;
-- quatro câmeras da Unity;
-- uma ROI por câmera;
+- três câmeras operacionais da Unity (`south`, `east` e `west`);
+- uma ROI de aproximação e ROIs por faixa por câmera;
 - YOLOv8n inicialmente;
 - visão a cada `0.5s` simulados;
 - ground truth apenas para avaliação.
@@ -50,9 +50,9 @@ A decisão de controle não usa sensores perfeitos do SUMO. Os dados internos do
 
 ## Teste de visão local
 
-O teste de visão roda sem SUMO e sem Unity, usando imagem ou vídeo local para validar a pipeline YOLO + SORT + ROI.
+O teste de visão roda sem SUMO e sem Unity, usando imagem ou vídeo local para validar a pipeline YOLO + ByteTrack + ROI.
 
-Esse teste é preliminar. Ele usa um vídeo top-down local apenas para validar a pipeline de visão em isolamento. A arquitetura final dos experimentos não usará esse vídeo como entrada principal; ela usará frames vindos de quatro câmeras virtuais da Unity, cada uma com sua ROI própria.
+Esse teste é preliminar. Ele usa um vídeo top-down local apenas para validar a pipeline de visão em isolamento. A arquitetura final dos experimentos usa frames das três câmeras operacionais da Unity, cada uma com suas próprias ROIs.
 
 1. Instale as dependências do ambiente virtual:
 

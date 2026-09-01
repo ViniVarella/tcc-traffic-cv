@@ -6,10 +6,17 @@ namespace TccTrafficVision
     public class VehicleManager : MonoBehaviour
     {
         [SerializeField] private Transform vehiclesRoot;
+        [SerializeField] private List<GameObject> vehiclePrefabs = new List<GameObject>();
+        [SerializeField] private Vector3 prefabScale = Vector3.one;
+        [SerializeField] private float prefabVerticalOffset;
+        // The imported vehicle FBXs use a lateral forward axis, unlike SUMO
+        // where the transmitted heading maps directly to Unity +Z.
+        [SerializeField] private float prefabYawOffset = -90f;
         [SerializeField] private Vector3 vehicleScale = new Vector3(1.2f, 1.0f, 2.4f);
         [SerializeField] private float verticalOffset = 0.5f;
 
         private readonly Dictionary<string, GameObject> vehiclesById = new Dictionary<string, GameObject>();
+        private readonly HashSet<string> prefabVehicleIds = new HashSet<string>();
 
         public void ApplyState(VehicleStateMessage[] vehicles)
         {
@@ -30,19 +37,25 @@ namespace TccTrafficVision
                 activeIds.Add(vehicle.id);
                 if (!vehiclesById.TryGetValue(vehicle.id, out var vehicleObject))
                 {
-                    vehicleObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    vehicleObject.name = vehicle.id;
-                    vehicleObject.transform.localScale = vehicleScale;
-                    vehicleObject.transform.SetParent(vehiclesRoot != null ? vehiclesRoot : transform, false);
-                    ConfigureVehicleVisual(vehicleObject, vehicle.type);
+                    vehicleObject = CreateVehicleObject(vehicle.id, vehicle.type);
                     vehiclesById[vehicle.id] = vehicleObject;
                 }
 
+                VehicleGroundTruth groundTruth = vehicleObject.GetComponent<VehicleGroundTruth>();
+                if (groundTruth == null)
+                {
+                    groundTruth = vehicleObject.AddComponent<VehicleGroundTruth>();
+                }
+                groundTruth.Configure(vehicle.id, vehicle.type);
+
                 vehicleObject.SetActive(true);
-                vehicleObject.transform.position = new Vector3(vehicle.x, vehicle.y + verticalOffset, vehicle.z);
+                bool usesPrefab = prefabVehicleIds.Contains(vehicle.id);
+                float yOffset = usesPrefab ? prefabVerticalOffset : verticalOffset;
+                float yawOffset = usesPrefab ? prefabYawOffset : 0f;
+                vehicleObject.transform.position = new Vector3(vehicle.x, vehicle.y + yOffset, vehicle.z);
                 // SUMO uses navigational angles: 0° points north (+Z here) and
                 // 90° points east (+X here). This matches Unity's positive yaw.
-                vehicleObject.transform.rotation = Quaternion.Euler(0f, vehicle.angle, 0f);
+                vehicleObject.transform.rotation = Quaternion.Euler(0f, vehicle.angle + yawOffset, 0f);
             }
 
             SetInactiveMissing(activeIds);
@@ -56,6 +69,61 @@ namespace TccTrafficVision
                 {
                     entry.Value.SetActive(false);
                 }
+            }
+        }
+
+        private GameObject CreateVehicleObject(string vehicleId, string vehicleType)
+        {
+            Transform parent = vehiclesRoot != null ? vehiclesRoot : transform;
+            GameObject prefab = SelectVehiclePrefab(vehicleId, vehicleType);
+            if (prefab != null)
+            {
+                GameObject instance = Instantiate(prefab, parent, false);
+                instance.name = vehicleId;
+                instance.transform.localScale = prefabScale;
+                prefabVehicleIds.Add(vehicleId);
+                return instance;
+            }
+
+            GameObject fallback = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            fallback.name = vehicleId;
+            fallback.transform.localScale = vehicleScale;
+            fallback.transform.SetParent(parent, false);
+            ConfigureVehicleVisual(fallback, vehicleType);
+            return fallback;
+        }
+
+        private GameObject SelectVehiclePrefab(string vehicleId, string vehicleType)
+        {
+            if (vehiclePrefabs == null || vehiclePrefabs.Count == 0)
+            {
+                return null;
+            }
+
+            int stableIndex = StableHash(vehicleId) % vehiclePrefabs.Count;
+            for (int offset = 0; offset < vehiclePrefabs.Count; offset++)
+            {
+                GameObject candidate = vehiclePrefabs[(stableIndex + offset) % vehiclePrefabs.Count];
+                if (candidate != null)
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private static int StableHash(string value)
+        {
+            unchecked
+            {
+                int hash = 17;
+                foreach (char character in value ?? string.Empty)
+                {
+                    hash = hash * 31 + character;
+                }
+
+                return hash & int.MaxValue;
             }
         }
 

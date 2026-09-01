@@ -57,3 +57,9 @@ class FramePacket:
     image_format: str
     payload_size: int
     latency_ms: float | None = None
+    ground_truth_vehicles: list[dict[str, Any]] = field(default_factory=list)
+    mask_format: str | None = None
+    mask_payload_size: int = 0
+    # Binary sidecar received after the JPEG. It is intentionally local-only
+    # and is never serialized back to Unity.
+    mask_png: bytes | None = None

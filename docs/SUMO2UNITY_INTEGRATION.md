@@ -74,7 +74,25 @@ copiar `ExchangeData` ou `SimulationController` do Sumo2Unity.
 
 O emissor de frames deve esperar a atualização da cena antes de capturar. O
 Python descarta frames atrasados e só usa o conjunto associado ao step que
-originou a decisão.
+originou a decisão. O `FrameBundleCollector` agrupa `south`, `east` e `west`
+por `step_id`, preserva frames futuros em buffer e informa explicitamente as
+câmeras ausentes antes de a percepção visual ser executada.
+
+O processamento offline `python -m experiments.test_unity_vision` carrega os
+JSONs de calibração, escala suas ROIs normalizadas para cada JPEG, executa
+YOLO, filtra as detecções pela ROI externa, mantém um ByteTrack independente
+por câmera e conta os tracks nas ROIs de faixa. Ele grava imagens anotadas e um
+resumo JSONL por step. A sequência é compatível com a inferência do SimJamCV e
+será comparada ao ground truth TraCI antes de alimentar qualquer DQN.
+
+Os cubos temporários foram substituídos por prefabs de carros Alma, Elka e
+Elora, copiados de forma organizada para `Assets/Art/TrafficModels/` e
+instanciados por `VehicleManager`. O pipeline atual foi validado em 100 steps
+nas três câmeras e também suporta a captura de máscaras de instância para
+gerar dataset sintético. Um YOLOv8n foi ajustado com esse dataset e a inferência
+offline usa a classe única `0` do modelo ajustado, ByteTrack e ROIs por faixa.
+As comparações com E2/TraCI são diagnósticas: o E2 mede um trecho de 20 m,
+enquanto a ROI operacional pode cobrir outro trecho da aproximação.
 
 ## Plano de execução acordado
 
@@ -175,8 +193,9 @@ falha, incluindo a rejeição de quadriláteros com lados cruzados.
 Após aplicar o estado de um `step_id`, a Unity renderiza as três câmeras de
 entrada em
 `RenderTexture`, codifica JPEG e envia cada frame via TCP com `step_id`,
-`sim_time` e `camera_id`. O Python executa YOLO, tracking e ROIs, agrega as
-contagens e só então decide a ação do semáforo via TraCI.
+`sim_time` e `camera_id`. O Python executa YOLO, filtra a ROI externa, aplica
+ByteTrack e ROIs de faixa, agrega as contagens e só então decide a ação do
+semáforo via TraCI.
 
 O arquivo do modelo DQN treinado está em `models/dqn_traffic_model.keras` e
 pertence ao processo Python, não à Unity. Ele será carregado uma vez no início
@@ -208,6 +227,19 @@ As leituras de detectores do SUMO podem permanecer em um logger de *ground
 truth* para medir erro de contagem e qualidade experimental; elas não podem
 alimentar a decisão online.
 
+No cenário SP, a avaliação offline é alinhada pelo mesmo `step_id` do frame e
+usa um mapeamento explícito de ROI para detector E2 no perfil
+`python/configs/sp.yaml`. O log `results/ground_truth/sp-e2.jsonl` armazena
+`vehicle_count`, `halting_count` e `occupancy` a cada step. O avaliador compara
+somente `lane_counts` visuais com `vehicle_count`, preservando as outras duas
+métricas como contexto experimental, pois elas ainda não têm estimadores
+visuais semanticamente equivalentes.
+
+Os detectores E2 do SP possuem extensão de 20 m. Uma ROI de fila maior pode
+ser mais útil para a decisão, mas não é diretamente comparável ao E2; quando
+for necessário isolar a qualidade da percepção, deve existir uma ROI de
+avaliação separada e limitada ao mesmo trecho físico do detector.
+
 ## Limites verificados
 
 - O exemplo distribuído em `Scenario1` não é o cenário do TCC e não possui um
@@ -222,8 +254,9 @@ alimentar a decisão online.
 
 ## Próximo marco técnico
 
-Repetir a calibração e a captura para `east` e `west`, transformando o emissor
-atual de uma câmera em um catálogo de câmeras. O ramo norte é apenas saída da
-mão única iniciada no sul e, portanto, não recebe câmera. Com os três fluxos
-de entrada validados, o Python poderá encaminhar os JPEGs ao primeiro detector
-visual.
+Executar uma captura com os três fluxos já calibrados (`south`, `east` e
+`west`) registrando, no mesmo `step_id`, os snapshots E2 de avaliação. Em
+seguida, comparar a saída YOLO + ByteTrack por ROI contra essa referência e
+usar as métricas resultantes para calibrar a percepção antes de compor o vetor
+visual do DQN. O ramo norte é apenas saída da mão única iniciada no sul e, por
+isso, não recebe câmera.
