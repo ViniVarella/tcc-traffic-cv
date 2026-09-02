@@ -104,13 +104,22 @@ def main() -> None:
     if not selected_step_ids:
         raise ValueError("Nenhum step completo foi encontrado para as câmeras selecionadas.")
 
-    detector = YoloVehicleDetector(
-        model_path=args.model,
-        confidence_threshold=args.confidence,
-        classes=parse_class_ids(args.classes),
-        inference_size=args.image_size,
-        nms_iou_threshold=args.nms_iou,
-    )
+    detector_kwargs = {
+        "model_path": args.model,
+        "confidence_threshold": args.confidence,
+        "classes": parse_class_ids(args.classes),
+        "inference_size": args.image_size,
+        "nms_iou_threshold": args.nms_iou,
+    }
+    # Ultralytics mantém o estado BoT-SORT dentro do objeto YOLO. Cada câmera
+    # precisa de sua própria instância para nunca associar carros de visões
+    # diferentes. ByteTrack recebe o estado explicitamente abaixo e compartilha
+    # o único detector para evitar carregar o modelo três vezes.
+    detector = YoloVehicleDetector(**detector_kwargs) if args.tracker == "bytetrack" else None
+    botsort_detectors = {
+        camera_id: YoloVehicleDetector(**detector_kwargs)
+        for camera_id in camera_ids
+    } if args.tracker == "botsort" else {}
     trackers = {
         camera_id: ByteTrackVehicleTracker(
             frame_rate=args.frame_rate,
@@ -136,8 +145,9 @@ def main() -> None:
             lane_rois = calibration.lane_pixel_rois(frame.shape[1], frame.shape[0])
             inference_started = perf_counter()
             if args.tracker == "botsort":
-                detections, tracks = detector.track_with_botsort(frame, args.botsort_config)
+                detections, tracks = botsort_detectors[camera_id].track_with_botsort(frame, args.botsort_config)
             else:
+                assert detector is not None
                 detections = detector.detect(frame)
                 tracks = trackers[camera_id].update(detections)
             detections = filter_detections_to_roi(detections, all_rois["approach"])

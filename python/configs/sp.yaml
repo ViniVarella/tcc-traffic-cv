@@ -26,6 +26,14 @@ traffic_light:
     secondary_green: 3
     secondary_yellow: 4
 
+traffic_control:
+  # Controlador heurístico inicial. Suas entradas são somente as filas visuais.
+  min_green_seconds: 10
+  max_green_seconds: 40
+  yellow_seconds: 3
+  all_red_seconds: 1
+  switch_margin: 1
+
 detectors:
   ids:
     - "e2_0" # E6_0
