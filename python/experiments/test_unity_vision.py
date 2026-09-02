@@ -39,6 +39,18 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
         help="Tolerância de associação do ByteTrack; maior aceita deslocamentos maiores entre frames.",
     )
     parser.add_argument(
+        "--tracker",
+        choices=("bytetrack", "botsort"),
+        default="bytetrack",
+        help="Backend de tracking. BoT-SORT é experimental e usa o YAML de ReID.",
+    )
+    parser.add_argument(
+        "--botsort-config",
+        type=Path,
+        default=base_dir / "configs" / "botsort_sparse_unity.yaml",
+        help="YAML do BoT-SORT usado quando --tracker botsort.",
+    )
+    parser.add_argument(
         "--classes",
         default="2,3,5,7",
         help="IDs de classe YOLO aceitos, separados por vírgula. Use 0 para o modelo sintético de classe única.",
@@ -77,6 +89,8 @@ def main() -> None:
         raise ValueError("--camera-ids precisa conter ao menos uma câmera.")
     if args.max_steps <= 0 or args.frame_step <= 0 or args.frame_rate <= 0 or args.image_size <= 0:
         raise ValueError("--max-steps, --frame-step, --frame-rate e --image-size devem ser positivos.")
+    if args.tracker == "botsort" and not args.botsort_config.is_file():
+        raise ValueError(f"YAML BoT-SORT não encontrado: {args.botsort_config}")
 
     calibrations = {
         camera_id: load_camera_calibration(
@@ -104,7 +118,7 @@ def main() -> None:
             matching_threshold=args.track_match_threshold,
         )
         for camera_id in camera_ids
-    }
+    } if args.tracker == "bytetrack" else {}
     estimators = {camera_id: QueueEstimator() for camera_id in camera_ids}
     debuggers = {camera_id: VisualDebugger(str(args.output_dir / camera_id)) for camera_id in camera_ids}
     summaries: list[dict[str, object]] = []
@@ -121,10 +135,14 @@ def main() -> None:
             all_rois = calibration.pixel_rois(frame.shape[1], frame.shape[0])
             lane_rois = calibration.lane_pixel_rois(frame.shape[1], frame.shape[0])
             inference_started = perf_counter()
-            detections = detector.detect(frame)
+            if args.tracker == "botsort":
+                detections, tracks = detector.track_with_botsort(frame, args.botsort_config)
+            else:
+                detections = detector.detect(frame)
+                tracks = trackers[camera_id].update(detections)
             detections = filter_detections_to_roi(detections, all_rois["approach"])
+            tracks = filter_detections_to_roi(tracks, all_rois["approach"])
             inference_ms = round((perf_counter() - inference_started) * 1000.0, 2)
-            tracks = trackers[camera_id].update(detections)
             counting_objects, count_source = select_counting_objects(detections, tracks)
             raw_counts = ROICounter(lane_rois).count(counting_objects)
             queue_counts = estimators[camera_id].update(raw_counts)
@@ -139,7 +157,7 @@ def main() -> None:
                     "camera": camera_id,
                     "step": step_id,
                     "detections": len(detections),
-                    "tracker": "ByteTrack",
+                    "tracker": "ByteTrack" if args.tracker == "bytetrack" else "BoT-SORT/ReID",
                     "count_source": count_source,
                     "inference_ms": inference_ms,
                 },
@@ -148,6 +166,7 @@ def main() -> None:
             cameras_summary[camera_id] = {
                 "detections": len(detections),
                 "tracks": len(tracks),
+                "tracker": args.tracker,
                 "count_source": count_source,
                 "lane_counts": raw_counts,
                 "queue_counts": queue_counts,

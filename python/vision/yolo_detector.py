@@ -59,6 +59,49 @@ class YoloVehicleDetector:
             )
         return _class_agnostic_nms(candidates, self.nms_iou_threshold)
 
+    def track_with_botsort(self, frame: Any, tracker_config: str | Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """Executa detecção e BoT-SORT persistente no mesmo passe do YOLO.
+
+        O backend Ultralytics mantém o estado do tracker entre chamadas quando
+        ``persist=True``. Ao contrário do ByteTrack do Supervision, BoT-SORT
+        pode usar características de aparência (ReID) configuradas no YAML.
+        """
+        if frame is None:
+            return [], []
+
+        results = self.model.track(
+            source=frame,
+            persist=True,
+            tracker=str(tracker_config),
+            conf=self.confidence_threshold,
+            classes=self.classes,
+            imgsz=self.inference_size,
+            verbose=False,
+        )
+        if not results or results[0].boxes is None:
+            return [], []
+
+        boxes = results[0].boxes
+        xyxy = boxes.xyxy.cpu().numpy() if boxes.xyxy is not None else np.empty((0, 4))
+        confs = boxes.conf.cpu().numpy() if boxes.conf is not None else np.empty((0,))
+        class_ids = boxes.cls.cpu().numpy() if boxes.cls is not None else np.empty((0,))
+        track_ids = boxes.id.cpu().numpy() if boxes.id is not None else np.empty((0,))
+
+        detections: list[dict[str, Any]] = []
+        tracks: list[dict[str, Any]] = []
+        for index, (bbox, confidence, class_id) in enumerate(zip(xyxy, confs, class_ids)):
+            if confidence <= self.confidence_threshold or int(class_id) not in self.classes:
+                continue
+            record = {
+                "bbox": [float(value) for value in bbox.tolist()],
+                "confidence": float(confidence),
+                "class_id": int(class_id),
+            }
+            detections.append(record)
+            if index < len(track_ids):
+                tracks.append({**record, "track_id": int(track_ids[index])})
+        return detections, tracks
+
 
 def _class_agnostic_nms(detections: list[dict[str, Any]], threshold: float) -> list[dict[str, Any]]:
     """Replica o NMS agnóstico de classe aplicado pelo SimJamCV."""

@@ -1,0 +1,18 @@
+# BoT-SORT experimental profile for the Unity/SUMO captures.
+# Cameras are fixed, so global motion compensation must remain disabled.
+tracker_type: botsort
+track_high_thresh: 0.15
+track_low_thresh: 0.05
+new_track_thresh: 0.15
+# The offline sequence supplies one image per simulated second.
+track_buffer: 8
+match_thresh: 0.8
+fuse_score: true
+gmc_method: none
+
+# ReID is the experiment: visual appearance may reconnect a vehicle after a
+# large positional jump. "auto" reuses detector features when available.
+with_reid: true
+model: auto
+proximity_thresh: 0.05
+appearance_thresh: 0.8

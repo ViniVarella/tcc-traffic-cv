@@ -34,17 +34,46 @@ def filter_detections_to_roi(
 def select_counting_objects(
     detections: list[dict[str, Any]],
     tracks: list[dict[str, Any]],
+    duplicate_iou_threshold: float = 0.5,
 ) -> tuple[list[dict[str, Any]], str]:
-    """Prefere tracks, mas mantém a contagem em fluxo livre sem track.
+    """Combina tracks e detecções ainda não associadas, sem duplicá-las.
 
-    ByteTrack oferece IDs persistentes quando há associação temporal. Em uma
-    câmera com veículos rápidos ou amostragem esparsa, ele pode não confirmar
-    nenhum ID apesar de haver detecções válidas no frame. Nesse caso, as
-    detecções já filtradas pela ROI principal são usadas somente naquele step.
+    O track mantém a identidade temporal, mas não substitui uma detecção YOLO
+    válida. Isso é importante quando a captura é esparsa e o veículo muda muito
+    de posição entre frames: um track pode não ser associado enquanto a caixa
+    de detecção continua correta. Uma detecção que já sobrepõe um track não é
+    adicionada novamente.
     """
+    if not 0.0 < duplicate_iou_threshold <= 1.0:
+        raise ValueError("duplicate_iou_threshold precisa estar no intervalo (0, 1].")
+
+    objects: list[dict[str, Any]] = list(tracks)
+    unmatched_detections = [
+        detection
+        for detection in detections
+        if all(_bbox_iou(detection["bbox"], track["bbox"]) < duplicate_iou_threshold for track in tracks)
+    ]
+    objects.extend(unmatched_detections)
+
+    if tracks and unmatched_detections:
+        return objects, "hybrid"
     if tracks:
-        return tracks, "tracks"
-    return detections, "detections_fallback"
+        return objects, "tracks"
+    return objects, "detections_fallback"
+
+
+def _bbox_iou(first: list[float], second: list[float]) -> float:
+    """Calcula IoU de duas caixas xyxy para remover duplicatas track/detecção."""
+    left = max(first[0], second[0])
+    top = max(first[1], second[1])
+    right = min(first[2], second[2])
+    bottom = min(first[3], second[3])
+    intersection = max(0.0, right - left) * max(0.0, bottom - top)
+    if intersection <= 0.0:
+        return 0.0
+    first_area = max(0.0, first[2] - first[0]) * max(0.0, first[3] - first[1])
+    second_area = max(0.0, second[2] - second[0]) * max(0.0, second[3] - second[1])
+    return intersection / max(first_area + second_area - intersection, 1e-6)
 
 
 class ROICounter:
