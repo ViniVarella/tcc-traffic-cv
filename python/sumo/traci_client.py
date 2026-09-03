@@ -30,8 +30,13 @@ class SumoClient:
         self._started = False
 
     @classmethod
-    def from_config(cls, config: dict[str, Any], base_dir: str | Path) -> "SumoClient":
-        """Constroi o cliente a partir da configuracao YAML do projeto."""
+    def from_config(
+        cls,
+        config: dict[str, Any],
+        base_dir: str | Path,
+        seed_override: int | None = None,
+    ) -> "SumoClient":
+        """Constrói o cliente; ``seed_override`` substitui a seed do perfil."""
         base_path = Path(base_dir)
         sumo_config = config.get("sumo", {})
         experiment_config = config.get("experiment", {})
@@ -43,7 +48,7 @@ class SumoClient:
             sumo_binary=binary_name,
             config_path=str(config_path),
             gui=gui,
-            seed=experiment_config.get("seed"),
+            seed=experiment_config.get("seed") if seed_override is None else int(seed_override),
             step_length=sumo_config.get("step_length"),
             traci_port=sumo_config.get("traci_port"),
         )
@@ -101,6 +106,25 @@ class SumoClient:
                 }
             )
         return vehicles
+
+    def get_simulation_events(self) -> dict[str, list[str]]:
+        """Retorna partidas e chegadas do último passo para avaliação offline."""
+        self._ensure_started()
+        return {
+            "departed": [str(vehicle_id) for vehicle_id in traci.simulation.getDepartedIDList()],
+            "arrived": [str(vehicle_id) for vehicle_id in traci.simulation.getArrivedIDList()],
+        }
+
+    def get_active_vehicle_metrics(self) -> dict[str, dict[str, float]]:
+        """Retorna métricas globais dos veículos ativos, sem consultar detectores E2."""
+        self._ensure_started()
+        return {
+            str(vehicle_id): {
+                "speed": float(traci.vehicle.getSpeed(vehicle_id)),
+                "accumulated_waiting_time": float(traci.vehicle.getAccumulatedWaitingTime(vehicle_id)),
+            }
+            for vehicle_id in traci.vehicle.getIDList()
+        }
 
     def get_traffic_light_state(self, tls_id: str) -> dict[str, Any]:
         """Retorna o estado do semaforo indicado por identificador."""

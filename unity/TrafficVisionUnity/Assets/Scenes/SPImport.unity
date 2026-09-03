@@ -2183,7 +2183,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraId: south_ds_right
-  captureEnabled: 1
+  captureEnabled: 0
   captureWidth: 1280
   captureHeight: 720
   approachRoi:
@@ -3109,7 +3109,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraId: east_ds_near
-  captureEnabled: 1
+  captureEnabled: 0
   captureWidth: 1280
   captureHeight: 720
   approachRoi:
@@ -6001,7 +6001,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraId: east_ds_far
-  captureEnabled: 1
+  captureEnabled: 0
   captureWidth: 1280
   captureHeight: 720
   approachRoi:
@@ -6975,7 +6975,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraId: south_ds_left
-  captureEnabled: 1
+  captureEnabled: 0
   captureWidth: 1280
   captureHeight: 720
   approachRoi:
@@ -8128,7 +8128,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraId: west_ds_near
-  captureEnabled: 1
+  captureEnabled: 0
   captureWidth: 1280
   captureHeight: 720
   approachRoi:
@@ -11064,7 +11064,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraId: west_ds_far
-  captureEnabled: 1
+  captureEnabled: 0
   captureWidth: 1280
   captureHeight: 720
   approachRoi:

@@ -186,6 +186,58 @@ Validação esperada:
 - o Console da Unity deve registrar `step`, `step_id`, `sim_time` e quantidade de veículos;
 - a cena deve mostrar cubos simples representando veículos se movendo ao longo dos steps recebidos.
 
-## Próxima validação importante
+## Avaliação: tempo fixo versus controlador visual
 
-Antes de integrar controle completo, o projeto deve validar cedo se o YOLO detecta bem os veículos renderizados pela Unity. Frames sintéticos podem divergir do domínio visual do COCO, então esse risco precisa ser medido antes de fechar a arquitetura de controle.
+O controlador adaptativo já está integrado. Ele usa exclusivamente as contagens
+visuais das câmeras `south`, `east` e `west`; E2 e outros dados perfeitos do
+SUMO não entram na decisão.
+
+Para comparar as políticas sob a mesma configuração e seed, execute primeiro o
+baseline de tempos fixos do SUMO (Unity não é necessária):
+
+```bash
+cd python
+python -m experiments.run_fixed_time_baseline --config configs/sp.yaml --steps 100 --output ../results/evaluation/fixed-time-baseline-metrics.json
+```
+
+Em seguida, com a cena `SPImport` em Play Mode e a captura de dataset desativada,
+execute o controlador visual, incluindo a saída de métricas:
+
+```bash
+python -m experiments.run_visual_controller --config configs/sp.yaml --steps 100 --camera-ids south,east,west --model ../runs/results/models/yolov8n-unity-run-002-mask/weights/best.pt --classes 0 --metrics-output ../results/evaluation/visual-controller-metrics.json
+```
+
+Por fim, gere a comparação:
+
+```bash
+python -m experiments.compare_control_experiments --baseline ../results/evaluation/fixed-time-baseline-metrics.json --visual-adaptive ../results/evaluation/visual-controller-metrics.json --output ../results/evaluation/fixed-vs-visual-controller.json
+```
+
+As métricas são veículos concluídos, tempo médio de viagem, tempo médio de
+espera, fila média/máxima e vazão. O arquivo comparativo registra a diferença
+absoluta e percentual; valores maiores são desejáveis apenas para veículos
+concluídos e vazão.
+
+Para replicações independentes, informe a mesma `--seed` no baseline e no
+controlador visual de cada par, mudando-a entre os pares. O SUMO é
+determinístico para uma seed específica; portanto, usar `--seed 7`, por
+exemplo, cria um novo padrão de demanda, mas mantém a comparação justa entre
+as duas políticas.
+
+### Resultado inicial (três seeds)
+
+Em 100 segundos simulados para as seeds `42`, `7` e `99`, o controlador visual
+superou o plano fixo em todos os pares. As médias foram:
+
+| Métrica | Tempo fixo | Controle visual | Variação |
+| --- | ---: | ---: | ---: |
+| Veículos concluídos | 50,67 | 60,67 | +19,7% |
+| Vazão | 1842,4 veh/h | 2206,1 veh/h | +19,7% |
+| Tempo médio de viagem | 27,35 s | 26,11 s | -4,6% |
+| Tempo médio de espera | 6,77 s | 3,93 s | -42,0% |
+| Fila média | 8,70 | 3,89 | -55,3% |
+| Fila máxima | 19,67 | 9,33 | -52,5% |
+
+É uma avaliação experimental inicial com três cenários de demanda; ela mostra
+consistência entre as seeds, mas não substitui um estudo estatístico de maior
+escala.

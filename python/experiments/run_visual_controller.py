@@ -14,7 +14,7 @@ import yaml
 
 from bridge import FrameBundleCollector, UnityBridge
 from controller.traffic_controller import TrafficController
-from sumo import SumoClient, SumoStateExtractor
+from sumo import ExperimentMetricsCollector, SumoClient, SumoStateExtractor
 from vision import ByteTrackVehicleTracker, QueueEstimator, ROICounter, VisualDebugger, YoloVehicleDetector, load_camera_calibration
 from vision.roi_counter import filter_detections_to_roi, select_counting_objects
 
@@ -23,6 +23,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Executa o controlador semafórico adaptativo baseado em visão.")
     parser.add_argument("--config", type=Path, default=base_dir / "configs" / "sp.yaml")
     parser.add_argument("--steps", type=int, default=100)
+    parser.add_argument("--seed", type=int, default=None, help="Seed do SUMO; substitui experiment.seed do perfil.")
     parser.add_argument("--send-interval", type=float, default=0.1)
     parser.add_argument("--camera-ids", default="south,east,west")
     parser.add_argument("--model", default="yolov8n.pt")
@@ -33,6 +34,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--track-match-threshold", type=float, default=0.6)
     parser.add_argument("--debug-output-dir", type=Path, default=base_dir.parent / "results" / "vision" / "live-visual-controller")
     parser.add_argument("--decision-output", type=Path, default=base_dir.parent / "results" / "logs" / "visual-controller-decisions.jsonl")
+    parser.add_argument("--metrics-output", type=Path, default=base_dir.parent / "results" / "evaluation" / "visual-controller-metrics.json")
     return parser.parse_args()
 
 
@@ -59,6 +61,8 @@ def main() -> None:
     args = parse_args(base_dir)
     if args.steps <= 0 or args.send_interval < 0 or args.frame_rate <= 0 or args.image_size <= 0:
         raise ValueError("--steps, --frame-rate e --image-size devem ser positivos; --send-interval não pode ser negativo.")
+    if args.seed is not None and args.seed < 0:
+        raise ValueError("--seed não pode ser negativa.")
     camera_ids = tuple(value.strip() for value in args.camera_ids.split(",") if value.strip())
     if not camera_ids:
         raise ValueError("Informe ao menos uma câmera em --camera-ids.")
@@ -88,11 +92,12 @@ def main() -> None:
     estimators = {camera_id: QueueEstimator() for camera_id in camera_ids}
     debuggers = {camera_id: VisualDebugger(str(args.debug_output_dir / camera_id)) for camera_id in camera_ids}
     controller = TrafficController(str(config["traffic_light"]["id"]), config)
-    sumo_client = SumoClient.from_config(config, base_dir)
+    sumo_client = SumoClient.from_config(config, base_dir, seed_override=args.seed)
     unity_bridge = UnityBridge.from_config(config)
     frame_collector = FrameBundleCollector(set(camera_ids))
     state_extractor = SumoStateExtractor()
     decisions: list[dict[str, Any]] = []
+    metrics = ExperimentMetricsCollector()
 
     try:
         unity_bridge.start_frame_server()
@@ -103,6 +108,11 @@ def main() -> None:
 
         for step_id in range(args.steps):
             sim_time = sumo_client.step()
+            metrics.observe(
+                sim_time,
+                sumo_client.get_simulation_events(),
+                sumo_client.get_active_vehicle_metrics(),
+            )
             state = state_extractor.build_simulation_state(
                 step=step_id,
                 sim_time=sim_time,
@@ -157,10 +167,12 @@ def main() -> None:
     finally:
         args.decision_output.parent.mkdir(parents=True, exist_ok=True)
         args.decision_output.write_text("".join(json.dumps(item) + "\n" for item in decisions), encoding="utf-8")
+        args.metrics_output.parent.mkdir(parents=True, exist_ok=True)
+        args.metrics_output.write_text(json.dumps(metrics.summary(), indent=2) + "\n", encoding="utf-8")
         sumo_client.close()
         unity_bridge.close()
 
-    print(f"control_complete decisions={len(decisions)} output={args.decision_output}")
+    print(f"control_complete decisions={len(decisions)} output={args.decision_output} metrics={args.metrics_output}")
 
 
 if __name__ == "__main__":
