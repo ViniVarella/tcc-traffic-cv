@@ -197,31 +197,23 @@ entrada em
 ByteTrack e ROIs de faixa, agrega as contagens e só então decide a ação do
 semáforo via TraCI.
 
-O arquivo do modelo DQN treinado está em `models/dqn_traffic_model.keras` e
-pertence ao processo Python, não à Unity. Ele será carregado uma vez no início
-da execução. Como o DQN atual foi treinado com detectores E2, ele só poderá ser
-usado no pipeline visual depois que o vetor de estado visual estiver definido e
-o modelo tiver sido retreinado com essa mesma semântica.
+O DQN visual pertence ao processo Python, não à Unity. Ele é implementado em
+PyTorch, treinado por `experiments.train_visual_dqn` e carregado por
+`experiments.run_visual_controller --dqn-model ...`. O checkpoint de produção
+é selecionado pela validação, e não simplesmente pelo último episódio.
 
 ## Contrato da percepção e do DQN
 
-O script de treinamento de referência em `optimization/sp/traci8.DQN.py` usa
-26 entradas: para cada um
-dos sete detectores E2, quantidade de veículos, quantidade parada e ocupação,
-mais a fase do semáforo em one-hot. Portanto, uma contagem visual simples não
-é intercambiável com o modelo atual.
+O script histórico `optimization/sp/traci8.DQN.py` usa 26 entradas derivadas de
+detectores E2 e não é reutilizado pela política visual. O DQN atual recebe 13
+entradas: as contagens normalizadas das sete faixas visuais do SP, as cinco
+fases em *one-hot* e a razão entre o tempo decorrido da fase e o verde máximo.
+O estado é criado por `vision.visual_state.VisualStateEncoder` e alimenta uma
+rede PyTorch com duas ações: manter ou solicitar troca.
 
-A primeira versão visual deve produzir, por aproximação/faixa:
-
-- `vehicle_count`: detecções ou tracks dentro da ROI de fila;
-- `halting_count`: tracks persistentes com velocidade visual abaixo de um
-  limiar;
-- `occupancy`: estimativa calibrada da fração da ROI ocupada, ou uma nova
-  representação de estado que dispense essa variável.
-
-Em seguida, o vetor visual deve ser normalizado e o DQN deve ser treinado
-novamente. O modelo treinado com leituras de `traci.lanearea` não pode ser
-reutilizado como se uma nova semântica de entrada fosse equivalente.
+A ação passa por `DqnTrafficController`, que impõe verde mínimo/máximo,
+amarelo e *all-red*. Portanto, a rede nunca aplica diretamente uma transição
+insegura no SUMO.
 
 As leituras de detectores do SUMO podem permanecer em um logger de *ground
 truth* para medir erro de contagem e qualidade experimental; elas não podem
@@ -252,11 +244,15 @@ avaliação separada e limitada ao mesmo trecho físico do detector.
   alinhados; cenas, `GraphicsSettings` e assets do Sumo2Unity continuam fora
   do projeto até serem migrados de forma explícita.
 
-## Próximo marco técnico
+## Estado experimental e próximo marco
 
-Executar uma captura com os três fluxos já calibrados (`south`, `east` e
-`west`) registrando, no mesmo `step_id`, os snapshots E2 de avaliação. Em
-seguida, comparar a saída YOLO + ByteTrack por ROI contra essa referência e
-usar as métricas resultantes para calibrar a percepção antes de compor o vetor
-visual do DQN. O ramo norte é apenas saída da mão única iniciada no sul e, por
-isso, não recebe câmera.
+O DQN visual foi treinado com seeds `1`–`50`, validado nas seeds `1001`–`1003`
+e comparado, nas seeds inéditas `201`–`203`, ao tempo fixo e ao controlador
+heurístico visual. Ambos os controladores visuais superaram o tempo fixo; o
+DQN ficou ligeiramente abaixo do heurístico porque aprendeu a solicitar troca
+assim que o verde mínimo termina.
+
+O próximo marco é criar perfis SP de demanda assimétrica, treinar com cenários
+equilibrados e assimétricos e restringir as decisões DQN aos estados em que a
+ação pode alterar a fase. O ramo norte permanece apenas como saída da mão única
+iniciada no sul e, por isso, não recebe câmera.

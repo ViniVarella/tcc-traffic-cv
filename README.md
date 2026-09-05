@@ -220,9 +220,10 @@ concluídos e vazão.
 
 Para replicações independentes, informe a mesma `--seed` no baseline e no
 controlador visual de cada par, mudando-a entre os pares. O SUMO é
-determinístico para uma seed específica; portanto, usar `--seed 7`, por
-exemplo, cria um novo padrão de demanda, mas mantém a comparação justa entre
-as duas políticas.
+determinístico para uma seed específica. No cenário SP atual, a demanda é
+definida pelos seis fluxos `from`/`to` de `sumo/sp/Cruzamento.rou.xml`; a seed
+não seleciona outras rotas, mas controla os componentes estocásticos de uma
+execução. Usar a mesma seed mantém a comparação justa entre as políticas.
 
 ### Resultado inicial (três seeds)
 
@@ -241,3 +242,31 @@ superou o plano fixo em todos os pares. As médias foram:
 É uma avaliação experimental inicial com três cenários de demanda; ela mostra
 consistência entre as seeds, mas não substitui um estudo estatístico de maior
 escala.
+
+### DQN visual: treinamento e avaliação final
+
+O DQN operacional é implementado em PyTorch e recebe somente o vetor visual de
+13 entradas: as contagens normalizadas das sete faixas monitoradas, a fase do
+semáforo em *one-hot* e o tempo decorrido da fase. As leituras E2/TraCI não são
+entradas da política; a espera global do SUMO é usada apenas como sinal de
+recompensa durante o treinamento.
+
+O treinamento usa seeds `1` a `50`; a validação periódica, sem exploração nem
+atualização de pesos, usa as seeds `1001` a `1003`; e os testes finais usam as
+seeds não vistas `201` a `203`. O checkpoint selecionado por validação foi o do
+episódio 4. A camada de segurança mantém verde mínimo de 10 s, verde máximo de
+40 s, amarelo de 3 s e *all-red* de 1 s.
+
+| Métrica média nas seeds finais 201–203 | Tempo fixo | Heurístico visual | DQN visual |
+| --- | ---: | ---: | ---: |
+| Veículos concluídos | 50,67 | 60,67 | 60,33 |
+| Vazão (veíc./h) | 1842,42 | 2206,06 | 2193,94 |
+| Tempo médio de espera | 6,85 s | 4,41 s | 4,44 s |
+| Fila média | 8,73 | 4,15 | 4,21 |
+| Fila máxima | 18,67 | 10,33 | 10,33 |
+
+Os dois controladores visuais superaram o tempo fixo. O DQN não superou o
+heurístico: nos testes ele solicitou troca assim que o verde mínimo permitiu,
+produzindo uma política quase fixa. Esse resultado é preservado como limitação
+experimental; o próximo aperfeiçoamento é treinar com perfis de demanda
+assimétricos e decisões apenas quando uma troca for permitida.

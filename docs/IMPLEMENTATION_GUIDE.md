@@ -1160,6 +1160,10 @@ Critério de sucesso:
 - o modelo DQN é carregado pelo Python, não pela Unity.
 ```
 
+Status: concluído com um DQN PyTorch de estado exclusivamente visual. A camada
+de segurança impõe verde mínimo de 10 s, verde máximo de 40 s, amarelo de 3 s
+e *all-red* de 1 s.
+
 ### Marco 11 — Experimentos
 
 Critério de sucesso:
@@ -1170,6 +1174,11 @@ Critério de sucesso:
 - salvar logs;
 - gerar tabelas e gráficos comparativos.
 ```
+
+Status: concluído para 100 s simulados nas seeds finais `201`–`203`, comparando
+tempo fixo, controlador heurístico visual e DQN visual. O DQN supera o tempo
+fixo, mas não o heurístico; essa limitação orienta o próximo experimento com
+demanda assimétrica.
 
 ---
 
