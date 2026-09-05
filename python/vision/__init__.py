@@ -6,9 +6,12 @@ from importlib import import_module
 from typing import Any
 
 from .camera_calibration import CameraCalibration, load_camera_calibration
+from .visual_state import SP_LANE_ORDER, VisualStateEncoder
 
 __all__ = [
     "CameraCalibration",
+    "SP_LANE_ORDER",
+    "VisualStateEncoder",
     "ByteTrackVehicleTracker",
     "QueueEstimator",
     "ROICounter",

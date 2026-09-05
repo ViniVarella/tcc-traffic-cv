@@ -13,9 +13,10 @@ import numpy as np
 import yaml
 
 from bridge import FrameBundleCollector, UnityBridge
+from controller import DqnAgent, DqnTrafficController
 from controller.traffic_controller import TrafficController
 from sumo import ExperimentMetricsCollector, SumoClient, SumoStateExtractor
-from vision import ByteTrackVehicleTracker, QueueEstimator, ROICounter, VisualDebugger, YoloVehicleDetector, load_camera_calibration
+from vision import ByteTrackVehicleTracker, QueueEstimator, ROICounter, VisualDebugger, VisualStateEncoder, YoloVehicleDetector, load_camera_calibration
 from vision.roi_counter import filter_detections_to_roi, select_counting_objects
 
 
@@ -35,6 +36,8 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--debug-output-dir", type=Path, default=base_dir.parent / "results" / "vision" / "live-visual-controller")
     parser.add_argument("--decision-output", type=Path, default=base_dir.parent / "results" / "logs" / "visual-controller-decisions.jsonl")
     parser.add_argument("--metrics-output", type=Path, default=base_dir.parent / "results" / "evaluation" / "visual-controller-metrics.json")
+    parser.add_argument("--dqn-model", type=Path, default=None, help="Checkpoint .pt; ativa a política DQN em vez da heurística.")
+    parser.add_argument("--dqn-device", default=None, help="Dispositivo PyTorch do DQN; padrão MPS/CPU automático.")
     return parser.parse_args()
 
 
@@ -91,7 +94,20 @@ def main() -> None:
     }
     estimators = {camera_id: QueueEstimator() for camera_id in camera_ids}
     debuggers = {camera_id: VisualDebugger(str(args.debug_output_dir / camera_id)) for camera_id in camera_ids}
-    controller = TrafficController(str(config["traffic_light"]["id"]), config)
+    dqn_agent: DqnAgent | None = None
+    state_encoder: VisualStateEncoder | None = None
+    if args.dqn_model is None:
+        controller: Any = TrafficController(str(config["traffic_light"]["id"]), config)
+    else:
+        dqn_agent = DqnAgent.load(args.dqn_model, device=args.dqn_device)
+        state_encoder = VisualStateEncoder(
+            max_lane_count=float(config["dqn"]["max_lane_count"]),
+            phase_count=int(config["traffic_light"]["phase_count"]),
+            max_green_seconds=float(config["traffic_control"]["max_green_seconds"]),
+        )
+        if dqn_agent.config.state_size != state_encoder.state_size:
+            raise ValueError("Checkpoint DQN incompatível com o contrato visual atual.")
+        controller = DqnTrafficController(str(config["traffic_light"]["id"]), config)
     sumo_client = SumoClient.from_config(config, base_dir, seed_override=args.seed)
     unity_bridge = UnityBridge.from_config(config)
     frame_collector = FrameBundleCollector(set(camera_ids))
@@ -156,12 +172,23 @@ def main() -> None:
                 )
                 debuggers[camera_id].save_frame(annotated, f"step_{step_id:06d}.jpg")
 
-            decision = controller.update(sim_time, visual_counts)
+            if dqn_agent is None or state_encoder is None:
+                decision = controller.update(sim_time, visual_counts)
+            else:
+                phase = controller.phase_manager.get_current_phase()
+                state = state_encoder.encode(visual_counts, phase.phase_index, controller.phase_manager.elapsed(sim_time))
+                dqn_action = dqn_agent.select_action(state, epsilon=0.0, explore=False)
+                decision = controller.update(sim_time, dqn_action)
             controller.apply(sumo_client, decision)
-            decisions.append({**decision, "step_id": step_id, "visual_counts": visual_counts})
+            decisions.append({**decision, "step_id": step_id, "visual_counts": visual_counts, "policy": "dqn" if dqn_agent else "heuristic"})
+            demand_or_dqn_action = (
+                f"dqn_action={decision['requested_action']}"
+                if dqn_agent is not None
+                else f"demand={decision['demand']}"
+            )
             print(
                 f"control_step step_id={step_id} phase={decision['phase_index']} action={decision['action']} "
-                f"reason={decision['reason']} demand={decision['demand']}"
+                f"reason={decision['reason']} {demand_or_dqn_action}"
             )
             sleep(args.send_interval)
     finally:
