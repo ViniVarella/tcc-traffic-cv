@@ -87,17 +87,62 @@ namespace TccTrafficVision.Editor.SumoImport
 
         private static void ConfigureTrafficLightMarker(GameObject marker)
         {
-            if (marker.GetComponentInChildren<Renderer>() == null)
+            // Replace the old cylinder placeholder on every configuration so
+            // the scene cannot retain the previous obelisk-like marker.
+            for (int childIndex = marker.transform.childCount - 1; childIndex >= 0; childIndex--)
             {
-                GameObject primitive = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                primitive.name = "SP Traffic Light Visual";
-                primitive.transform.SetParent(marker.transform, false);
-                primitive.transform.localScale = new Vector3(1.2f, 2.5f, 1.2f);
+                Object.DestroyImmediate(marker.transform.GetChild(childIndex).gameObject);
             }
 
-            // The TLS junction is (-6.04, -5.60) in SUMO; Unity maps (x, y)
-            // to (x, z) and the marker is raised above the road for visibility.
-            marker.transform.position = new Vector3(-6.04f, 2.5f, -5.60f);
+            // E2, E3 and E6 are the three incoming approaches controlled by
+            // this TLS. Each post is placed right of its vehicle direction,
+            // just beyond the respective stop line and sidewalk.
+            marker.transform.position = Vector3.zero;
+            CreateTrafficSignalPost(marker.transform, "Signal Post East", new Vector3(19.36f, 0f, -2.93f), new Quaternion(0f, -0.5941611f, 0f, 0.80434614f));
+            CreateTrafficSignalPost(marker.transform, "Signal Post South", new Vector3(6.3f, 0f, -19.46f), new Quaternion(0f, -0.028023053f, 0f, 0.99960726f));
+            CreateTrafficSignalPost(marker.transform, "Signal Post West", new Vector3(-25.95f, 0f, -4.01f), new Quaternion(0f, 0.8f, 0f, 0.6000001f));
+        }
+
+        private static void CreateTrafficSignalPost(Transform parent, string objectName, Vector3 position, Quaternion rotation)
+        {
+            GameObject post = new GameObject(objectName);
+            post.transform.SetParent(parent, false);
+            post.transform.localPosition = position;
+            post.transform.localRotation = rotation;
+
+            CreateVisualPrimitive(PrimitiveType.Cylinder, "Signal Pole", post.transform, new Vector3(0f, 2.5f, 0f), new Vector3(0.18f, 2.5f, 0.18f), new Color(0.12f, 0.13f, 0.14f));
+            CreateVisualPrimitive(PrimitiveType.Cylinder, "Signal Base", post.transform, new Vector3(0f, 0.12f, 0f), new Vector3(0.52f, 0.12f, 0.52f), new Color(0.18f, 0.19f, 0.20f));
+            // The post is on the right sidewalk; the arm extends left over the road.
+            CreateVisualPrimitive(PrimitiveType.Cube, "Signal Arm", post.transform, new Vector3(-1.45f, 4.65f, 0f), new Vector3(2.9f, 0.16f, 0.16f), new Color(0.12f, 0.13f, 0.14f));
+            CreateVisualPrimitive(PrimitiveType.Cube, "Signal Housing", post.transform, new Vector3(-2.72f, 4.15f, 0f), new Vector3(0.78f, 1.72f, 0.38f), new Color(0.06f, 0.07f, 0.08f));
+            CreateVisualPrimitive(PrimitiveType.Sphere, "Signal Red", post.transform, new Vector3(-2.72f, 4.66f, -0.22f), new Vector3(0.36f, 0.36f, 0.12f), new Color(0.25f, 0.02f, 0.02f));
+            CreateVisualPrimitive(PrimitiveType.Sphere, "Signal Yellow", post.transform, new Vector3(-2.72f, 4.15f, -0.22f), new Vector3(0.36f, 0.36f, 0.12f), new Color(0.25f, 0.18f, 0.01f));
+            CreateVisualPrimitive(PrimitiveType.Sphere, "Signal Green", post.transform, new Vector3(-2.72f, 3.64f, -0.22f), new Vector3(0.36f, 0.36f, 0.12f), new Color(0.01f, 0.22f, 0.03f));
+        }
+
+        private static void CreateVisualPrimitive(PrimitiveType primitiveType, string objectName, Transform parent, Vector3 localPosition, Vector3 localScale, Color color)
+        {
+            GameObject visual = GameObject.CreatePrimitive(primitiveType);
+            visual.name = objectName;
+            visual.transform.SetParent(parent, false);
+            visual.transform.localPosition = localPosition;
+            visual.transform.localScale = localScale;
+            Object.DestroyImmediate(visual.GetComponent<Collider>());
+
+            Renderer renderer = visual.GetComponent<Renderer>();
+            if (renderer == null)
+            {
+                return;
+            }
+
+            Material material = new Material(renderer.sharedMaterial);
+            material.color = color;
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", color);
+            }
+
+            renderer.sharedMaterial = material;
         }
     }
 }

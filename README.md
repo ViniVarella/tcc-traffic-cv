@@ -121,6 +121,36 @@ O teste esperado confirma 22 faixas e um cruzamento. O botão `Clear generated
 road network` deve remover a geometria e uma nova importação deve recriá-la sem
 duplicar objetos.
 
+### Entorno de apresentação no Unity
+
+Com `Assets/Scenes/SPImport.unity` aberto, execute `Traffic Vision > SUMO >
+Build SP Presentation Environment`. A ação cria o nó `SP Environment`, com
+grama, oito casas residenciais posicionadas manualmente junto às vias, árvores,
+postes, iluminação e névoa leve, reutilizando somente assets já versionados no
+projeto. As calçadas pertencem à malha viária gerada, não a esse nó.
+
+O comando pode ser executado novamente: ele substitui apenas `SP Environment`.
+Portanto, não modifica `GeneratedSumoRoadNetwork`, as câmeras/ROIs calibradas,
+a sincronização com o SUMO nem a máscara de instâncias dos veículos. Como o
+entorno passa a aparecer nas imagens RGB, depois de aplicá-lo é recomendável
+verificar uma captura das três câmeras antes de gerar um novo conjunto de dados
+ou rodar uma avaliação de visão. A cena e os materiais novos são salvos pelo
+próprio comando.
+
+Para reconstruir a apresentação da rede, execute `Traffic Vision > SUMO >
+Configure SP Visuals`. O comando recria somente `GeneratedSumoRoadNetwork`:
+asfalto, cruzamento, calçadas que acompanham as curvas, linhas tracejadas entre
+faixas do mesmo sentido, dupla amarela entre sentidos opostos e linhas de
+retenção nas aproximações controladas. Ele não altera as casas, câmeras ou
+semáforos; pressione `Cmd+S` depois de executá-lo.
+
+Para configurar a ponte visual, execute `Traffic Vision > SUMO > Configure SP
+Dynamic Sync`. Ela mantém o nó `SP Dynamic Synchronization` e recria apenas os
+três postes `Signal Post East`, `Signal Post South` e `Signal Post West` nas
+posições ajustadas na cena. Cada poste exibe vermelho, amarelo ou verde segundo
+os índices da fase do TLS SUMO correspondentes à sua aproximação. O comando não
+modifica o ambiente ou a malha das vias; pressione `Cmd+S` depois de executá-lo.
+
 ## Teste inicial Python -> Unity
 
 O primeiro teste de comunicação Python -> Unity envia estados JSON fake via UDP. Ele valida apenas o lado Python da ponte e a recepção manual do `step` ou `step_id` no log da Unity.

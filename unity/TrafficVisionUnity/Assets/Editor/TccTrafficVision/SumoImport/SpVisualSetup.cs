@@ -35,9 +35,13 @@ namespace TccTrafficVision.Editor.SumoImport
 
             EnsureMaterialsDirectory();
             Material road = GetOrCreateMaterial("SP Road", "SP_Road.mat", new Color(0.13f, 0.15f, 0.18f));
-            Material junction = GetOrCreateMaterial("SP Junction", "SP_Junction.mat", new Color(0.18f, 0.21f, 0.25f));
+            // The junction is continuous asphalt, so it intentionally shares
+            // the exact same material asset as the road approaches.
+            Material junction = road;
             Material marking = GetOrCreateMaterial("SP Lane Marking", "SP_LaneMarking.mat", new Color(0.95f, 0.93f, 0.82f));
-            if (road == null || junction == null || marking == null)
+            Material centerLine = GetOrCreateMaterial("SP Double Center Line", "SP_DoubleCenterLine.mat", new Color(0.95f, 0.72f, 0.08f));
+            Material sidewalk = GetOrCreateMaterial("SP Sidewalk", "SP_Sidewalk.mat", new Color(0.48f, 0.48f, 0.46f));
+            if (road == null || junction == null || marking == null || centerLine == null || sidewalk == null)
             {
                 return;
             }
@@ -46,10 +50,16 @@ namespace TccTrafficVision.Editor.SumoImport
             serializedImporter.FindProperty("roadMaterial").objectReferenceValue = road;
             serializedImporter.FindProperty("junctionMaterial").objectReferenceValue = junction;
             serializedImporter.FindProperty("laneMarkingMaterial").objectReferenceValue = marking;
+            serializedImporter.FindProperty("centerLineMaterial").objectReferenceValue = centerLine;
+            serializedImporter.FindProperty("sidewalkMaterial").objectReferenceValue = sidewalk;
             serializedImporter.FindProperty("generateLaneCenterLines").boolValue = true;
             serializedImporter.FindProperty("laneMarkingWidth").floatValue = 0.16f;
             serializedImporter.FindProperty("laneMarkingDashLength").floatValue = 2.5f;
             serializedImporter.FindProperty("laneMarkingGapLength").floatValue = 4f;
+            serializedImporter.FindProperty("stopLineWidth").floatValue = 0.32f;
+            serializedImporter.FindProperty("stopLineOffset").floatValue = 0f;
+            serializedImporter.FindProperty("stopLineOverlap").floatValue = 0.20f;
+            serializedImporter.FindProperty("sidewalkWidth").floatValue = 2.4f;
             serializedImporter.ApplyModifiedPropertiesWithoutUndo();
 
             importer.Rebuild();
