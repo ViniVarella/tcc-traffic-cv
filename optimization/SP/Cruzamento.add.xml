@@ -1,15 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-05-26T10:45:45.220699-03:00 by Eclipse SUMO netedit 1.26.0
+<!-- Detectores E2 dimensionados para as ROIs reais medidas na calibracao do
+     drone em simjamcv/DigitalTwinsforSmartCities/SP/*/calib_screens.
+
+     Antes: todos com length="20.00", cobrindo so os ultimos 20 m de
+     aproximacoes de 68-78 m. Como um detector de 20 m satura em ~3 veiculos
+     (ver maxVehicleNumber nos e2_*.xml), o agente era cego a qualquer fila
+     maior que isso.
+
+     Agora cada detector tem o comprimento da ROI da camera correspondente e
+     termina junto a linha de retencao:
+
+       E2 (Leste, DadosLeste, 2 faixas)  L23 = 45.80 m
+       E3 (Sul,   DadosSul,   4 faixas)  L12 = 42.60 m
+       E6 (Oeste, DadosOeste, 1 faixa)   L23 = 44.30 m
+
+     Os ids sao preservados, entao Cruzamento.sumocfg, python/configs/sp.yaml e
+     os scripts continuam validos.
 -->
 
 <additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
     <!-- Detectors -->
-    <laneAreaDetector id="e2_0" lane="E6_0" pos="51.80" length="20.00" period="300.00" file="e2_0.xml"/>
-    <laneAreaDetector id="e2_1" lane="E3_2" pos="56.17" length="20.00" period="300.00" file="e2_1.xml"/>
-    <laneAreaDetector id="e2_2" lane="E3_3" pos="56.23" length="20.00" period="300.00" file="e2_2.xml"/>
-    <laneAreaDetector id="e2_3" lane="E3_1" pos="56.50" length="20.00" period="300.00" file="e2_3.xml"/>
-    <laneAreaDetector id="e2_4" lane="E3_0" pos="56.27" length="20.00" period="300.00" file="e2_4.xml"/>
-    <laneAreaDetector id="e2_5" lane="E2_1" pos="47.45" length="20.00" period="300.00" file="e2_5.xml"/>
-    <laneAreaDetector id="e2_6" lane="E2_0" pos="47.48" length="20.00" period="300.00" file="e2_6.xml"/>
+    <laneAreaDetector id="e2_0" lane="E6_0" pos="27.50" length="44.30" period="300.00" file="e2_0.xml"/>
+    <laneAreaDetector id="e2_1" lane="E3_2" pos="33.57" length="42.60" period="300.00" file="e2_1.xml"/>
+    <laneAreaDetector id="e2_2" lane="E3_3" pos="33.63" length="42.60" period="300.00" file="e2_2.xml"/>
+    <laneAreaDetector id="e2_3" lane="E3_1" pos="33.90" length="42.60" period="300.00" file="e2_3.xml"/>
+    <laneAreaDetector id="e2_4" lane="E3_0" pos="33.67" length="42.60" period="300.00" file="e2_4.xml"/>
+    <laneAreaDetector id="e2_5" lane="E2_1" pos="21.65" length="45.80" period="300.00" file="e2_5.xml"/>
+    <laneAreaDetector id="e2_6" lane="E2_0" pos="21.68" length="45.80" period="300.00" file="e2_6.xml"/>
 </additional>
