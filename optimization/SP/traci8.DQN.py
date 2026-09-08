@@ -1,570 +1,500 @@
-# =============================================================================
-# Deep Q-Network (DQN) for Traffic Signal Control — SUMO/TraCI
-# =============================================================================
-# Implements the canonical DQN algorithm (Mnih et al., 2015) with:
-#   - Experience Replay Buffer
-#   - Target Network (frozen, periodically synced)
-#   - Epsilon-greedy policy with decay
-#
-# Key references:
-#   Mnih et al. (2015) "Human-level control through deep reinforcement
-#       learning." Nature, 518, 529–533.
-#   Genders & Razavi (2016) "Using a deep reinforcement learning agent
-#       for traffic signal control." arXiv:1611.01142
-#   Van Hasselt et al. (2016) "Deep Reinforcement Learning with Double
-#       Q-learning." AAAI 2016. [optional extension — see bottom of file]
-# =============================================================================
+"""
+=============================================================================
+Treino Double DQN para controle semaforico -- cruzamento de SP (SUMO/TraCI)
+=============================================================================
 
-# Step 1: Standard library imports
+Toda a dinamica (estado, recompensa, transicoes de fase, flags do SUMO) vem de
+sp_env.py, o mesmo modulo importado por traci9_comp.py. Isso garante que o
+agente e avaliado exatamente no ambiente em que foi treinado.
+
+O que mudou em relacao a versao anterior, e por que:
+
+  1. Transicoes seguras. Antes, setPhase(0 -> 3) saltava amarelo e all-red, e o
+     ganho medido vinha de nao pagar o tempo perdido que o programa fixo paga.
+     Agora SafeTrafficLight percorre verde -> amarelo -> all-red -> verde.
+
+  2. Autoridade real sobre o semaforo. O programa e "static": antes ele
+     continuava ciclando por baixo do agente, e a acao "manter" nao mantinha
+     nada. Agora cada fase entra com duracao infinita e so o agente avanca.
+
+  3. Verde minimo e maximo aplicados por mascara de acao, com as transicoes
+     forcadas fora do buffer de replay. O agente so aprende de decisoes que
+     eram de fato dele.
+
+  4. Estado normalizado pela capacidade do detector em veiculos, nao pelo
+     comprimento em metros. Antes as features de fila viviam em [0; 0,15]
+     enquanto o one-hot de fase valia 1,0.
+
+  5. Recompensa unica e limitada, definida em sp_env.py. Antes treino e
+     comparacao usavam funcoes diferentes, em escalas ~40x distintas.
+
+  6. Demanda aleatorizada por episodio (--scale em [0,85; 1,30]) e seed
+     diferente por episodio. Sem isso o agente decorava uma unica realizacao.
+
+  7. Alvo de Bellman aplicado somente a acao tomada, dentro de um tf.function.
+     A versao anterior regredia tambem a acao nao tomada contra a propria
+     predicao, injetando ruido.
+
+  8. Checkpoint pelo melhor resultado em seeds de validacao separadas, nao
+     pelos pesos do ultimo episodio.
+
+Referencias:
+  Mnih et al. (2015) Nature 518:529-533.
+  Van Hasselt et al. (2016) AAAI -- Double Q-learning.
+  Genders & Razavi (2016) arXiv:1611.01142.
+=============================================================================
+"""
+
+import argparse
+import csv
 import os
 import sys
 import random
-from collections import deque  # Efficient fixed-size FIFO buffer
+import time
+from collections import deque
 
 import numpy as np
-import matplotlib.pyplot as plt
 
-# Step 1.1: Deep learning framework
+import sp_env
+from sp_env import ACTION_SIZE, STATE_SIZE, EnvConfig, SpIntersection
+
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
-# Reproducibility
+# =============================================================================
+# Hiperparametros
+# =============================================================================
+
 SEED = 42
-random.seed(SEED)
-np.random.seed(SEED)
-tf.random.set_seed(SEED)
+
+GAMMA = 0.95               # ~20 decisoes de horizonte efetivo (~100 s, um ciclo)
+LEARNING_RATE = 5e-4
+BATCH_SIZE = 64
+REPLAY_BUFFER_SIZE = 100_000
+MIN_REPLAY_SIZE = 800     # so decisoes livres entram no buffer, ver nota abaixo
+TARGET_UPDATE_EVERY = 500  # em atualizacoes de gradiente, nao em steps de simulacao
+UPDATES_PER_DECISION = 1   # atualizacoes por decisao, independente do armazenamento
+
+EPSILON_START = 1.0
+EPSILON_MIN = 0.05
+# O decaimento so COMECA quando o buffer atinge MIN_REPLAY_SIZE. Antes disso
+# nenhum gradiente e aplicado, e decair epsilon nessa janela desperdicava
+# metade do treino explorando sem aprender nada.
+EPSILON_DECAY_FRACTION = 0.5   # fracao das decisoes de aprendizado ate o piso
+
+# Liberdade ampla de proposito. A varredura de min_green mostrou que o ponto
+# de operacao otimo e segurar o verde ~20 s: em min_green=20 tudo converge para
+# o mesmo resultado e nao ha nada a aprender. Deixando min_green=10 e
+# max_green=60, segurar o verde passa a ser uma decisao do agente, e a pergunta
+# do experimento vira: o DQN descobre sozinho o ponto que a analise indica?
+MIN_GREEN_STEPS = 10
+MAX_GREEN_STEPS = 60
+DECISION_INTERVAL = 5
+HORIZON = 1800
+WARMUP_STEPS = 300
+
+# Demanda calibrada = 3123 veic/h, com E2 em v/c = 1.00. Varia-se em torno
+# de 1.0 para o agente ver desde folga leve ate saturacao.
+TRAIN_SCALE_RANGE = (0.80, 1.05)   # demanda aleatorizada por episodio
+VALID_SEEDS = (9001, 9002, 9003)   # nunca usadas no treino
+VALID_SCALE = 1.0
+
+MODEL_PATH = os.path.join(sp_env.SCRIPT_DIR, "dqn_traffic_model.keras")
+LAST_MODEL_PATH = os.path.join(sp_env.SCRIPT_DIR, "dqn_traffic_model_last.keras")
+
 
 # =============================================================================
-# Step 2: SUMO environment setup
-# =============================================================================
-if 'SUMO_HOME' in os.environ:
-    tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
-    sys.path.append(tools)
-else:
-    sys.exit("Please declare environment variable 'SUMO_HOME'")
-
-import traci
-
-# Get the directory where this script is located
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-Sumo_config = [
-    'sumo',
-    '-c', os.path.join(SCRIPT_DIR, 'Cruzamento.sumocfg'),
-    '--step-length', '1.0',
-    '--lateral-resolution', '0',
-    '--no-warnings', 'true',
-]
-
-
-# =============================================================================
-# Step 3: Hyperparameters
+# Rede
 # =============================================================================
 
-# --- Simulation ---
-TOTAL_STEPS    = 15000   # Total simulation steps (online training horizon)
 
-# --- DQN core ---
-GAMMA          = 0.9     # Discount factor γ ∈ [0,1]
-#                          γ→0: myopic (immediate reward only)
-#                          γ→1: far-sighted (long-term return)
-
-LEARNING_RATE  = 0.001   # Adam optimizer learning rate
-#                          NOTE: Do NOT apply a manual α multiplier on top of
-#                          the Bellman target — Adam already handles step sizes.
-
-BATCH_SIZE     = 32      # Mini-batch size sampled from the replay buffer
-#                          Mnih et al. used 32. Smaller → noisier gradients;
-#                          larger → slower but more stable updates.
-
-# --- Experience Replay ---
-REPLAY_BUFFER_SIZE = 50000  # Maximum number of transitions stored
-#                              Once full, oldest transitions are discarded (FIFO).
-MIN_REPLAY_SIZE    = 3000    # Minimum transitions before training starts
-#                              Ensures the first mini-batch is representative.
-
-# --- Target Network ---
-TARGET_UPDATE_FREQ = 1000    # Steps between target network weight syncs
-#                              Low → target moves often → instability
-#                              High → slow adaptation
-#                              Mnih et al. used 10 000 (longer episodes).
-
-# --- Epsilon-greedy with decay ---
-EPSILON_START  = 1.0     # Initial exploration rate (fully random)
-EPSILON_MIN    = 0.05    # Floor — agent still explores 5% of the time
-EPSILON_DECAY  = 0.999    # Multiplicative decay applied per DECISION (not per sim step)
-#                          ε(t) = max(EPSILON_MIN, EPSILON_START * decay^t)
-
-# --- Traffic-signal stability ---
-MIN_GREEN_STEPS = 20    # Minimum sim steps between phase switches (avoids flicker)
-
-# --- Action repeat ---
-DECISION_INTERVAL = 5   # The agent picks an action every N sim steps; the action
-#                         is held for the whole interval and the reward accumulated.
-#                         Removes redundant no-op transitions when MIN_GREEN blocks switches.
-
-# --- Problem dimensions ---
-DETECTORS = [
-    "e2_0",   # E6_0  (WB approach)
-    "e2_5",   # E2_1  (EB approach, lane 1)
-    "e2_6",   # E2_0  (EB approach, lane 0)
-    "e2_1",   # E3_2  (NB approach, lane 2)
-    "e2_2",   # E3_3  (NB approach, lane 3)
-    "e2_3",   # E3_1  (NB approach, lane 1)
-    "e2_4",   # E3_0  (NB approach, lane 0)
-]
-NUM_PHASES  = 5          # TLS program has 5 phases (0..4); see Cruzamento.net.xml
-STATE_SIZE = len(DETECTORS) * 3 + NUM_PHASES  # (queue, halting, occupancy) per detector + one-hot phase
-ACTION_SIZE = 2          # 0 = keep current phase | 1 = switch to next phase
-ACTIONS     = [0, 1]
-
-# =============================================================================
-# Step 4: Detector & TLS identifiers
-# =============================================================================
-TLS_ID = "clusterJ0_J14_J2_J7"
-
-# logic = traci.trafficlight.getAllProgramLogics(TLS_ID)[0]
-
-# for i, phase in enumerate(logic.phases):
-
-#     print(f"\nPhase {i}")
-#     print("Duration:", phase.duration)
-#     print("State:", phase.state)
-#     print("-" * 30)
-
-# =============================================================================
-# Step 5: Neural network architecture
-# =============================================================================
-
-def build_model(state_size: int, action_size: int) -> keras.Model:
+def build_model(state_size, action_size):
     """
-    Builds a fully-connected Q-network.
-
-    Architecture (Mnih et al. used convolutional layers for pixel input;
-    for low-dimensional state vectors a 2-layer MLP is standard):
-        Input  → Dense(64, ReLU) → Dense(64, ReLU) → Dense(action_size, linear)
-
-    The output layer has *linear* activation because Q-values are unbounded.
-    Loss = MSE between predicted Q(s,a) and the Bellman target.
+    MLP de 3 camadas ocultas. Saida linear porque valores Q sao ilimitados.
+    A perda e Huber, aplicada manualmente no train_step para evitar depender
+    da assinatura de keras.losses entre versoes.
     """
-    model = keras.Sequential([
+    return keras.Sequential([
         layers.Input(shape=(state_size,)),
-        layers.Dense(128, activation='relu'),
-        layers.Dense(128, activation='relu'),
-        layers.Dense(64, activation='relu'),
-        layers.Dense(action_size, activation='linear'),
+        layers.Dense(128, activation="relu"),
+        layers.Dense(128, activation="relu"),
+        layers.Dense(64, activation="relu"),
+        layers.Dense(action_size, activation="linear"),
     ])
-    model.compile(
-        loss=keras.losses.Huber(),
-        optimizer=keras.optimizers.Adam(learning_rate=LEARNING_RATE,clipnorm=1.0)
-    )
-    return model
 
 
-# Main network — updated every step (after warm-up)
-online_network = build_model(STATE_SIZE, ACTION_SIZE)
+class DoubleDQN:
+    """Double DQN com replay uniforme e rede alvo."""
 
-# Target network — weights frozen; synced with online_network every TARGET_UPDATE_FREQ steps
-target_network = build_model(STATE_SIZE, ACTION_SIZE)
-target_network.set_weights(online_network.get_weights())  # Initial sync
+    def __init__(self, state_size, action_size, lr=LEARNING_RATE):
+        self.online = build_model(state_size, action_size)
+        self.target = build_model(state_size, action_size)
+        self.target.set_weights(self.online.get_weights())
+        self.optimizer = keras.optimizers.Adam(learning_rate=lr, clipnorm=10.0)
+        self.buffer = deque(maxlen=REPLAY_BUFFER_SIZE)
+        self.updates = 0
 
-print("Online network architecture:")
-online_network.summary()
+    def remember(self, s, a, r, s2, done):
+        self.buffer.append((s, a, r, s2, float(done)))
 
-# =============================================================================
-# Step 6: Experience Replay Buffer
-# =============================================================================
-# A deque with maxlen automatically discards the oldest element when full.
-# Each element is a tuple: (state, action, reward, next_state, done)
-# 'done' signals episode termination — here every step is within one episode,
-# so done=False always, but included for generality.
+    def act(self, state, epsilon):
+        if random.random() < epsilon:
+            return random.randrange(ACTION_SIZE)
+        q = self.online(state[None, :], training=False).numpy()[0]
+        return int(np.argmax(q))
 
-replay_buffer = deque(maxlen=REPLAY_BUFFER_SIZE)
+    def act_greedy(self, state):
+        q = self.online(state[None, :], training=False).numpy()[0]
+        return int(np.argmax(q))
 
+    @tf.function(reduce_retracing=True)
+    def _train_step(self, states, actions, rewards, next_states, dones):
+        # Double DQN: a acao do proximo estado e escolhida pela rede online e
+        # avaliada pela rede alvo, o que corrige o vies de superestimacao.
+        next_online = self.online(next_states, training=False)
+        best = tf.argmax(next_online, axis=1, output_type=tf.int32)
+        next_target = self.target(next_states, training=False)
+        rows = tf.range(tf.shape(best)[0], dtype=tf.int32)
+        max_q_next = tf.gather_nd(next_target, tf.stack([rows, best], axis=1))
+        y = rewards + GAMMA * max_q_next * (1.0 - dones)
 
-def store_transition(state, action, reward, next_state, done=False):
-    """Append one transition to the replay buffer."""
-    replay_buffer.append((state, action, reward, next_state, done))
+        with tf.GradientTape() as tape:
+            q = self.online(states, training=True)
+            q_taken = tf.gather_nd(q, tf.stack([rows, actions], axis=1))
+            err = y - q_taken
+            abs_err = tf.abs(err)
+            huber = tf.where(abs_err <= 1.0, 0.5 * tf.square(err), abs_err - 0.5)
+            loss = tf.reduce_mean(huber)
+        grads = tape.gradient(loss, self.online.trainable_variables)
+        self.optimizer.apply_gradients(zip(grads, self.online.trainable_variables))
+        return loss
 
-
-# =============================================================================
-# Step 7: Helper functions
-# =============================================================================
-
-def state_to_array(state_tuple) -> np.ndarray:
-    """Convert state tuple → (1, STATE_SIZE) float32 array for model input."""
-    return np.array(state_tuple, dtype=np.float32).reshape(1, -1)
-
-
-def get_state():
-
-    state = []
-
-    for d in DETECTORS:
-
-        queue = (
-            traci.lanearea.getLastStepVehicleNumber(d)
-            / 20.0
+    def learn(self):
+        if len(self.buffer) < MIN_REPLAY_SIZE:
+            return None
+        batch = random.sample(self.buffer, BATCH_SIZE)
+        s, a, r, s2, d = zip(*batch)
+        loss = self._train_step(
+            tf.convert_to_tensor(np.asarray(s, dtype=np.float32)),
+            tf.convert_to_tensor(np.asarray(a, dtype=np.int32)),
+            tf.convert_to_tensor(np.asarray(r, dtype=np.float32)),
+            tf.convert_to_tensor(np.asarray(s2, dtype=np.float32)),
+            tf.convert_to_tensor(np.asarray(d, dtype=np.float32)),
         )
-
-        halting = (
-            traci.lanearea.getLastStepHaltingNumber(d)
-            / 20.0
-        )
-
-        occupancy = (
-            traci.lanearea.getLastStepOccupancy(d)
-            / 100.0
-        )
-
-        state.extend([
-            queue,
-            halting,
-            occupancy
-        ])
-
-    # One-hot encoding of the current phase. A scalar (phase/10) would imply a
-    # spurious ordinal relationship between phases; one-hot lets the network treat
-    # each phase as an independent category.
-    phase = traci.trafficlight.getPhase(TLS_ID)
-    phase_onehot = [0.0] * NUM_PHASES
-    if 0 <= phase < NUM_PHASES:
-        phase_onehot[phase] = 1.0
-    state.extend(phase_onehot)
-
-    return tuple(state)
-
-
-prev_total_wait = 0.0  # running total accumulated waiting time (set per episode)
-
-
-def get_reward(state, action):
-    """
-    Reward based on the *reduction* of accumulated waiting time between steps
-    (delta reward) plus a small penalty on standing queues/occupancy.
-
-    Delta rewards have lower variance than absolute-level rewards and align the
-    learning signal directly with "did this action reduce congestion?".
-    """
-    global prev_total_wait
-
-    total_queue = 0.0
-    total_occupancy = 0.0
-
-    # Detector block excludes the trailing NUM_PHASES one-hot entries.
-    values = list(state[:-NUM_PHASES])
-    for i in range(0, len(values), 3):
-        total_queue += values[i]
-        total_occupancy += values[i + 2]
-
-    total_waiting = 0.0
-    for veh in traci.vehicle.getIDList():
-        total_waiting += traci.vehicle.getWaitingTime(veh) / 100.0
-
-    # Positive when accumulated waiting time went down vs. previous step.
-    delta_wait = prev_total_wait - total_waiting
-    prev_total_wait = total_waiting
-
-    reward = (
-        delta_wait * 1.0
-        - total_queue * 0.5
-        - total_occupancy * 0.5
-    )
-
-    # penaliza troca excessiva
-    if action == 1:
-        reward -= 0.3
-
-    return float(reward)
-
-last_switch_step = -MIN_GREEN_STEPS  # initialise before training loop
-
-
-def apply_action(action: int, current_step: int):
-    """
-    Execute the chosen action on the traffic light.
-    Constraint 5: enforce MIN_GREEN_STEPS between consecutive phase switches
-    to prevent rapid oscillation (green-time guarantee).
-    """
-    global last_switch_step
-
-    if action == 0:
-        return  # keep current phase
-
-    # action == 1: switch phase only if minimum green time has elapsed
-    if current_step - last_switch_step >= MIN_GREEN_STEPS:
-        GREEN_PHASES = [0, 3]  # phases 0 and 3 are the green phases (2 is all-red)
-        current_phase = traci.trafficlight.getPhase(TLS_ID)
-        if current_phase == GREEN_PHASES[0]:
-            traci.trafficlight.setPhase(TLS_ID, GREEN_PHASES[1])
-        else:
-            traci.trafficlight.setPhase(TLS_ID, GREEN_PHASES[0])
-        last_switch_step = current_step
-
-
-def get_action(state: tuple, epsilon: float) -> int:
-    """
-    Epsilon-greedy action selection.
-    Constraint 7: balance exploration (random) and exploitation (greedy).
-
-    With probability ε  → random action (exploration)
-    With probability 1-ε → argmax Q(s,·) from online_network (exploitation)
-    """
-    if random.random() < epsilon:
-        return random.choice(ACTIONS)
-    state_tensor = tf.convert_to_tensor(
-        state_to_array(state),
-        dtype=tf.float32
-    )
-
-    q_values = online_network(
-        state_tensor,
-        training=False
-    ).numpy()[0]
-    return int(np.argmax(q_values))
-
-
-def train_online_network():
-    """
-    Sample a random mini-batch from the replay buffer and perform one
-    gradient-descent step on the online network.
-
-    Bellman target (standard DQN):
-        y = r                          if done
-        y = r + γ · max_a' Q_target(s', a')   otherwise
-
-    Using the TARGET network for the bootstrap estimate stabilises training
-    because the target does not change every step.
-
-    Constraint 6: Q-value update via gradient descent on MSE loss.
-    """
-    if len(replay_buffer) < MIN_REPLAY_SIZE:
-        return  # not enough data yet — skip training
-
-    # Sample a random mini-batch
-    batch = random.sample(replay_buffer, BATCH_SIZE)
-    states, actions, rewards, next_states, dones = zip(*batch)
-
-    # Vectorise for efficient batch inference
-    states_arr      = np.array(states,      dtype=np.float32)   # (BATCH, STATE_SIZE)
-    next_states_arr = np.array(next_states, dtype=np.float32)   # (BATCH, STATE_SIZE)
-    rewards_arr     = np.array(rewards,     dtype=np.float32)   # (BATCH,)
-    dones_arr       = np.array(dones,       dtype=np.float32)   # (BATCH,)
-
-    # Q(s,·) from online network — shape (BATCH, ACTION_SIZE)
-    q_current = online_network(
-        states_arr,
-        training=False
-    ).numpy()
-
-    # max_a' Q_target(s', a') from TARGET network — shape (BATCH,)
-    q_next_target = target_network(
-        next_states_arr,
-        training=False
-    ).numpy()
-    best_actions = np.argmax(
-        online_network(
-            next_states_arr,
-            training=False
-        ).numpy(),
-        axis=1
-    )
-    max_q_next = q_next_target[
-        np.arange(BATCH_SIZE),
-        best_actions
-    ]
-
-    # Bellman targets for the taken action only (vectorised).
-    # (1 - done) zeroes the bootstrap term on terminal transitions.
-    idx = np.arange(BATCH_SIZE)
-    actions_arr = np.array(actions, dtype=np.int64)
-    targets = q_current.copy()
-    targets[idx, actions_arr] = rewards_arr + GAMMA * max_q_next * (1.0 - dones_arr)
-
-    # Single gradient step — train_on_batch avoids the per-call overhead of fit().
-    online_network.train_on_batch(states_arr, targets)
+        self.updates += 1
+        if self.updates % TARGET_UPDATE_EVERY == 0:
+            self.target.set_weights(self.online.get_weights())
+        return float(loss.numpy())
 
 
 # =============================================================================
-# Step 8: Training loop
+# Rollouts
 # =============================================================================
 
-step_history      = []
-reward_history    = []
-queue_history     = []
-epsilon_history   = []
 
-cumulative_reward = 0.0
-epsilon           = EPSILON_START
-
-eval_history      = []  # (episode, greedy cumulative reward) from periodic evaluation
-
-EPISODES = 20
-STEPS_PER_EPISODE = 1000
-EVAL_EVERY = 5  # run a greedy evaluation every N episodes
+def make_env(control="agent"):
+    return SpIntersection(EnvConfig(
+        horizon=HORIZON,
+        decision_interval=DECISION_INTERVAL,
+        min_green=MIN_GREEN_STEPS,
+        max_green=MAX_GREEN_STEPS,
+        warmup_steps=WARMUP_STEPS,
+        control=control,
+    ))
 
 
-def evaluate_greedy(num_steps: int = STEPS_PER_EPISODE) -> float:
+def run_greedy(agent, env, seed, scale=VALID_SCALE):
     """
-    Run one greedy (ε=0, no learning) rollout to measure true policy quality,
-    decoupled from the exploration noise present during training.
+    Rollout guloso, sem aprendizado.
+
+    Grava tripinfo porque a selecao de checkpoint tem de usar a METRICA
+    OBJETIVO (atraso total por veiculo, incluindo o atraso de insercao). Selecionar
+    por fila/espera nas faixas premiaria uma politica que simplesmente retem
+    veiculos fora da rede: a fila nas faixas cai e o atraso real sobe.
     """
-    global prev_total_wait, last_switch_step
-    traci.start(Sumo_config)
-    last_switch_step = -MIN_GREEN_STEPS
-    prev_total_wait = 0.0
+    tripinfo = os.path.join(sp_env.ensure_runs_dir(),
+                            "valid_s%d.xml" % seed)
+    state = env.reset(seed=seed, scale=scale, tripinfo=tripinfo)
     total_reward = 0.0
-    state = get_state()
-    sim_step = 0
-    while sim_step < num_steps:
-        action = get_action(state, epsilon=0.0)  # pure exploitation
-        apply_action(action, current_step=sim_step)
-        done = False
-        for _ in range(DECISION_INTERVAL):
-            traci.simulationStep()
-            sim_step += 1
-            if sim_step >= 100 and traci.simulation.getMinExpectedNumber() <= 0:
-                done = True
+    try:
+        while True:
+            action = agent.act_greedy(state)
+            state, reward, done, _ = env.step(action)
+            total_reward += reward
+            if done:
                 break
-        state = get_state()
-        total_reward += get_reward(state, action)
-        if done:
-            break
-    traci.close()
-    return total_reward
+    finally:
+        env.close()
+    summary = env.metrics.summary()
+    summary.update(sp_env.parse_tripinfo(tripinfo, min_depart=WARMUP_STEPS))
+    summary["reward"] = total_reward
+    return summary
 
 
-print("\n=== Starting DQN Training ===")
-print(f"Replay buffer warms up for {MIN_REPLAY_SIZE} transitions before training begins.\n")
+def reference_baselines(seeds=VALID_SEEDS, scale=VALID_SCALE):
+    """
+    Mede tempo fixo e max-pressure nas MESMAS seeds de validacao.
 
-global_step = 0  # monotonic counter across all episodes (drives target sync)
+    Serve de alvo durante o treino: sem esta referencia e impossivel saber, ao
+    olhar a curva de aprendizado, se o agente esta indo bem ou apenas melhorando
+    em relacao a si mesmo.
+    """
+    from sp_env import max_pressure_action
+    out = {}
+    for name, control, policy in (
+        ("Tempo Fixo", "fixed", lambda e, s: 0),
+        ("Max-Pressure", "agent", lambda e, s: max_pressure_action(e)),
+    ):
+        env = make_env(control)
+        rows = []
+        for seed in seeds:
+            tri = os.path.join(sp_env.ensure_runs_dir(), "ref_s%d.xml" % seed)
+            state = env.reset(seed=seed, scale=scale, tripinfo=tri)
+            try:
+                while True:
+                    state, _, done, _ = env.step(policy(env, state))
+                    if done:
+                        break
+            finally:
+                env.close()
+            m = env.metrics.summary()
+            m.update(sp_env.parse_tripinfo(tri, min_depart=WARMUP_STEPS))
+            rows.append(m)
+        out[name] = {k: float(np.mean([r[k] for r in rows])) for k in rows[0]}
+    return out
 
-for episode in range(EPISODES):
 
-    traci.start(Sumo_config)
+def validate(agent, env, seeds=VALID_SEEDS):
+    """Media das seeds de validacao. Menor mean_total_delay e melhor."""
+    rows = [run_greedy(agent, env, s) for s in seeds]
+    keys = rows[0].keys()
+    return {k: float(np.mean([r[k] for r in rows])) for k in keys}
 
-    last_switch_step = -MIN_GREEN_STEPS
-    prev_total_wait  = 0.0
-    cumulative_reward = 0.0
-
-    state = get_state()
-    sim_step = 0
-
-    while sim_step < STEPS_PER_EPISODE:
-
-        # --- Select action (held for DECISION_INTERVAL sim steps) ---
-        action = get_action(state, epsilon)
-        apply_action(action, current_step=sim_step)
-
-        # --- Advance simulation, accumulating reward over the interval ---
-        done = False
-        for _ in range(DECISION_INTERVAL):
-            traci.simulationStep()
-            sim_step += 1
-            global_step += 1
-            if sim_step >= 100 and traci.simulation.getMinExpectedNumber() <= 0:
-                done = True
-                break
-
-        # --- Observe outcome ---
-        next_state = get_state()
-        reward     = get_reward(next_state, action)
-        cumulative_reward += reward
-
-        # --- Store transition ---
-        store_transition(state, action, reward, next_state, done)
-
-        # --- Learn from replay buffer ---
-        train_online_network()
-
-        # --- Sync target network periodically (uses the global step counter) ---
-        if global_step % TARGET_UPDATE_FREQ < DECISION_INTERVAL:
-            target_network.set_weights(online_network.get_weights())
-            print(f"  [GlobalStep {global_step:>6}] Target network synced. ε={epsilon:.4f}")
-
-        # --- Decay epsilon (per decision, not per sim step) ---
-        epsilon = max(EPSILON_MIN, epsilon * EPSILON_DECAY)
-
-        # --- Logging (roughly every 100 sim steps) ---
-        if sim_step % 100 < DECISION_INTERVAL:
-            q_vals = online_network(state_to_array(state), training=False).numpy()[0]
-            total_q = sum(next_state[i] for i in range(0, len(next_state[:-NUM_PHASES]), 3))
-            print(
-                f"Episode={episode+1} | "
-                f"Step={sim_step:>5} | "
-                f"ε={epsilon:.4f} | "
-                f"Reward={reward:.2f} | "
-                f"TotalQ={total_q:.2f} | "
-                f"CumReward={cumulative_reward:.1f} | "
-                f"Buffer={len(replay_buffer)} | "
-                f"Q={np.round(q_vals, 2)}"
-            )
-            step_history.append(global_step)
-            reward_history.append(cumulative_reward)
-            queue_history.append(total_q)
-            epsilon_history.append(epsilon)
-
-        state = next_state
-        if done:
-            print(f"\nEpisode {episode+1} finished early.")
-            break
-
-    print(f"\nEpisode {episode+1} finished. CumReward={cumulative_reward:.1f}")
-    traci.close()
-
-    # --- Periodic greedy evaluation ---
-    if (episode + 1) % EVAL_EVERY == 0:
-        eval_reward = evaluate_greedy()
-        eval_history.append((episode + 1, eval_reward))
-        print(f"  >> Greedy eval after episode {episode+1}: CumReward={eval_reward:.1f}")
 
 # =============================================================================
-# Step 9: Close SUMO
-# =============================================================================
-print("\nTraining complete.")
-print("Online network summary:")
-online_network.summary()
-
-# =============================================================================
-# Step 10: Save trained model
-# =============================================================================
-online_network.save("dqn_traffic_model.keras")
-print("Model saved to dqn_traffic_model.keras")
-
-# =============================================================================
-# Step 11: Visualisation
+# Treino
 # =============================================================================
 
-fig, axes = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
 
-axes[0].plot(step_history, reward_history, linewidth=1.5)
-axes[0].set_ylabel("Cumulative Reward")
-axes[0].set_title("DQN Training — Traffic Signal Control (SUMO)")
-axes[0].grid(True, alpha=0.4)
+def train(episodes, eval_every, out_csv):
+    random.seed(SEED)
+    np.random.seed(SEED)
+    tf.random.set_seed(SEED)
 
-axes[1].plot(step_history, queue_history, color='tab:orange', linewidth=1.5)
-axes[1].set_ylabel("Total Queue Length (vehicles)")
-axes[1].grid(True, alpha=0.4)
+    agent = DoubleDQN(STATE_SIZE, ACTION_SIZE)
+    print("Estado: %d features | Acoes: %d" % (STATE_SIZE, ACTION_SIZE))
+    agent.online.summary()
 
-axes[2].plot(step_history, epsilon_history, color='tab:green', linewidth=1.5)
-axes[2].set_ylabel("Epsilon (ε)")
-axes[2].set_xlabel("Simulation Step")
-axes[2].grid(True, alpha=0.4)
+    print()
+    print("Referencia nas seeds de validacao %s (demanda %.2fx):"
+          % (str(VALID_SEEDS), VALID_SCALE))
+    refs = reference_baselines()
+    for name, m in refs.items():
+        print("  %-13s atraso_total=%6.1f s (loss=%.1f + insercao=%.1f)"
+              " | viagens=%.0f | fila=%.2f"
+              % (name, m["mean_total_delay"], m["mean_time_loss"],
+                 m["mean_depart_delay"], m["n_trips"], m["mean_queue"]))
+    target = refs["Max-Pressure"]["mean_total_delay"]
+    print("  Alvo: o atraso total de validacao do DQN precisa ficar abaixo de"
+          " %.1f s para superar a heuristica gulosa." % target)
 
-plt.tight_layout()
-plt.savefig("dqn_training_results.png", dpi=150)
-plt.show()
-print("Plot saved to dqn_training_results.png")
+    env = make_env("agent")
+    decisions_per_ep = HORIZON // DECISION_INTERVAL
+    total_decisions = max(episodes * decisions_per_ep, 1)
+    eps_decay_steps = max(int(total_decisions * EPSILON_DECAY_FRACTION), 1)
+
+    history = []
+    decisions = 0
+    learn_decisions = 0
+    best_wait = float("inf")
+    started = time.time()
+
+    print("\n=== Treino Double DQN ===")
+    print("Episodios=%d | horizonte=%d steps | decisao a cada %d steps"
+          % (episodes, HORIZON, DECISION_INTERVAL))
+    print("epsilon 1.00 -> %.2f em %d decisoes (%.0f%% do treino)\n"
+          % (EPSILON_MIN, eps_decay_steps, 100 * EPSILON_DECAY_FRACTION))
+
+    try:
+        for episode in range(1, episodes + 1):
+            seed = 1000 + episode
+            scale = random.uniform(*TRAIN_SCALE_RANGE)
+            state = env.reset(seed=seed, scale=scale)
+
+            ep_reward = 0.0
+            ep_loss = []
+            stored = 0
+            ep_decisions = 0
+
+            while True:
+                # epsilon linear: previsivel e facil de reportar no TCC.
+                frac = min(learn_decisions / eps_decay_steps, 1.0)
+                epsilon = EPSILON_START + frac * (EPSILON_MIN - EPSILON_START)
+
+                action = agent.act(state, epsilon)
+                next_state, reward, done, info = env.step(action)
+                ep_reward += reward
+                decisions += 1
+                ep_decisions += 1
+
+                # Transicoes forcadas por verde min/max nao foram escolhas do
+                # agente, entao nao entram no buffer. As atualizacoes de
+                # gradiente, porem, acontecem a cada decisao: atrela-las ao
+                # armazenamento reduzia o treino a ~40% das atualizacoes.
+                if not info["forced"]:
+                    agent.remember(state, info["action"], reward, next_state, done)
+                    stored += 1
+                for _ in range(UPDATES_PER_DECISION):
+                    loss = agent.learn()
+                    if loss is not None:
+                        ep_loss.append(loss)
+                if len(agent.buffer) >= MIN_REPLAY_SIZE:
+                    learn_decisions += 1
+
+                state = next_state
+                if done:
+                    break
+
+            env.close()
+            m = env.metrics.summary()
+            row = {
+                "episode": episode,
+                "seed": seed,
+                "scale": round(scale, 3),
+                "epsilon": round(epsilon, 4),
+                "reward": round(ep_reward, 2),
+                "reward_per_decision": round(ep_reward / max(ep_decisions, 1), 4),
+                "mean_queue": round(m["mean_queue"], 3),
+                "mean_lane_wait": round(m["mean_lane_wait"], 2),
+                "mean_speed": round(m["mean_speed"], 3),
+                "arrived": m["arrived"],
+                "teleports": m["teleports"],
+                "switches": m["switches"],
+                "stored": stored,
+                "buffer": len(agent.buffer),
+                "updates": agent.updates,
+                "loss": round(float(np.mean(ep_loss)), 5) if ep_loss else "",
+                "valid_wait": "",
+            }
+
+            if episode % eval_every == 0 or episode == episodes:
+                v = validate(agent, env)
+                row["valid_wait"] = round(v["mean_total_delay"], 2)
+                flag = ""
+                if v["mean_total_delay"] < best_wait:
+                    best_wait = v["mean_total_delay"]
+                    agent.online.save(MODEL_PATH)
+                    flag = "  <-- melhor, salvo"
+                print("  validacao ep %3d: atraso_total=%6.1f s (loss=%.1f + insercao=%.1f)"
+                      " | viagens=%.0f | fila=%.2f%s"
+                      % (episode, v["mean_total_delay"], v["mean_time_loss"],
+                         v["mean_depart_delay"], v["n_trips"], v["mean_queue"], flag))
+
+            history.append(row)
+            print("ep %3d/%d | scale=%.2f | eps=%.3f | R=%8.1f | fila=%5.2f | "
+                  "espera=%6.1f | trocas=%3d | buf=%6d"
+                  % (episode, episodes, scale, epsilon, ep_reward,
+                     m["mean_queue"], m["mean_lane_wait"], m["switches"],
+                     len(agent.buffer)))
+    except KeyboardInterrupt:
+        print("\nInterrompido pelo usuario. Salvando o estado atual.")
+    finally:
+        env.close()
+        agent.online.save(LAST_MODEL_PATH)
+
+    if not os.path.exists(MODEL_PATH):
+        agent.online.save(MODEL_PATH)
+
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        if history:
+            w = csv.DictWriter(f, fieldnames=list(history[0].keys()))
+            w.writeheader()
+            w.writerows(history)
+
+    mins = (time.time() - started) / 60.0
+    print("\nTreino concluido em %.1f min." % mins)
+    print("Melhor atraso total de validacao: %.1f s" % best_wait)
+    print("Modelo (melhor): %s" % MODEL_PATH)
+    print("Modelo (ultimo): %s" % LAST_MODEL_PATH)
+    print("Historico:      %s" % out_csv)
+    return history
+
 
 # =============================================================================
-# NOTE: Double DQN is ALREADY active in train_online_network():
-#   action *selection* uses the online network (best_actions) while action
-#   *evaluation* uses the target network (q_next_target). This corrects the
-#   overestimation bias of vanilla DQN.
-# Reference: Van Hasselt, H., Guez, A., & Silver, D. (2016).
-#   "Deep Reinforcement Learning with Double Q-learning." AAAI 2016.
-#
-# Possible further extensions: Dueling DQN architecture, Prioritized Experience
-# Replay, n-step returns, and richer action space (per-phase green-time control).
+# Grafico
 # =============================================================================
+
+
+def plot_history(history, path):
+    if not history:
+        return
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    ep = [r["episode"] for r in history]
+    fig, ax = plt.subplots(4, 1, figsize=(11, 12), sharex=True)
+
+    ax[0].plot(ep, [r["reward"] for r in history], linewidth=1.6, color="tab:blue")
+    ax[0].set_ylabel("Recompensa/episodio")
+    ax[0].set_title("Treino Double DQN -- cruzamento de SP")
+
+    ax[1].plot(ep, [r["mean_queue"] for r in history], linewidth=1.6, color="tab:orange")
+    ax[1].set_ylabel("Fila media (veic.)")
+
+    ax[2].plot(ep, [r["mean_lane_wait"] for r in history], linewidth=1.6, color="tab:red",
+               label="treino (com exploracao)")
+    vx = [r["episode"] for r in history if r["valid_wait"] != ""]
+    vy = [r["valid_wait"] for r in history if r["valid_wait"] != ""]
+    if vx:
+        ax[2].plot(vx, vy, "o-", linewidth=2.0, color="tab:green",
+                   label="validacao (guloso)")
+    ax[2].set_ylabel("Espera nas faixas (s)")
+    ax[2].legend(fontsize=9)
+
+    ax[3].plot(ep, [r["epsilon"] for r in history], linewidth=1.6, color="tab:gray")
+    ax[3].set_ylabel("epsilon")
+    ax[3].set_xlabel("Episodio")
+
+    for a in ax:
+        a.grid(True, alpha=0.35)
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    print("Grafico:        %s" % path)
+
+
+# =============================================================================
+# CLI
+# =============================================================================
+
+
+def main():
+    p = argparse.ArgumentParser(description="Treino Double DQN -- cruzamento de SP")
+    p.add_argument("--episodes", type=int, default=60)
+    p.add_argument("--eval-every", type=int, default=5)
+    p.add_argument("--scenario", default="calibrated",
+                   choices=list(sp_env.SCENARIOS),
+                   help="cenario de demanda (ver sp_env.SCENARIOS)")
+    # Sem isto, redirecionar a saida para arquivo ("> log.txt") esconde o
+    # progresso ate o processo terminar, porque o Python passa a bufferizar
+    # stdout em bloco quando ele nao e um terminal.
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except (AttributeError, ValueError):
+        pass
+
+    args = p.parse_args()
+    sp_env.set_scenario(args.scenario)
+    print("Cenario: %s (%s)" % (args.scenario,
+          os.path.basename(sp_env.SCENARIOS[args.scenario])))
+
+    runs = sp_env.ensure_runs_dir()
+    out_csv = os.path.join(runs, "training_history.csv")
+    history = train(args.episodes, args.eval_every, out_csv)
+    plot_history(history, os.path.join(runs, "dqn_training_results.png"))
+
+
+if __name__ == "__main__":
+    main()

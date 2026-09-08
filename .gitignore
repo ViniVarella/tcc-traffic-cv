@@ -107,3 +107,11 @@ unity/**/mono_crash.*.json
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Saidas geradas pelos experimentos de otimizacao (optimization/SP)
+optimization/*/runs/
+optimization/*/e2_*.xml
+optimization/*/tripinfo*.xml
+optimization/*/baseline_metrics.csv
+optimization/*/dqn_metrics.csv
+optimization/*/*_last.keras

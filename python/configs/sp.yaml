@@ -38,8 +38,13 @@ detectors:
 
 dqn:
   model_path: "../models/dqn_traffic_model.keras"
-  state_size: 26
+  # 7 detectores x 5 features (fila, parados, ocupacao, velocidade, espera)
+  # + one-hot de 5 fases + verde decorrido/pode trocar/deve trocar.
+  # Definido em optimization/SP/sp_env.py:STATE_SIZE.
+  state_size: 43
   detector_features:
     - "vehicle_count"
     - "halting_count"
     - "occupancy"
+    - "mean_speed"
+    - "lane_waiting_time"
