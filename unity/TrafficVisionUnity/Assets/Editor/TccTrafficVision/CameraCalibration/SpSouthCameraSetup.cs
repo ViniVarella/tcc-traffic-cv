@@ -26,7 +26,8 @@ namespace TccTrafficVision.Editor.CameraCalibration
                 "south",
                 SouthCameraName,
                 new Vector3(4.8f, 5.25f, -13.2f),
-                new Vector3(22.613f, -160f, 0f)));
+                new Vector3(22.613f, -160f, 0f),
+                38.8f));
         }
 
         [MenuItem("Traffic Vision/Cameras/Create SP East Camera")]
@@ -36,7 +37,8 @@ namespace TccTrafficVision.Editor.CameraCalibration
                 "east",
                 EastCameraName,
                 new Vector3(12.1f, 5.07f, -1.6f),
-                new Vector3(21.1f, 130f, 0f)));
+                new Vector3(18.343f, 123.797f, -2.175f),
+                28.7f));
         }
 
         [MenuItem("Traffic Vision/Cameras/Create SP West Camera")]
@@ -46,7 +48,8 @@ namespace TccTrafficVision.Editor.CameraCalibration
                 "west",
                 WestCameraName,
                 new Vector3(-17.46f, 5f, -4.75f),
-                new Vector3(25.153f, -48.282f, -1.867f)));
+                new Vector3(14.902f, -63.164f, 0f),
+                25.7f));
         }
 
         private static void CreateOrConfigureCamera(CameraDefinition definition)
@@ -90,7 +93,7 @@ namespace TccTrafficVision.Editor.CameraCalibration
                 definition.position,
                 Quaternion.Euler(definition.rotationEulerDegrees));
             trafficCamera.orthographic = false;
-            trafficCamera.fieldOfView = 48f;
+            trafficCamera.fieldOfView = definition.fieldOfView;
             trafficCamera.nearClipPlane = 0.1f;
             trafficCamera.farClipPlane = 250f;
             trafficCamera.clearFlags = CameraClearFlags.SolidColor;
@@ -195,13 +198,20 @@ namespace TccTrafficVision.Editor.CameraCalibration
             public readonly string objectName;
             public readonly Vector3 position;
             public readonly Vector3 rotationEulerDegrees;
+            public readonly float fieldOfView;
 
-            public CameraDefinition(string cameraId, string objectName, Vector3 position, Vector3 rotationEulerDegrees)
+            public CameraDefinition(
+                string cameraId,
+                string objectName,
+                Vector3 position,
+                Vector3 rotationEulerDegrees,
+                float fieldOfView)
             {
                 this.cameraId = cameraId;
                 this.objectName = objectName;
                 this.position = position;
                 this.rotationEulerDegrees = rotationEulerDegrees;
+                this.fieldOfView = fieldOfView;
             }
         }
     }

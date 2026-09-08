@@ -8,20 +8,20 @@ A simulação 3D no Unity ainda não foi finalizada. Neste momento, os dados uti
 
 Sistema experimental de controle semafórico adaptativo baseado em visão computacional.
 
-O projeto integra SUMO, Unity, YOLOv8 e SORT para avaliar uma abordagem de otimização de tráfego urbano em ambiente simulado. O SUMO gera a dinâmica do tráfego, a Unity renderiza a cena 3D, o YOLO detecta veículos nos frames das câmeras virtuais, o SORT pode auxiliar no rastreamento e um controlador semafórico toma decisões com base na estimativa visual de filas.
+O projeto integra SUMO, Unity, YOLOv8 e ByteTrack para avaliar uma abordagem de otimização de tráfego urbano em ambiente simulado. O SUMO gera a dinâmica do tráfego, a Unity renderiza a cena 3D, o YOLO detecta veículos nos frames das câmeras virtuais, o ByteTrack associa detecções entre frames e um controlador semafórico tomará decisões com base na estimativa visual de filas.
 
 A decisão de controle não usa sensores perfeitos do SUMO. Os dados internos do SUMO são usados para renderização, sincronização e avaliação posterior.
 
 ## Arquitetura
 
-`SUMO -> Python/TraCI -> Unity/SUMO2Unity -> 4 cameras -> Python/YOLO+ROI -> controlador -> SUMO`
+`SUMO -> Python/TraCI -> Unity/SUMO2Unity -> 3 câmeras de entrada -> Python/YOLO+ByteTrack+ROI -> controlador -> SUMO`
 
 ## Decisões arquiteturais revisadas
 
 - Simulação `step-based`: o Python avança o SUMO com `simulationStep()` em modo síncrono. O tempo de referência para métricas é o tempo simulado, não o relógio de parede.
 - Python como único cliente TraCI: a Unity não se conecta diretamente ao SUMO.
-- Quatro câmeras virtuais na Unity: `north`, `south`, `east` e `west`.
-- Uma ROI fixa por câmera: a contagem relevante para o controlador é a quantidade de veículos aguardando dentro da ROI daquela aproximação.
+- Três câmeras virtuais operacionais na Unity: `south`, `east` e `west`. A aproximação `north` é apenas de saída no cenário SP e não é observada.
+- Cada câmera possui uma ROI de aproximação e ROIs por faixa. Elas são a medida operacional para o controlador; os E2 cobrem outro trecho físico e servem apenas como referência de avaliação.
 - Visão a cada `N` steps: a configuração inicial usa `step_length = 0.1s` e `update_every_steps = 5`, o que equivale a rodar a visão a cada `0.5s` simulados.
 - Frames Unity -> Python via TCP: a confiabilidade do transporte é prioritária para imagens JPEG completas em localhost.
 - Cada frame deve carregar `step_id`, `sim_time`, `camera_id`, `image_format` e `payload_size`.
@@ -33,8 +33,8 @@ A decisão de controle não usa sensores perfeitos do SUMO. Os dados internos do
 
 - uma interseção;
 - duas fases principais: `NS` e `EW`;
-- quatro câmeras da Unity;
-- uma ROI por câmera;
+- três câmeras operacionais da Unity (`south`, `east` e `west`);
+- uma ROI de aproximação e ROIs por faixa por câmera;
 - YOLOv8n inicialmente;
 - visão a cada `0.5s` simulados;
 - ground truth apenas para avaliação.
@@ -50,9 +50,9 @@ A decisão de controle não usa sensores perfeitos do SUMO. Os dados internos do
 
 ## Teste de visão local
 
-O teste de visão roda sem SUMO e sem Unity, usando imagem ou vídeo local para validar a pipeline YOLO + SORT + ROI.
+O teste de visão roda sem SUMO e sem Unity, usando imagem ou vídeo local para validar a pipeline YOLO + ByteTrack + ROI.
 
-Esse teste é preliminar. Ele usa um vídeo top-down local apenas para validar a pipeline de visão em isolamento. A arquitetura final dos experimentos não usará esse vídeo como entrada principal; ela usará frames vindos de quatro câmeras virtuais da Unity, cada uma com sua ROI própria.
+Esse teste é preliminar. Ele usa um vídeo top-down local apenas para validar a pipeline de visão em isolamento. A arquitetura final dos experimentos usa frames das três câmeras operacionais da Unity, cada uma com suas próprias ROIs.
 
 1. Instale as dependências do ambiente virtual:
 
@@ -186,6 +186,87 @@ Validação esperada:
 - o Console da Unity deve registrar `step`, `step_id`, `sim_time` e quantidade de veículos;
 - a cena deve mostrar cubos simples representando veículos se movendo ao longo dos steps recebidos.
 
-## Próxima validação importante
+## Avaliação: tempo fixo versus controlador visual
 
-Antes de integrar controle completo, o projeto deve validar cedo se o YOLO detecta bem os veículos renderizados pela Unity. Frames sintéticos podem divergir do domínio visual do COCO, então esse risco precisa ser medido antes de fechar a arquitetura de controle.
+O controlador adaptativo já está integrado. Ele usa exclusivamente as contagens
+visuais das câmeras `south`, `east` e `west`; E2 e outros dados perfeitos do
+SUMO não entram na decisão.
+
+Para comparar as políticas sob a mesma configuração e seed, execute primeiro o
+baseline de tempos fixos do SUMO (Unity não é necessária):
+
+```bash
+cd python
+python -m experiments.run_fixed_time_baseline --config configs/sp.yaml --steps 100 --output ../results/evaluation/fixed-time-baseline-metrics.json
+```
+
+Em seguida, com a cena `SPImport` em Play Mode e a captura de dataset desativada,
+execute o controlador visual, incluindo a saída de métricas:
+
+```bash
+python -m experiments.run_visual_controller --config configs/sp.yaml --steps 100 --camera-ids south,east,west --model ../runs/results/models/yolov8n-unity-run-002-mask/weights/best.pt --classes 0 --metrics-output ../results/evaluation/visual-controller-metrics.json
+```
+
+Por fim, gere a comparação:
+
+```bash
+python -m experiments.compare_control_experiments --baseline ../results/evaluation/fixed-time-baseline-metrics.json --visual-adaptive ../results/evaluation/visual-controller-metrics.json --output ../results/evaluation/fixed-vs-visual-controller.json
+```
+
+As métricas são veículos concluídos, tempo médio de viagem, tempo médio de
+espera, fila média/máxima e vazão. O arquivo comparativo registra a diferença
+absoluta e percentual; valores maiores são desejáveis apenas para veículos
+concluídos e vazão.
+
+Para replicações independentes, informe a mesma `--seed` no baseline e no
+controlador visual de cada par, mudando-a entre os pares. O SUMO é
+determinístico para uma seed específica. No cenário SP atual, a demanda é
+definida pelos seis fluxos `from`/`to` de `sumo/sp/Cruzamento.rou.xml`; a seed
+não seleciona outras rotas, mas controla os componentes estocásticos de uma
+execução. Usar a mesma seed mantém a comparação justa entre as políticas.
+
+### Resultado inicial (três seeds)
+
+Em 100 segundos simulados para as seeds `42`, `7` e `99`, o controlador visual
+superou o plano fixo em todos os pares. As médias foram:
+
+| Métrica | Tempo fixo | Controle visual | Variação |
+| --- | ---: | ---: | ---: |
+| Veículos concluídos | 50,67 | 60,67 | +19,7% |
+| Vazão | 1842,4 veh/h | 2206,1 veh/h | +19,7% |
+| Tempo médio de viagem | 27,35 s | 26,11 s | -4,6% |
+| Tempo médio de espera | 6,77 s | 3,93 s | -42,0% |
+| Fila média | 8,70 | 3,89 | -55,3% |
+| Fila máxima | 19,67 | 9,33 | -52,5% |
+
+É uma avaliação experimental inicial com três cenários de demanda; ela mostra
+consistência entre as seeds, mas não substitui um estudo estatístico de maior
+escala.
+
+### DQN visual: treinamento e avaliação final
+
+O DQN operacional é implementado em PyTorch e recebe somente o vetor visual de
+13 entradas: as contagens normalizadas das sete faixas monitoradas, a fase do
+semáforo em *one-hot* e o tempo decorrido da fase. As leituras E2/TraCI não são
+entradas da política; a espera global do SUMO é usada apenas como sinal de
+recompensa durante o treinamento.
+
+O treinamento usa seeds `1` a `50`; a validação periódica, sem exploração nem
+atualização de pesos, usa as seeds `1001` a `1003`; e os testes finais usam as
+seeds não vistas `201` a `203`. O checkpoint selecionado por validação foi o do
+episódio 4. A camada de segurança mantém verde mínimo de 10 s, verde máximo de
+40 s, amarelo de 3 s e *all-red* de 1 s.
+
+| Métrica média nas seeds finais 201–203 | Tempo fixo | Heurístico visual | DQN visual |
+| --- | ---: | ---: | ---: |
+| Veículos concluídos | 50,67 | 60,67 | 60,33 |
+| Vazão (veíc./h) | 1842,42 | 2206,06 | 2193,94 |
+| Tempo médio de espera | 6,85 s | 4,41 s | 4,44 s |
+| Fila média | 8,73 | 4,15 | 4,21 |
+| Fila máxima | 18,67 | 10,33 | 10,33 |
+
+Os dois controladores visuais superaram o tempo fixo. O DQN não superou o
+heurístico: nos testes ele solicitou troca assim que o verde mínimo permitiu,
+produzindo uma política quase fixa. Esse resultado é preservado como limitação
+experimental; o próximo aperfeiçoamento é treinar com perfis de demanda
+assimétricos e decisões apenas quando uma troca for permitida.

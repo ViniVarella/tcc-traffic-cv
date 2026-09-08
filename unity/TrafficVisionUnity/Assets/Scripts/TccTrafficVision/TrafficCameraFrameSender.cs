@@ -26,6 +26,7 @@ namespace TccTrafficVision
         [SerializeField] private string destinationHost = "127.0.0.1";
         [SerializeField] private int destinationPort = 5005;
         [SerializeField, Range(1, 100)] private int jpegQuality = 90;
+        [SerializeField] private bool sendInstanceMasks = true;
         [SerializeField, Min(100)] private int connectionTimeoutMilliseconds = 2000;
         [SerializeField] private bool logSuccessfulFrames = true;
 
@@ -49,8 +50,8 @@ namespace TccTrafficVision
 
         private void EnsureCameraCalibrations()
         {
-            cameraCalibrations.RemoveAll(calibration => calibration == null);
-            if (cameraCalibration != null && !cameraCalibrations.Contains(cameraCalibration))
+            cameraCalibrations.RemoveAll(calibration => calibration == null || !calibration.CaptureEnabled);
+            if (cameraCalibration != null && cameraCalibration.CaptureEnabled && !cameraCalibrations.Contains(cameraCalibration))
             {
                 cameraCalibrations.Add(cameraCalibration);
             }
@@ -58,7 +59,7 @@ namespace TccTrafficVision
             TrafficCameraCalibration[] discovered = FindObjectsByType<TrafficCameraCalibration>(FindObjectsSortMode.None);
             foreach (TrafficCameraCalibration calibration in discovered)
             {
-                if (calibration != null && !cameraCalibrations.Contains(calibration))
+                if (calibration != null && calibration.CaptureEnabled && !cameraCalibrations.Contains(calibration))
                 {
                     cameraCalibrations.Add(calibration);
                 }
@@ -98,9 +99,19 @@ namespace TccTrafficVision
                 }
 
                 byte[] jpeg;
+                byte[] maskPng = null;
+                GroundTruthVehicle[] annotations;
                 try
                 {
                     jpeg = CaptureJpeg(calibration);
+                    if (sendInstanceMasks)
+                    {
+                        maskPng = CaptureInstanceMask(calibration, out annotations);
+                    }
+                    else
+                    {
+                        annotations = VehicleGroundTruth.Collect(calibration.CameraComponent);
+                    }
                 }
                 catch (Exception exception)
                 {
@@ -110,7 +121,7 @@ namespace TccTrafficVision
                     continue;
                 }
 
-                _ = SendFrameAsync(state, calibration.CameraId, jpeg);
+                _ = SendFrameAsync(state, calibration.CameraId, jpeg, maskPng, annotations);
             }
         }
 
@@ -134,6 +145,69 @@ namespace TccTrafficVision
                 texture.ReadPixels(new Rect(0f, 0f, width, height), 0, 0, false);
                 texture.Apply(false, false);
                 return texture.EncodeToJPG(jpegQuality);
+            }
+            finally
+            {
+                RenderTexture.active = previousActive;
+                Destroy(texture);
+                RenderTexture.ReleaseTemporary(renderTexture);
+            }
+        }
+
+        private byte[] CaptureInstanceMask(TrafficCameraCalibration calibration, out GroundTruthVehicle[] annotations)
+        {
+            Camera sourceCamera = calibration.CameraComponent;
+            if (sourceCamera == null)
+            {
+                throw new InvalidOperationException("The calibrated camera has no Camera component.");
+            }
+
+            Shader shader = Shader.Find("TccTrafficVision/InstanceMask");
+            if (shader == null)
+            {
+                throw new InvalidOperationException("Could not find the TccTrafficVision/InstanceMask shader.");
+            }
+
+            int previousCullingMask = sourceCamera.cullingMask;
+            CameraClearFlags previousClearFlags = sourceCamera.clearFlags;
+            Color previousBackground = sourceCamera.backgroundColor;
+            bool previousAllowMsaa = sourceCamera.allowMSAA;
+            Material template = new Material(shader);
+            try
+            {
+                using (InstanceMaskRenderScope scope = InstanceMaskRenderScope.Begin(template))
+                {
+                    sourceCamera.cullingMask = 1 << InstanceMaskRenderScope.MaskLayer;
+                    sourceCamera.clearFlags = CameraClearFlags.SolidColor;
+                    sourceCamera.backgroundColor = Color.black;
+                    sourceCamera.allowMSAA = false;
+                    byte[] png = CapturePng(sourceCamera, calibration.CaptureWidth, calibration.CaptureHeight);
+                    annotations = VehicleGroundTruth.Collect(sourceCamera);
+                    return png;
+                }
+            }
+            finally
+            {
+                sourceCamera.cullingMask = previousCullingMask;
+                sourceCamera.clearFlags = previousClearFlags;
+                sourceCamera.backgroundColor = previousBackground;
+                sourceCamera.allowMSAA = previousAllowMsaa;
+                Destroy(template);
+            }
+        }
+
+        private static byte[] CapturePng(Camera sourceCamera, int width, int height)
+        {
+            RenderTexture renderTexture = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32);
+            Texture2D texture = new Texture2D(width, height, TextureFormat.RGB24, false, true);
+            RenderTexture previousActive = RenderTexture.active;
+            try
+            {
+                RenderCamera(sourceCamera, renderTexture);
+                RenderTexture.active = renderTexture;
+                texture.ReadPixels(new Rect(0f, 0f, width, height), 0, 0, false);
+                texture.Apply(false, false);
+                return texture.EncodeToPNG();
             }
             finally
             {
@@ -167,7 +241,12 @@ namespace TccTrafficVision
             }
         }
 
-        private async Task SendFrameAsync(SimulationStateMessage state, string cameraId, byte[] jpeg)
+        private async Task SendFrameAsync(
+            SimulationStateMessage state,
+            string cameraId,
+            byte[] jpeg,
+            byte[] maskPng,
+            GroundTruthVehicle[] annotations)
         {
             FrameHeader header = new FrameHeader
             {
@@ -175,7 +254,10 @@ namespace TccTrafficVision
                 sim_time = state.sim_time,
                 camera_id = cameraId,
                 image_format = "jpeg",
-                payload_size = jpeg.Length
+                payload_size = jpeg.Length,
+                mask_format = maskPng == null ? null : "png",
+                mask_payload_size = maskPng?.Length ?? 0,
+                ground_truth_vehicles = annotations,
             };
             byte[] headerBytes = Encoding.UTF8.GetBytes(JsonUtility.ToJson(header));
             byte[] headerLengthBytes = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(headerBytes.Length));
@@ -194,12 +276,17 @@ namespace TccTrafficVision
                 await stream.WriteAsync(headerLengthBytes, 0, headerLengthBytes.Length);
                 await stream.WriteAsync(headerBytes, 0, headerBytes.Length);
                 await stream.WriteAsync(jpeg, 0, jpeg.Length);
+                if (maskPng != null)
+                {
+                    await stream.WriteAsync(maskPng, 0, maskPng.Length);
+                }
                 await stream.FlushAsync();
 
                 if (logSuccessfulFrames)
                 {
                     Debug.Log(
-                        $"Unity sent frame: camera={header.camera_id} step_id={header.step_id} bytes={header.payload_size}",
+                        $"Unity sent frame: camera={header.camera_id} step_id={header.step_id} " +
+                        $"jpeg_bytes={header.payload_size} mask_bytes={header.mask_payload_size}",
                         this);
                 }
             }
@@ -219,6 +306,9 @@ namespace TccTrafficVision
             public string camera_id;
             public string image_format;
             public int payload_size;
+            public string mask_format;
+            public int mask_payload_size;
+            public GroundTruthVehicle[] ground_truth_vehicles;
         }
     }
 }

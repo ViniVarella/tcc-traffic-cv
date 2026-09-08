@@ -26,6 +26,14 @@ traffic_light:
     secondary_green: 3
     secondary_yellow: 4
 
+traffic_control:
+  # Controlador heurístico inicial. Suas entradas são somente as filas visuais.
+  min_green_seconds: 10
+  max_green_seconds: 40
+  yellow_seconds: 3
+  all_red_seconds: 1
+  switch_margin: 1
+
 detectors:
   ids:
     - "e2_0" # E6_0
@@ -36,15 +44,33 @@ detectors:
     - "e2_3" # E3_1
     - "e2_4" # E3_0
 
+# Mapeamento explícito entre as ROIs calibradas no Unity e os detectores E2.
+# Serve somente para comparar visão vs. verdade de terreno em avaliação offline.
+vision_evaluation:
+  lane_detector_mapping:
+    south:
+      lane_0: "e2_4" # E3_0
+      lane_1: "e2_3" # E3_1
+      lane_2: "e2_1" # E3_2
+      lane_3: "e2_2" # E3_3
+    east:
+      lane_0: "e2_6" # E2_0
+      lane_1: "e2_5" # E2_1
+    west:
+      lane_0: "e2_0" # E6_0
+
 dqn:
-  model_path: "../models/dqn_traffic_model.keras"
-  # 7 detectores x 5 features (fila, parados, ocupacao, velocidade, espera)
-  # + one-hot de 5 fases + verde decorrido/pode trocar/deve trocar.
-  # Definido em optimization/SP/sp_env.py:STATE_SIZE.
-  state_size: 43
-  detector_features:
-    - "vehicle_count"
-    - "halting_count"
-    - "occupancy"
-    - "mean_speed"
-    - "lane_waiting_time"
+  model_path: "../results/models/visual-dqn-sp.pt"
+  state_size: 13
+  actions: ["keep", "switch"]
+  max_lane_count: 10
+  hidden_size: 64
+  gamma: 0.90
+  learning_rate: 0.001
+  batch_size: 32
+  replay_capacity: 50000
+  min_replay_size: 256
+  target_update_interval: 250
+  epsilon_start: 1.0
+  epsilon_min: 0.05
+  epsilon_decay: 0.995

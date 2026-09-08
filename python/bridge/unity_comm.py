@@ -91,7 +91,9 @@ class UnityBridge:
         with connection:
             connection.settimeout(self.timeout)
             header_size = int.from_bytes(self._read_exact(connection, 4), byteorder="big", signed=False)
-            if not 2 <= header_size <= 16_384:
+            # Synthetic-training annotations are carried in the header and can
+            # legitimately make it larger than the old RGB-only 16 KiB limit.
+            if not 2 <= header_size <= 512 * 1024:
                 raise ValueError(f"Invalid Unity frame header size: {header_size}.")
 
             raw_header = json.loads(self._read_exact(connection, header_size).decode("utf-8"))
@@ -101,13 +103,22 @@ class UnityBridge:
                 camera_id=str(raw_header.get("camera_id", "unknown")),
                 image_format=str(raw_header.get("image_format", "jpeg")),
                 payload_size=int(raw_header.get("payload_size", -1)),
+                ground_truth_vehicles=self._parse_ground_truth_vehicles(raw_header.get("ground_truth_vehicles", [])),
+                mask_format=raw_header.get("mask_format"),
+                mask_payload_size=int(raw_header.get("mask_payload_size", 0)),
             )
             if packet.image_format.lower() != "jpeg":
                 raise ValueError(f"Unsupported Unity frame format: {packet.image_format}.")
             if not 1 <= packet.payload_size <= 20 * 1024 * 1024:
                 raise ValueError(f"Invalid Unity frame payload size: {packet.payload_size}.")
+            if packet.mask_payload_size < 0 or packet.mask_payload_size > 20 * 1024 * 1024:
+                raise ValueError(f"Invalid Unity mask payload size: {packet.mask_payload_size}.")
+            if packet.mask_payload_size and str(packet.mask_format).lower() != "png":
+                raise ValueError(f"Unsupported Unity mask format: {packet.mask_format!r}.")
 
             payload = self._read_exact(connection, packet.payload_size)
+            if packet.mask_payload_size:
+                packet.mask_png = self._read_exact(connection, packet.mask_payload_size)
             return payload, packet
 
     def close(self) -> None:
@@ -124,6 +135,9 @@ class UnityBridge:
         camera_id: str,
         payload_size: int,
         image_format: str = "jpeg",
+        ground_truth_vehicles: list[dict[str, Any]] | None = None,
+        mask_format: str | None = None,
+        mask_payload_size: int = 0,
     ) -> FramePacket:
         """Cria um pacote de metadados para um frame associado a uma camera."""
         return FramePacket(
@@ -132,7 +146,49 @@ class UnityBridge:
             camera_id=camera_id,
             image_format=image_format,
             payload_size=payload_size,
+            ground_truth_vehicles=ground_truth_vehicles or [],
+            mask_format=mask_format,
+            mask_payload_size=mask_payload_size,
         )
+
+    @staticmethod
+    def _parse_ground_truth_vehicles(value: object) -> list[dict[str, Any]]:
+        """Valida o metadado opcional gerado pela Unity para treino sintético."""
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            raise ValueError("Unity ground_truth_vehicles must be a JSON array.")
+        if len(value) > 1_000:
+            raise ValueError("Unity ground_truth_vehicles exceeds the per-frame safety limit.")
+
+        annotations: list[dict[str, Any]] = []
+        for item in value:
+            if not isinstance(item, dict):
+                raise ValueError("Each Unity ground-truth vehicle must be a JSON object.")
+            try:
+                annotation = {
+                    "vehicle_id": str(item["vehicle_id"]),
+                    "vehicle_type": str(item.get("vehicle_type", "")),
+                    "class_id": int(item.get("class_id", 0)),
+                    "color_r": int(item.get("color_r", 0)),
+                    "color_g": int(item.get("color_g", 0)),
+                    "color_b": int(item.get("color_b", 0)),
+                    "center_x": float(item["center_x"]),
+                    "center_y": float(item["center_y"]),
+                    "width": float(item["width"]),
+                    "height": float(item["height"]),
+                }
+            except (KeyError, TypeError, ValueError) as exception:
+                raise ValueError(f"Invalid Unity ground-truth vehicle: {item!r}") from exception
+
+            if annotation["class_id"] != 0:
+                raise ValueError("Only the vehicle class_id=0 is supported by the synthetic dataset.")
+            if not all(0 <= annotation[key] <= 255 for key in ("color_r", "color_g", "color_b")):
+                raise ValueError(f"Unity ground-truth color is invalid: {item!r}")
+            if not all(0.0 <= annotation[key] <= 1.0 for key in ("center_x", "center_y", "width", "height")):
+                raise ValueError(f"Unity ground-truth box is outside normalized bounds: {item!r}")
+            annotations.append(annotation)
+        return annotations
 
     @staticmethod
     def _read_exact(connection: socket.socket, size: int) -> bytes:
