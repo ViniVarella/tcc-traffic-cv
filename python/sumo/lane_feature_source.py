@@ -69,6 +69,7 @@ class TraciLaneFeatureSource:
             for camera_id in cameras
         }
         self._random = random.Random(self._seed if seed is None else seed)
+        self.last_observations: dict[str, list[LaneObservation]] = {}
 
     def observe(self, client: LanePositionClient, sim_time: float) -> dict[LaneKey, LaneFeatures]:
         observations: dict[str, list[LaneObservation]] = {camera_id: [] for camera_id in self._trackers}
@@ -77,6 +78,7 @@ class TraciLaneFeatureSource:
                 observation = self._observation(lane_id, geometry, vehicle_id, lane_position)
                 if observation is not None:
                     observations[camera_id].append(observation)
+        self.last_observations = observations
         features: dict[LaneKey, LaneFeatures] = {}
         for camera_id, tracker in self._trackers.items():
             for lane_id, lane_features in tracker.update(observations[camera_id], sim_time).items():

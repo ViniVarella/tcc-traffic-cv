@@ -18,7 +18,7 @@ import yaml
 from controller import DqnAgent
 from controller.policies import FixedCyclePolicy, MaxPressurePolicy
 from experiments.episode_runner import DqnPolicy, EpisodeSettings, Policy
-from experiments.pretrain_dqn_sumo import Environment
+from experiments.sumo_environment import Environment
 from experiments.scenario_config import add_scenario_argument
 
 
@@ -41,13 +41,15 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     return parser.parse_args()
 
 
-def evaluate(environment: Environment, policy: Policy, seeds: list[int]) -> dict[str, Any]:
+def evaluate(environment: Environment, policy: Policy, seeds: list[int], **run_options: Any) -> dict[str, Any]:
+    """Roda a política em cada seed; ``run_options`` vai para ``Environment.run`` (ex.: observer)."""
     runs = []
     for seed in seeds:
-        outcome, scenario = environment.run(seed, policy)
+        outcome, scenario = environment.run(seed, policy, **run_options)
         green = {name: outcome.phase_seconds.get(name, 0) for name in ("EAST_WEST_GREEN", "SOUTH_GREEN")}
         runs.append({"seed": seed, "scenario": scenario, "mean_reward": outcome.mean_reward, "switches": outcome.switches,
-                     "switch_rate": outcome.switch_rate, "east_west_green_share": green["EAST_WEST_GREEN"] / max(1, sum(green.values())),
+                     "switch_rate": outcome.switch_rate, "missing_observations": outcome.missing_observations,
+                     "east_west_green_share": green["EAST_WEST_GREEN"] / max(1, sum(green.values())),
                      **{key: outcome.metrics.get(key) for key in SUMMARY_KEYS}})
     numeric = ("mean_reward", "switches", "east_west_green_share", *SUMMARY_KEYS)
     return {"runs": runs, "mean": {key: fmean(float(run[key]) for run in runs) for key in numeric if all(run[key] is not None for run in runs)}}

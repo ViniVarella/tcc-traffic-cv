@@ -17,16 +17,13 @@ from typing import Any
 
 import yaml
 
-from controller import DqnAgent, DqnConfig, DqnTrafficController
+from controller import DqnAgent, DqnConfig
 from controller.policies import FixedCyclePolicy, MaxPressurePolicy
-from controller.rewards import RewardWeights
 from experiments.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
-from experiments.episode_runner import DqnPolicy, EpisodeSettings, EpsilonSchedule, Policy, RewardModel, incoming_lane_capacity, run_episode
+from experiments.episode_runner import DqnPolicy, EpisodeSettings, EpsilonSchedule, Policy
 from experiments.scenario_config import add_scenario_argument
-from sumo import SumoClient
-from sumo.lane_feature_source import TraciLaneFeatureSource, noise_from_config
-from vision import SP_LANE_ORDER, build_state_encoder
-from vision.lane_features import KinematicsParameters, load_lane_geometries
+from experiments.sumo_environment import Environment
+from vision import SP_LANE_ORDER
 
 
 def parse_args(base_dir: Path) -> argparse.Namespace:
@@ -53,39 +50,6 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--best-checkpoint-output", type=Path, default=base_dir.parent / "results" / "models" / "dqn-v2-pretrain-best.pt")
     parser.add_argument("--log-output", type=Path, default=base_dir.parent / "results" / "logs" / "dqn-v2-pretrain.jsonl")
     return parser.parse_args()
-
-
-class Environment:
-    """Tudo o que é fixo entre episódios: perfil, geometria, encoder e recompensa."""
-
-    def __init__(self, config: dict[str, Any], base_dir: Path, scenario: str | None, settings: EpisodeSettings) -> None:
-        self.config = config
-        self.base_dir = base_dir
-        self.scenario = scenario
-        self.settings = settings
-        self.geometries = load_lane_geometries(config)
-        self.parameters = KinematicsParameters.from_config(config)
-        self.noise = noise_from_config(config)
-        self.encoder = build_state_encoder(config, version=2)
-        self.reward_lanes = tuple(sorted({geometry.sumo_lane for geometry in self.geometries.values()}))
-        self.reward_weights = RewardWeights.from_config(config)
-        self.tls_id = str(config["traffic_light"]["id"])
-
-    def run(self, seed: int, policy: Policy, learner: DqnAgent | None = None) -> tuple[Any, str | None]:
-        client = SumoClient.from_config(self.config, self.base_dir, seed_override=seed, scenario_override=self.scenario)
-        client.start()
-        try:
-            reward = RewardModel(self.reward_lanes, incoming_lane_capacity([client.get_lane_length(lane) for lane in self.reward_lanes]),
-                                 self.reward_weights)
-            source = TraciLaneFeatureSource(self.geometries, self.parameters, self.noise, seed=seed)
-            outcome = run_episode(
-                client=client, controller=DqnTrafficController(self.tls_id, self.config),
-                observe=lambda sim_time: source.observe(client, sim_time), encoder=self.encoder,
-                policy=policy, reward=reward, settings=self.settings, learner=learner,
-            )
-        finally:
-            client.close()
-        return outcome, client.scenario
 
 
 def main() -> None:

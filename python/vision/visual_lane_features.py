@@ -46,6 +46,7 @@ class VisualLaneFeatureSource:
             camera_id: ApproachKinematicsTracker({lane_id: homography.length_m for lane_id, homography in lanes.items()}, self.parameters)
             for camera_id, lanes in self._homographies.items()
         }
+        self.last_observations: dict[str, list[LaneObservation]] = {}
 
     def observations(self, camera_id: str, objects: Sequence[Mapping[str, Any]], frame_width: int, frame_height: int) -> list[LaneObservation]:
         """Projeta os objetos de uma câmera nas faixas calibradas."""
@@ -75,9 +76,11 @@ class VisualLaneFeatureSource:
     def observe(self, camera_results: Mapping[str, Any], sim_time: float) -> dict[LaneKey, LaneFeatures]:
         """Recebe ``CameraStepResult`` por câmera (``objects`` e ``frame``) de um step."""
         features: dict[LaneKey, LaneFeatures] = {}
+        self.last_observations = {}
         for camera_id, tracker in self._trackers.items():
             result = camera_results.get(camera_id)
             observations = [] if result is None else self.observations(camera_id, result.objects, result.frame.shape[1], result.frame.shape[0])
+            self.last_observations[camera_id] = observations
             for lane_id, lane_features in tracker.update(observations, sim_time).items():
                 features[(camera_id, lane_id)] = lane_features
         return features

@@ -102,7 +102,7 @@ class DqnAgent:
                                       bool(done), discount))
 
     def train_step(self) -> float | None:
-        if len(self.replay) < self.config.min_replay_size:
+        if len(self.replay) < max(self.config.min_replay_size, self.config.batch_size):
             return None
         batch = self._random.sample(self.replay, self.config.batch_size)
         states = torch.as_tensor(np.stack([item.state for item in batch]), dtype=torch.float32, device=self.device)

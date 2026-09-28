@@ -180,7 +180,8 @@ def run_episode(
                     decision = controller.update(sim_time, controller.KEEP)
         controller.apply(client, decision)
         if on_step is not None:
-            on_step({"sim_time": sim_time, "reward": step_reward, "phase": phase.name, "decision": decision,
+            on_step({"sim_time": sim_time, "reward": step_reward, "phase": phase.name, "phase_index": phase.phase_index,
+                     "phase_elapsed": elapsed, "decision": decision,
                      "requested_action": requested, "lane_features": lane_features, "lane_metrics": lane_metrics})
     # Episódio truncado pelo tempo: a última transição faz bootstrap (done=False).
     if last_state is not None:
