@@ -108,7 +108,7 @@ class KinematicsParameters:
 
     @classmethod
     def from_config(cls, config: Mapping[str, Any]) -> "KinematicsParameters":
-        return cls(**dict(config.get("lane_state", {})))
+        return cls(**dict(config.get("lane_state", {}).get("kinematics", {})))
 
 
 @dataclass(slots=True)

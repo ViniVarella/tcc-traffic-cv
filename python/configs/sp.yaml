@@ -82,6 +82,23 @@ lane_geometry:
   west:
     lane_0: {sumo_lane: "E6_0", roi_start_m: 50.8, roi_end_m: 74.0, width_m: 3.2}
 
+# Parâmetros das features por faixa (vision/lane_features.py). "Parado" segue os
+# padrões do E2 do SUMO (1,39 m/s por 1 s). oracle_noise degrada a fonte TraCI do
+# pré-treino; visual_ground_offset_m corrige a posição do ponto de solo da bbox.
+# Ambos são calibrados pela medição do domain gap visão × TraCI.
+lane_state:
+  kinematics:
+    stop_speed_mps: 1.39
+    stop_time_s: 1.0
+    move_speed_mps: 2.0
+    vehicle_length_m: 5.0
+    ghost_ttl_s: 3.0
+  visual_ground_offset_m: 0.0
+  oracle_noise:
+    position_std_m: 0.0
+    drop_probability: 0.0
+    untracked_probability: 0.0
+
 dqn:
   model_path: "../results/models/visual-dqn-sp.pt"
   state_size: 13

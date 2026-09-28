@@ -155,7 +155,7 @@ class GeometryTests(unittest.TestCase):
     def test_parameters_validate_hysteresis(self) -> None:
         with self.assertRaises(ValueError):
             KinematicsParameters(stop_speed_mps=3.0, move_speed_mps=2.0)
-        self.assertEqual(KinematicsParameters.from_config({"lane_state": {"ghost_ttl_s": 0.0}}).ghost_ttl_s, 0.0)
+        self.assertEqual(KinematicsParameters.from_config({"lane_state": {"kinematics": {"ghost_ttl_s": 0.0}}}).ghost_ttl_s, 0.0)
 
 
 if __name__ == "__main__":

@@ -161,6 +161,14 @@ class SumoClient:
             "occupancy": float(traci.lanearea.getLastStepOccupancy(detector_id)),
         }
 
+    def get_lane_vehicle_positions(self, lane_id: str) -> list[tuple[str, float]]:
+        """Retorna ``(id, posição da frente na lane em m)`` dos veículos da lane."""
+        self._ensure_started()
+        return [
+            (str(vehicle_id), float(traci.vehicle.getLanePosition(vehicle_id)))
+            for vehicle_id in traci.lane.getLastStepVehicleIDs(lane_id)
+        ]
+
     def set_traffic_light_phase(self, tls_id: str, phase: int) -> None:
         """Define a fase corrente de um semaforo no SUMO."""
         self._ensure_started()
