@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Mesma rede e mesmos detectores do Cruzamento.sumocfg; muda apenas o
+     arquivo de rotas, que usa a demanda calibrada pelos videos de drone.
+     Ver o cabecalho de Cruzamento.calibrated.rou.xml. -->
+
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="Cruzamento.net.xml"/>
+        <route-files value="Cruzamento.calibrated.rou.xml"/>
+        <additional-files value="Cruzamento.add.xml"/>
+    </input>
+
+</sumoConfiguration>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Demanda calibrada pelos videos de drone processados em
+     simjamcv/DigitalTwinsforSmartCities/SP.
+
+     Procedimento:
+       1. fluxo por aproximacao = throughput_per_hour de analysis_summary.txt
+          (conta apenas travessias completas da faixa);
+       2. multiplicado pela fracao de veiculos de vehicles.csv, para descartar
+          os rotulos "pedestrian"/"people" que o SimJamCV conta junto:
+            DadosLeste  1803.3 x 92.9%  = 1675.2 veic/h  -> E2
+            DadosSul    1561.0 x 81.9%  = 1278.6 veic/h  -> E3
+            DadosOeste   185.3 x 91.1%  =  168.7 veic/h  -> E6
+       3. as proporcoes de conversao do Cruzamento.rou.xml original foram
+          preservadas, e apenas o total de cada aproximacao foi reescalado.
+
+     Por que isto importa: o rou.xml original subestimava E2/Leste em 40%
+     (1080.1 contra 1803.3 veic/h medidos). Com a demanda real, o programa fixo
+     de 90 s fica evidentemente mal repartido:
+
+       E2 (2 faixas, 42 s verde)  demanda 1675.2  capacidade 1680.0  v/c = 1.00
+       E3 (4 faixas, 41 s verde)  demanda 1278.6  capacidade 3280.0  v/c = 0.39
+       E6 (1 faixa,  42 s verde)  demanda  168.7  capacidade  840.0  v/c = 0.20
+
+     Ou seja, o verde e dividido quase meio a meio entre um grupo saturado e um
+     grupo com folga. E esse desequilibrio que um controlador adaptativo tem de
+     descobrir, e ele nao existia no cenario original, onde as duas fases
+     ficavam em v/c ~ 0.5 e a temporizacao quase nao alterava o resultado.
+
+     Totais: calibrado 3122.6 veic/h contra 2936.1 do original - so +6.4%.
+     O que muda nao e o volume, e a DISTRIBUICAO entre as aproximacoes:
+       E2/Leste  1080.1 -> 1675.2  (+55%)   v/c 0.64 -> 1.00
+       E3/Sul    1630.0 -> 1278.6  (-22%)   v/c 0.50 -> 0.39
+       E6/Oeste   226.0 ->  168.7  (-25%)   v/c 0.27 -> 0.20
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <!-- Vehicles, persons and containers (sorted by depart) -->
+    <flow id="f_0" begin="0.00" end="3600.00" perHour="168.73" from="E6" to="E1"/>
+    <flow id="f_1" begin="0.00" end="3600.00" perHour="201.64" from="E2" to="E0"/>
+    <flow id="f_2" begin="0.00" end="3600.00" perHour="1473.56" from="E2" to="E5"/>
+    <flow id="f_3" begin="0.00" end="3600.00" perHour="219.64" from="E3" to="E1"/>
+    <flow id="f_4" begin="0.00" end="3600.00" perHour="470.66" from="E3" to="E5"/>
+    <flow id="f_5" begin="0.00" end="3600.00" perHour="588.32" from="E3" to="E0"/>
+</routes>

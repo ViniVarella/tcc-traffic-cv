@@ -13,6 +13,7 @@ import yaml
 from bridge import FrameBundleCollector, UnityBridge
 from controller import DqnAgent, DqnTrafficController
 from controller.traffic_controller import TrafficController
+from experiments.scenario_config import add_scenario_argument
 from sumo import ExperimentMetricsCollector, SumoClient, SumoStateExtractor
 from vision import ByteTrackVehicleTracker, VisualDebugger, VisualStateEncoder, YoloVehicleDetector
 from vision.visual_pipeline import VisualPipeline, load_calibrations, parse_class_ids, queue_counts_by_camera
@@ -23,6 +24,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--config", type=Path, default=base_dir / "configs" / "sp.yaml")
     parser.add_argument("--steps", type=int, default=100)
     parser.add_argument("--seed", type=int, default=None, help="Seed do SUMO; substitui experiment.seed do perfil.")
+    add_scenario_argument(parser)
     parser.add_argument("--send-interval", type=float, default=0.1)
     parser.add_argument("--camera-ids", default="south,east,west")
     parser.add_argument("--model", default="yolov8n.pt")
@@ -81,7 +83,7 @@ def main() -> None:
         if dqn_agent.config.state_size != state_encoder.state_size:
             raise ValueError("Checkpoint DQN incompatível com o contrato visual atual.")
         controller = DqnTrafficController(str(config["traffic_light"]["id"]), config)
-    sumo_client = SumoClient.from_config(config, base_dir, seed_override=args.seed)
+    sumo_client = SumoClient.from_config(config, base_dir, seed_override=args.seed, scenario_override=args.scenario)
     unity_bridge = UnityBridge.from_config(config)
     frame_collector = FrameBundleCollector(set(camera_ids))
     state_extractor = SumoStateExtractor()
@@ -164,7 +166,7 @@ def main() -> None:
         args.decision_output.parent.mkdir(parents=True, exist_ok=True)
         args.decision_output.write_text("".join(json.dumps(item) + "\n" for item in decisions), encoding="utf-8")
         args.metrics_output.parent.mkdir(parents=True, exist_ok=True)
-        args.metrics_output.write_text(json.dumps(metrics.summary(), indent=2) + "\n", encoding="utf-8")
+        args.metrics_output.write_text(json.dumps({**metrics.summary(), "scenario": sumo_client.scenario, "seed": sumo_client.seed}, indent=2) + "\n", encoding="utf-8")
         sumo_client.close()
         unity_bridge.close()
 

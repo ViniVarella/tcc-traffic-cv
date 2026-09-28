@@ -14,6 +14,7 @@ import yaml
 
 from bridge import FrameBundleCollector, UnityBridge
 from controller import DqnAgent, DqnConfig, DqnTrafficController
+from experiments.scenario_config import add_scenario_argument
 from sumo import SumoClient, SumoStateExtractor
 from vision import ByteTrackVehicleTracker, VisualStateEncoder, YoloVehicleDetector
 from vision.visual_pipeline import VisualPipeline, load_calibrations, parse_class_ids, queue_counts_by_camera
@@ -42,6 +43,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--validation-episodes", type=int, default=3, help="Número de seeds exclusivas de validação por rodada.")
     parser.add_argument("--validation-seed-start", type=int, default=1001, help="Primeira seed exclusiva de validação.")
     parser.add_argument("--validation-interval", type=int, default=5, help="Valida a cada N episódios de treino e no último.")
+    add_scenario_argument(parser)
     parser.add_argument("--send-interval", type=float, default=0.1)
     parser.add_argument("--camera-ids", default="south,east,west")
     parser.add_argument("--model", default="yolov8n.pt")
@@ -66,7 +68,7 @@ def _run_episode(*, split: str, episode: int, seed: int, epsilon: float, train: 
                  camera_ids: tuple[str, ...], pipeline: VisualPipeline,
                  encoder: VisualStateEncoder, agent: DqnAgent, unity_bridge: UnityBridge,
                  global_step: int) -> tuple[EpisodeResult, int]:
-    sumo_client = SumoClient.from_config(config, base_dir, seed_override=seed)
+    sumo_client = SumoClient.from_config(config, base_dir, seed_override=seed, scenario_override=args.scenario)
     controller = DqnTrafficController(str(config["traffic_light"]["id"]), config)
     collector = FrameBundleCollector(set(camera_ids))
     pipeline.reset()

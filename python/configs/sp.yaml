@@ -3,7 +3,12 @@ experiment:
   seed: 42
 
 sumo:
-  config_path: "../sumo/sp/Cruzamento.sumocfg"
+  # calibrated: demanda medida nos vídeos de drone (Leste saturado, v/c ~1,0).
+  # original: demanda do netedit, equilibrada entre as fases (v/c ~0,5).
+  scenarios:
+    calibrated: "../sumo/sp/Cruzamento.calibrated.sumocfg"
+    original: "../sumo/sp/Cruzamento.sumocfg"
+  default_scenario: "calibrated"
   gui: false
   step_length: 1.0
   traci_port: 8873

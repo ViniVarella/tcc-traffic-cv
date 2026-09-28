@@ -8,6 +8,8 @@ from typing import Any
 import traci
 from sumolib import checkBinary
 
+from .scenarios import resolve_sumo_scenario
+
 
 class SumoClient:
     """Encapsula o ciclo de vida do SUMO e operacoes basicas de simulacao."""
@@ -20,6 +22,7 @@ class SumoClient:
         seed: int | None = None,
         step_length: float | None = None,
         traci_port: int | None = None,
+        scenario: str | None = None,
     ) -> None:
         self.sumo_binary = sumo_binary
         self.config_path = str(Path(config_path))
@@ -27,6 +30,7 @@ class SumoClient:
         self.seed = seed
         self.step_length = step_length
         self.traci_port = traci_port
+        self.scenario = scenario
         self._started = False
 
     @classmethod
@@ -35,13 +39,15 @@ class SumoClient:
         config: dict[str, Any],
         base_dir: str | Path,
         seed_override: int | None = None,
+        scenario_override: str | None = None,
     ) -> "SumoClient":
-        """Constrói o cliente; ``seed_override`` substitui a seed do perfil."""
+        """Constrói o cliente; ``seed_override``/``scenario_override`` substituem o perfil."""
         base_path = Path(base_dir)
         sumo_config = config.get("sumo", {})
         experiment_config = config.get("experiment", {})
 
-        config_path = (base_path / sumo_config["config_path"]).resolve()
+        scenario, relative_config_path = resolve_sumo_scenario(config, scenario_override)
+        config_path = (base_path / relative_config_path).resolve()
         gui = bool(sumo_config.get("gui", True))
         binary_name = "sumo-gui" if gui else "sumo"
         return cls(
@@ -51,6 +57,7 @@ class SumoClient:
             seed=experiment_config.get("seed") if seed_override is None else int(seed_override),
             step_length=sumo_config.get("step_length"),
             traci_port=sumo_config.get("traci_port"),
+            scenario=scenario,
         )
 
     def start(self) -> None:

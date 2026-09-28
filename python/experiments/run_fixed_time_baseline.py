@@ -10,6 +10,7 @@ from typing import Any
 
 import yaml
 
+from experiments.scenario_config import add_scenario_argument
 from sumo import ExperimentMetricsCollector, SumoClient
 
 
@@ -18,6 +19,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--config", type=Path, default=base_dir / "configs" / "sp.yaml")
     parser.add_argument("--steps", type=int, default=100)
     parser.add_argument("--seed", type=int, default=None, help="Seed do SUMO; substitui experiment.seed do perfil.")
+    add_scenario_argument(parser)
     parser.add_argument("--send-interval", type=float, default=0.0)
     parser.add_argument("--output", type=Path, default=base_dir.parent / "results" / "evaluation" / "fixed-time-baseline-metrics.json")
     return parser.parse_args()
@@ -31,7 +33,7 @@ def main() -> None:
     if args.seed is not None and args.seed < 0:
         raise ValueError("--seed não pode ser negativa.")
     config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
-    sumo_client = SumoClient.from_config(config, base_dir, seed_override=args.seed)
+    sumo_client = SumoClient.from_config(config, base_dir, seed_override=args.seed, scenario_override=args.scenario)
     metrics = ExperimentMetricsCollector()
     try:
         sumo_client.start()
@@ -41,9 +43,9 @@ def main() -> None:
             sleep(args.send_interval)
     finally:
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(json.dumps(metrics.summary(), indent=2) + "\n", encoding="utf-8")
+        args.output.write_text(json.dumps({**metrics.summary(), "scenario": sumo_client.scenario, "seed": sumo_client.seed}, indent=2) + "\n", encoding="utf-8")
         sumo_client.close()
-    print(f"baseline_complete steps={args.steps} output={args.output}")
+    print(f"baseline_complete steps={args.steps} scenario={sumo_client.scenario} output={args.output}")
 
 
 if __name__ == "__main__":

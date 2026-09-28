@@ -12,6 +12,7 @@ from typing import Any
 import yaml
 
 from bridge import FrameBundleCollector, UnityBridge
+from experiments.scenario_config import add_scenario_argument
 from sumo import GroundTruthCollector, SumoClient, SumoStateExtractor
 
 
@@ -88,6 +89,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
             "Requer --receive-frames e é usado para gerar rótulos YOLO precisos."
         ),
     )
+    add_scenario_argument(parser)
     return parser.parse_args()
 
 
@@ -113,7 +115,7 @@ def main() -> None:
 
     config = load_config(args.config.resolve())
 
-    sumo_client = SumoClient.from_config(config=config, base_dir=base_dir)
+    sumo_client = SumoClient.from_config(config=config, base_dir=base_dir, scenario_override=args.scenario)
     unity_bridge = UnityBridge.from_config(config)
     state_extractor = SumoStateExtractor()
     tls_id = str(config["traffic_light"]["id"])
