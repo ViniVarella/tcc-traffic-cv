@@ -8,16 +8,14 @@ from pathlib import Path
 from time import sleep
 from typing import Any
 
-import cv2
-import numpy as np
 import yaml
 
 from bridge import FrameBundleCollector, UnityBridge
 from controller import DqnAgent, DqnTrafficController
 from controller.traffic_controller import TrafficController
 from sumo import ExperimentMetricsCollector, SumoClient, SumoStateExtractor
-from vision import ByteTrackVehicleTracker, QueueEstimator, ROICounter, VisualDebugger, VisualStateEncoder, YoloVehicleDetector, load_camera_calibration
-from vision.roi_counter import filter_detections_to_roi, select_counting_objects
+from vision import ByteTrackVehicleTracker, VisualDebugger, VisualStateEncoder, YoloVehicleDetector
+from vision.visual_pipeline import VisualPipeline, load_calibrations, parse_class_ids, queue_counts_by_camera
 
 
 def parse_args(base_dir: Path) -> argparse.Namespace:
@@ -41,24 +39,6 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _class_ids(raw: str) -> list[int]:
-    values = [value.strip() for value in raw.split(",") if value.strip()]
-    try:
-        class_ids = [int(value) for value in values]
-    except ValueError as error:
-        raise ValueError(f"IDs de classe inválidos: {raw!r}") from error
-    if not class_ids or any(value < 0 for value in class_ids):
-        raise ValueError("--classes precisa conter IDs não negativos.")
-    return class_ids
-
-
-def _decode_jpeg(jpeg: bytes, camera_id: str, step_id: int) -> Any:
-    frame = cv2.imdecode(np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
-    if frame is None:
-        raise ValueError(f"JPEG inválido: camera={camera_id} step={step_id}.")
-    return frame
-
-
 def main() -> None:
     base_dir = Path(__file__).resolve().parents[1]
     args = parse_args(base_dir)
@@ -71,28 +51,21 @@ def main() -> None:
         raise ValueError("Informe ao menos uma câmera em --camera-ids.")
 
     config = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
-    calibrations = {
-        camera_id: load_camera_calibration(
-            base_dir.parent / "unity" / "TrafficVisionUnity" / "Assets" / "Calibration" / f"{camera_id}-calibration.json",
-            expected_camera_id=camera_id,
-        )
-        for camera_id in camera_ids
-    }
     detector = YoloVehicleDetector(
         model_path=args.model,
         confidence_threshold=args.confidence,
-        classes=_class_ids(args.classes),
+        classes=parse_class_ids(args.classes),
         inference_size=args.image_size,
     )
-    trackers = {
-        camera_id: ByteTrackVehicleTracker(
+    pipeline = VisualPipeline(
+        load_calibrations(base_dir, camera_ids),
+        detector,
+        lambda: ByteTrackVehicleTracker(
             frame_rate=args.frame_rate,
             confidence_threshold=args.confidence,
             matching_threshold=args.track_match_threshold,
-        )
-        for camera_id in camera_ids
-    }
-    estimators = {camera_id: QueueEstimator() for camera_id in camera_ids}
+        ),
+    )
     debuggers = {camera_id: VisualDebugger(str(args.debug_output_dir / camera_id)) for camera_id in camera_ids}
     dqn_agent: DqnAgent | None = None
     state_encoder: VisualStateEncoder | None = None
@@ -154,26 +127,17 @@ def main() -> None:
                 sleep(args.send_interval)
                 continue
 
-            visual_counts: dict[str, dict[str, int]] = {}
-            for camera_id, captured in bundle.frames.items():
-                frame = _decode_jpeg(captured.jpeg, camera_id, step_id)
-                calibration = calibrations[camera_id]
-                approach_rois = calibration.pixel_rois(frame.shape[1], frame.shape[0])
-                lane_rois = calibration.lane_pixel_rois(frame.shape[1], frame.shape[0])
-                detections = filter_detections_to_roi(detector.detect(frame), approach_rois["approach"])
-                tracks = trackers[camera_id].update(detections)
-                objects, source = select_counting_objects(detections, tracks)
-                raw_counts = ROICounter(lane_rois).count(objects)
-                queue_counts = estimators[camera_id].update(raw_counts)
-                visual_counts[camera_id] = queue_counts
+            camera_results = pipeline.process_bundle(bundle)
+            visual_counts = queue_counts_by_camera(camera_results)
+            for camera_id, result in camera_results.items():
                 annotated = debuggers[camera_id].annotate(
-                    frame=frame,
-                    detections=detections,
-                    tracks=tracks,
-                    roi_counts=raw_counts,
-                    rois=approach_rois,
-                    queue_counts=queue_counts,
-                    metadata={"camera": camera_id, "step": step_id, "tracker": "ByteTrack", "count_source": source},
+                    frame=result.frame,
+                    detections=result.detections,
+                    tracks=result.tracks,
+                    roi_counts=result.raw_counts,
+                    rois=result.rois,
+                    queue_counts=result.queue_counts,
+                    metadata={"camera": camera_id, "step": step_id, "tracker": "ByteTrack", "count_source": result.count_source},
                 )
                 debuggers[camera_id].save_frame(annotated, f"step_{step_id:06d}.jpg")
 

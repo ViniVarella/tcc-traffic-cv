@@ -9,15 +9,14 @@ from pathlib import Path
 from time import sleep
 from typing import Any
 
-import cv2
 import numpy as np
 import yaml
 
 from bridge import FrameBundleCollector, UnityBridge
 from controller import DqnAgent, DqnConfig, DqnTrafficController
 from sumo import SumoClient, SumoStateExtractor
-from vision import ByteTrackVehicleTracker, QueueEstimator, ROICounter, VisualStateEncoder, YoloVehicleDetector, load_camera_calibration
-from vision.roi_counter import filter_detections_to_roi, select_counting_objects
+from vision import ByteTrackVehicleTracker, VisualStateEncoder, YoloVehicleDetector
+from vision.visual_pipeline import VisualPipeline, load_calibrations, parse_class_ids, queue_counts_by_camera
 
 
 @dataclass(frozen=True)
@@ -58,51 +57,19 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _class_ids(raw: str) -> list[int]:
-    values = [value.strip() for value in raw.split(",") if value.strip()]
-    result = [int(value) for value in values]
-    if not result or any(value < 0 for value in result):
-        raise ValueError("--classes deve conter IDs não negativos.")
-    return result
-
-
-def _decode_jpeg(jpeg: bytes, camera_id: str, step_id: int) -> Any:
-    frame = cv2.imdecode(np.frombuffer(jpeg, dtype=np.uint8), cv2.IMREAD_COLOR)
-    if frame is None:
-        raise ValueError(f"JPEG inválido: camera={camera_id} step={step_id}.")
-    return frame
-
-
-def _visual_counts(bundle: Any, calibrations: dict[str, Any], detector: YoloVehicleDetector,
-                   trackers: dict[str, ByteTrackVehicleTracker], estimators: dict[str, QueueEstimator],
-                   step_id: int) -> dict[str, dict[str, int]]:
-    result: dict[str, dict[str, int]] = {}
-    for camera_id, captured in bundle.frames.items():
-        frame = _decode_jpeg(captured.jpeg, camera_id, step_id)
-        calibration = calibrations[camera_id]
-        approach = calibration.pixel_rois(frame.shape[1], frame.shape[0])["approach"]
-        lanes = calibration.lane_pixel_rois(frame.shape[1], frame.shape[0])
-        detections = filter_detections_to_roi(detector.detect(frame), approach)
-        tracks = trackers[camera_id].update(detections)
-        objects, _ = select_counting_objects(detections, tracks)
-        result[camera_id] = estimators[camera_id].update(ROICounter(lanes).count(objects))
-    return result
-
-
 def _total_waiting(active_vehicles: dict[str, dict[str, float]]) -> float:
     return sum(float(metrics["accumulated_waiting_time"]) for metrics in active_vehicles.values())
 
 
 def _run_episode(*, split: str, episode: int, seed: int, epsilon: float, train: bool,
                  args: argparse.Namespace, config: dict[str, Any], base_dir: Path,
-                 camera_ids: tuple[str, ...], calibrations: dict[str, Any], detector: YoloVehicleDetector,
+                 camera_ids: tuple[str, ...], pipeline: VisualPipeline,
                  encoder: VisualStateEncoder, agent: DqnAgent, unity_bridge: UnityBridge,
                  global_step: int) -> tuple[EpisodeResult, int]:
     sumo_client = SumoClient.from_config(config, base_dir, seed_override=seed)
     controller = DqnTrafficController(str(config["traffic_light"]["id"]), config)
     collector = FrameBundleCollector(set(camera_ids))
-    trackers = {camera_id: ByteTrackVehicleTracker(args.frame_rate, args.confidence, args.track_match_threshold) for camera_id in camera_ids}
-    estimators = {camera_id: QueueEstimator() for camera_id in camera_ids}
+    pipeline.reset()
     state_extractor = SumoStateExtractor()
     previous_state: np.ndarray | None = None
     previous_action = DqnTrafficController.KEEP
@@ -132,7 +99,7 @@ def _run_episode(*, split: str, episode: int, seed: int, epsilon: float, train: 
                 global_step += 1
                 sleep(args.send_interval)
                 continue
-            counts = _visual_counts(bundle, calibrations, detector, trackers, estimators, global_step)
+            counts = queue_counts_by_camera(pipeline.process_bundle(bundle))
             phase = controller.phase_manager.get_current_phase()
             state = encoder.encode(counts, phase.phase_index, controller.phase_manager.elapsed(sim_time))
             current_waiting = _total_waiting(active)
@@ -194,10 +161,11 @@ def main() -> None:
         replay_capacity=int(dqn_config["replay_capacity"]), min_replay_size=int(dqn_config["min_replay_size"]),
         target_update_interval=int(dqn_config["target_update_interval"]),
     ), device=args.device, seed=args.seed_start)
-    calibrations = {camera_id: load_camera_calibration(
-        base_dir.parent / "unity" / "TrafficVisionUnity" / "Assets" / "Calibration" / f"{camera_id}-calibration.json",
-        expected_camera_id=camera_id) for camera_id in camera_ids}
-    detector = YoloVehicleDetector(args.model, args.confidence, _class_ids(args.classes), args.image_size)
+    detector = YoloVehicleDetector(args.model, args.confidence, parse_class_ids(args.classes), args.image_size)
+    pipeline = VisualPipeline(
+        load_calibrations(base_dir, camera_ids), detector,
+        lambda: ByteTrackVehicleTracker(args.frame_rate, args.confidence, args.track_match_threshold),
+    )
     unity_bridge = UnityBridge.from_config(config)
     logs: list[dict[str, Any]] = []
     best_validation_score: float | None = None
@@ -209,8 +177,7 @@ def main() -> None:
             epsilon = max(float(dqn_config["epsilon_min"]), float(dqn_config["epsilon_start"]) * float(dqn_config["epsilon_decay"]) ** episode)
             result, global_step = _run_episode(
                 split="train", episode=episode, seed=args.seed_start + episode, epsilon=epsilon, train=True,
-                args=args, config=config, base_dir=base_dir, camera_ids=camera_ids, calibrations=calibrations,
-                detector=detector, encoder=encoder, agent=agent, unity_bridge=unity_bridge, global_step=global_step)
+                args=args, config=config, base_dir=base_dir, camera_ids=camera_ids, pipeline=pipeline, encoder=encoder, agent=agent, unity_bridge=unity_bridge, global_step=global_step)
             logs.append(asdict(result))
             agent.save(args.checkpoint_output, {"kind": "latest", "training_episode": episode, "training_seed": result.seed})
             print(f"dqn_episode_complete split=train episode={episode} seed={result.seed} reward={result.mean_reward:.3f} transitions={result.transitions} missing_frames={result.missing_frames}")
@@ -222,7 +189,7 @@ def main() -> None:
                 validation_result, global_step = _run_episode(
                     split="validation", episode=episode, seed=args.validation_seed_start + validation_episode,
                     epsilon=0.0, train=False, args=args, config=config, base_dir=base_dir, camera_ids=camera_ids,
-                    calibrations=calibrations, detector=detector, encoder=encoder, agent=agent,
+                    pipeline=pipeline, encoder=encoder, agent=agent,
                     unity_bridge=unity_bridge, global_step=global_step)
                 validation_results.append(validation_result)
                 logs.append(asdict(validation_result))
