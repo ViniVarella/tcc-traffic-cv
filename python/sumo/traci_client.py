@@ -169,6 +169,24 @@ class SumoClient:
             for vehicle_id in traci.lane.getLastStepVehicleIDs(lane_id)
         ]
 
+    def get_incoming_lane_metrics(self, lane_ids: list[str] | tuple[str, ...]) -> dict[str, float | int]:
+        """Soma parados e espera nativa nas lanes informadas e mede a fila de inserção."""
+        self._ensure_started()
+        return {
+            "halting_vehicles": sum(int(traci.lane.getLastStepHaltingNumber(lane_id)) for lane_id in lane_ids),
+            "waiting_time_s": sum(float(traci.lane.getWaitingTime(lane_id)) for lane_id in lane_ids),
+            "pending_vehicles": len(traci.simulation.getPendingVehicles()),
+        }
+
+    def get_lane_length(self, lane_id: str) -> float:
+        self._ensure_started()
+        return float(traci.lane.getLength(lane_id))
+
+    def get_teleport_count(self) -> int:
+        """Veículos que iniciaram teleporte no último step (bloqueio > time-to-teleport)."""
+        self._ensure_started()
+        return int(traci.simulation.getStartingTeleportNumber())
+
     def set_traffic_light_phase(self, tls_id: str, phase: int) -> None:
         """Define a fase corrente de um semaforo no SUMO."""
         self._ensure_started()
