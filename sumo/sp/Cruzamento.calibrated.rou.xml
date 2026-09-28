@@ -32,14 +32,20 @@
        E2/Leste  1080.1 -> 1675.2  (+55%)   v/c 0.64 -> 1.00
        E3/Sul    1630.0 -> 1278.6  (-22%)   v/c 0.50 -> 0.39
        E6/Oeste   226.0 ->  168.7  (-25%)   v/c 0.27 -> 0.20
+
+     Chegadas: nesta copia (sumo/sp) cada fluxo usa period="exp(taxa)",
+     com taxa = perHour/3600 veic/s dos valores acima (processo de Poisson).
+     Com perHour o SUMO insere veiculos equiespacados e a seed quase nao
+     altera a demanda; com exp() cada seed gera chegadas diferentes com a
+     mesma taxa media. A copia em optimization/SP mantem perHour.
 -->
 
 <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
     <!-- Vehicles, persons and containers (sorted by depart) -->
-    <flow id="f_0" begin="0.00" end="3600.00" perHour="168.73" from="E6" to="E1"/>
-    <flow id="f_1" begin="0.00" end="3600.00" perHour="201.64" from="E2" to="E0"/>
-    <flow id="f_2" begin="0.00" end="3600.00" perHour="1473.56" from="E2" to="E5"/>
-    <flow id="f_3" begin="0.00" end="3600.00" perHour="219.64" from="E3" to="E1"/>
-    <flow id="f_4" begin="0.00" end="3600.00" perHour="470.66" from="E3" to="E5"/>
-    <flow id="f_5" begin="0.00" end="3600.00" perHour="588.32" from="E3" to="E0"/>
+    <flow id="f_0" begin="0.00" end="3600.00" period="exp(0.046869)" from="E6" to="E1"/>
+    <flow id="f_1" begin="0.00" end="3600.00" period="exp(0.056011)" from="E2" to="E0"/>
+    <flow id="f_2" begin="0.00" end="3600.00" period="exp(0.409322)" from="E2" to="E5"/>
+    <flow id="f_3" begin="0.00" end="3600.00" period="exp(0.061011)" from="E3" to="E1"/>
+    <flow id="f_4" begin="0.00" end="3600.00" period="exp(0.130739)" from="E3" to="E5"/>
+    <flow id="f_5" begin="0.00" end="3600.00" period="exp(0.163422)" from="E3" to="E0"/>
 </routes>
