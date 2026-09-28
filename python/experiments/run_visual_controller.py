@@ -15,7 +15,7 @@ from controller import DqnAgent, DqnTrafficController
 from controller.traffic_controller import TrafficController
 from experiments.scenario_config import add_scenario_argument
 from sumo import ExperimentMetricsCollector, SumoClient, SumoStateExtractor
-from vision import ByteTrackVehicleTracker, VisualDebugger, VisualStateEncoder, YoloVehicleDetector
+from vision import ByteTrackVehicleTracker, VisualDebugger, VisualStateEncoder, YoloVehicleDetector, build_state_encoder
 from vision.visual_pipeline import VisualPipeline, load_calibrations, parse_class_ids, queue_counts_by_camera
 
 
@@ -75,13 +75,14 @@ def main() -> None:
         controller: Any = TrafficController(str(config["traffic_light"]["id"]), config)
     else:
         dqn_agent = DqnAgent.load(args.dqn_model, device=args.dqn_device)
-        state_encoder = VisualStateEncoder(
-            max_lane_count=float(config["dqn"]["max_lane_count"]),
-            phase_count=int(config["traffic_light"]["phase_count"]),
-            max_green_seconds=float(config["traffic_control"]["max_green_seconds"]),
-        )
+        if dqn_agent.config.state_version != 1:
+            raise ValueError(
+                f"Checkpoint com estado v{dqn_agent.config.state_version}: este script só executa o v1 "
+                "(contagens por step); políticas v2 decidem em pontos de decisão e usam o executor de episódios."
+            )
+        state_encoder = build_state_encoder(config, version=1)
         if dqn_agent.config.state_size != state_encoder.state_size:
-            raise ValueError("Checkpoint DQN incompatível com o contrato visual atual.")
+            raise ValueError("Checkpoint DQN incompatível com o contrato visual v1.")
         controller = DqnTrafficController(str(config["traffic_light"]["id"]), config)
     sumo_client = SumoClient.from_config(config, base_dir, seed_override=args.seed, scenario_override=args.scenario)
     unity_bridge = UnityBridge.from_config(config)

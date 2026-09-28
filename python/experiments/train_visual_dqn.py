@@ -16,7 +16,7 @@ from bridge import FrameBundleCollector, UnityBridge
 from controller import DqnAgent, DqnConfig, DqnTrafficController
 from experiments.scenario_config import add_scenario_argument
 from sumo import SumoClient, SumoStateExtractor
-from vision import ByteTrackVehicleTracker, VisualStateEncoder, YoloVehicleDetector
+from vision import ByteTrackVehicleTracker, VisualStateEncoder, YoloVehicleDetector, build_state_encoder
 from vision.visual_pipeline import VisualPipeline, load_calibrations, parse_class_ids, queue_counts_by_camera
 
 
@@ -153,10 +153,8 @@ def main() -> None:
     if not camera_ids:
         raise ValueError("Informe ao menos uma câmera em --camera-ids.")
     dqn_config = config["dqn"]
-    encoder = VisualStateEncoder(float(dqn_config["max_lane_count"]), int(config["traffic_light"]["phase_count"]),
-                                 float(config["traffic_control"]["max_green_seconds"]))
-    if encoder.state_size != int(dqn_config["state_size"]):
-        raise ValueError("dqn.state_size diverge do contrato de estado visual.")
+    # Treino legado do estado v1 (contagens); o v2 usa o pré-treino SUMO + ajuste fino.
+    encoder = build_state_encoder(config, version=1)
     agent = DqnAgent(DqnConfig(
         state_size=encoder.state_size, hidden_size=int(dqn_config["hidden_size"]), gamma=float(dqn_config["gamma"]),
         learning_rate=float(dqn_config["learning_rate"]), batch_size=int(dqn_config["batch_size"]),

@@ -33,6 +33,9 @@ class DqnConfig:
     replay_capacity: int = 50_000
     min_replay_size: int = 256
     target_update_interval: int = 250
+    # 1 = contagens (13 entradas); 2 = features por faixa. Checkpoints antigos
+    # não gravavam o campo e por isso carregam como versão 1.
+    state_version: int = 1
 
 
 class QNetwork(nn.Module):
@@ -65,6 +68,7 @@ class DqnAgent:
         self.optimizer = torch.optim.Adam(self.online.parameters(), lr=config.learning_rate)
         self.replay: Deque[Transition] = deque(maxlen=config.replay_capacity)
         self.training_steps = 0
+        self.metadata: dict[str, Any] = {}
 
     def select_action(self, state: np.ndarray, epsilon: float, explore: bool = True) -> int:
         if not 0.0 <= epsilon <= 1.0:
@@ -125,6 +129,7 @@ class DqnAgent:
         if "optimizer_state" in checkpoint:
             agent.optimizer.load_state_dict(checkpoint["optimizer_state"])
         agent.training_steps = int(checkpoint.get("training_steps", 0))
+        agent.metadata = dict(checkpoint.get("metadata", {}))
         agent.online.eval()
         return agent
 

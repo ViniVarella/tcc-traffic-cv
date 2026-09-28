@@ -101,7 +101,13 @@ lane_state:
 
 dqn:
   model_path: "../results/models/visual-dqn-sp.pt"
-  state_size: 13
+  # v2: 7 faixas × (contagem, parados, ocupação, velocidade, espera) + 5 fases
+  # + tempo da fase = 41. O v1 (13 contagens/fase) segue carregável pelos
+  # checkpoints antigos; max_lane_count só vale para ele.
+  state_version: 2
+  state_size: 41
+  max_speed_mps: 13.89
+  waiting_reference_seconds: 60
   actions: ["keep", "switch"]
   max_lane_count: 10
   hidden_size: 64
