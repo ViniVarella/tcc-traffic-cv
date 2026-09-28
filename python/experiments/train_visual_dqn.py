@@ -124,11 +124,10 @@ def _run_episode(*, split: str, episode: int, seed: int, epsilon: float, train: 
             try:
                 bundle = collector.collect_for_step(global_step, unity_bridge.receive_frame)
             except ConnectionError:
-                missing_frames += 1
-                global_step += 1
-                sleep(args.send_interval)
-                continue
-            if not bundle.is_complete:
+                bundle = None
+            if bundle is None or not bundle.is_complete:
+                # Sem frames não há transição, mas as transições obrigatórias continuam.
+                controller.apply(sumo_client, controller.update_without_vision(sim_time))
                 missing_frames += 1
                 global_step += 1
                 sleep(args.send_interval)

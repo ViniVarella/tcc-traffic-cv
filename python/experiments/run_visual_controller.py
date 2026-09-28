@@ -136,16 +136,21 @@ def main() -> None:
                 traffic_light_state=sumo_client.get_traffic_light_state(tls_id),
             )
             unity_bridge.send_state(state)
+            policy_name = "dqn" if dqn_agent else "heuristic"
             try:
                 bundle = frame_collector.collect_for_step(step_id, unity_bridge.receive_frame)
             except ConnectionError as error:
                 # O Unity abre uma conexão TCP por frame. Um frame interrompido não
                 # deve encerrar o controle: o próximo estado abre novas conexões.
                 print(f"vision_connection_interrupted step_id={step_id} error={error}")
-                sleep(args.send_interval)
-                continue
-            if not bundle.is_complete:
-                print(f"vision_missing step_id={step_id} cameras={','.join(bundle.missing_camera_ids)}")
+                bundle = None
+            if bundle is None or not bundle.is_complete:
+                if bundle is not None:
+                    print(f"vision_missing step_id={step_id} cameras={','.join(bundle.missing_camera_ids)}")
+                # Sem frames não há decisão, mas amarelo, all-red e verde máximo continuam valendo.
+                decision = controller.update_without_vision(sim_time)
+                controller.apply(sumo_client, decision)
+                decisions.append({**decision, "step_id": step_id, "visual_counts": None, "policy": policy_name})
                 sleep(args.send_interval)
                 continue
 
@@ -180,7 +185,7 @@ def main() -> None:
                 dqn_action = dqn_agent.select_action(state, epsilon=0.0, explore=False)
                 decision = controller.update(sim_time, dqn_action)
             controller.apply(sumo_client, decision)
-            decisions.append({**decision, "step_id": step_id, "visual_counts": visual_counts, "policy": "dqn" if dqn_agent else "heuristic"})
+            decisions.append({**decision, "step_id": step_id, "visual_counts": visual_counts, "policy": policy_name})
             demand_or_dqn_action = (
                 f"dqn_action={decision['requested_action']}"
                 if dqn_agent is not None
