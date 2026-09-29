@@ -22,13 +22,13 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   executada em 100 steps)
 - Marco 10: concluído (captura sintética com máscaras de instância, conversão
   para YOLO e primeiro fine-tuning do detector)
-- Controlador visual heurístico e DQN visual v1 (13 contagens): concluídos
-  em 2026-09 (ver `README.md`); o v1 colapsou em "sempre trocar" — diagnóstico
-  na seção seguinte.
+- Controlador visual heurístico (v1) e DQN visual v1 (v1.1, 13 contagens):
+  concluídos em 2026-09. A v1.1 colapsou em "sempre trocar"; o diagnóstico, a
+  comparação no mesmo ambiente e o registro histórico estão na seção seguinte.
 - DQN v2 (features por faixa, pré-treino só SUMO e avaliação visual):
   concluído em 2026-09-29 — seção **DQN v2** abaixo.
-- Pendentes: teste visual no cenário `original` e, opcionalmente, um ajuste
-  fino visual mais robusto.
+- Pendentes: v1 e v1.1 com percepção visual no mesmo protocolo, teste visual
+  no cenário `original` e, opcionalmente, um ajuste fino visual mais robusto.
 
 ## DQN v2 — estado por faixa, pré-treino SUMO e avaliação visual
 
@@ -147,6 +147,82 @@ parecida, mas acumula 104 veículos esperando para entrar. O custo da visão em
 relação ao oráculo é de 1,2 s de espera. As execuções visuais foram
 reprodutíveis seed a seed e sem frames perdidos.
 
+### Comparação das versões no mesmo ambiente
+
+`experiments.compare_versions` roda a linha de base, a v1, a v1.1, a v2 e o
+max-pressure com o mesmo cenário, as mesmas seeds (201–203), 300 s de
+aquecimento, 1800 s controlados, a mesma camada de segurança e a mesma
+percepção. As regras de cada versão estão em `experiments/version_policies.py`.
+A v1 e a v1.1 recebem a contagem por faixa da mesma percepção usada pela v2,
+em vez do centro da bbox com média móvel da época, e decidem a cada 1 s.
+
+Percepção oráculo, cenário calibrado:
+
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas |
+|---|---:|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 16,1 s | 36,2 s | 1503 | 97 | 50% | 0 |
+| v1 (heurística) | 12,2 s | 36,9 s | 1349 | 254 | 52% | 126 |
+| v1.1 (DQN estado v1) | 12,9 s | 38,0 s | 1311 | 290 | 50% | 129 |
+| v2 (DQN estado v2) | 9,1 s | 30,9 s | 1598 | 6 | 66% | 93 |
+| max-pressure | 12,8 s | 37,5 s | 1317 | 284 | 50% | 127 |
+
+Percepção oráculo, cenário original:
+
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas |
+|---|---:|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 14,9 s | 37,3 s | 1431 | 37 | 50% | 0 |
+| v1 (heurística) | 4,7 s | 27,4 s | 1473 | 0 | 50% | 129 |
+| v1.1 (DQN estado v1) | 4,6 s | 27,3 s | 1474 | 0 | 50% | 127 |
+| v2 (DQN estado v2) | 5,1 s | 27,6 s | 1472 | 0 | 55% | 116 |
+| max-pressure | 4,6 s | 27,2 s | 1474 | 0 | 50% | 129 |
+
+- **No cenário calibrado,** a v1 e a v1.1 alternam no ciclo mínimo e dividem o
+  verde 50/50. Escoam menos veículos que o ciclo fixo e deixam 250–290
+  veículos fora da rede; a espera média delas só parece melhor porque esses
+  veículos não entram na conta. A v2 dá 66% do verde ao Leste e ganha em todas
+  as métricas.
+- **No cenário original,** com demanda equilibrada, as versões adaptativas
+  empatam; a v2, que não treinou nele, fica 0,4–0,5 s atrás.
+- **Percepção visual:** a v2 (10,3 s) e o max-pressure (11,1 s) já foram medidos
+  com a Unity no mesmo protocolo; a v1 e a v1.1 visuais estão pendentes
+  (`--perception visual --versions v1,v1.1`).
+
+Arquivos: `results/evaluation/versoes-calibrated-oracle.json` e
+`versoes-original-oracle.json`.
+
+### Registro histórico da v1 e da v1.1 (protocolos diferentes)
+
+Estes são os resultados originais, preservados como registro. **Não são
+comparáveis com a v2 nem entre si:**
+
+- usaram a demanda original e só 100 s simulados;
+- a referência era o plano estático do SUMO (verdes de 42/41 s);
+- rodaram antes da correção de sincronização das fases.
+
+Em 100 s de demanda equilibrada, qualquer política de ciclo curto supera um
+plano de 42/41 s, o que explica boa parte do ganho aparente.
+
+v1 (heurística visual), seeds 42, 7 e 99, 2026-09-02:
+
+| Métrica (média) | Tempo fixo | Controle visual | Variação |
+| --- | ---: | ---: | ---: |
+| Veículos concluídos | 50,67 | 60,67 | +19,7% |
+| Vazão | 1842,4 veh/h | 2206,1 veh/h | +19,7% |
+| Tempo médio de viagem | 27,35 s | 26,11 s | −4,6% |
+| Tempo médio de espera | 6,77 s | 3,93 s | −42,0% |
+| Fila média | 8,70 | 3,89 | −55,3% |
+| Fila máxima | 19,67 | 9,33 | −52,5% |
+
+v1.1 (DQN visual, estado v1), seeds 201–203, 2026-09-04:
+
+| Métrica (média) | Tempo fixo | Heurístico visual | DQN visual v1 |
+| --- | ---: | ---: | ---: |
+| Veículos concluídos | 50,67 | 60,67 | 60,33 |
+| Vazão (veíc./h) | 1842,42 | 2206,06 | 2193,94 |
+| Tempo médio de espera | 6,85 s | 4,41 s | 4,44 s |
+| Fila média | 8,73 | 4,15 | 4,21 |
+| Fila máxima | 18,67 | 10,33 | 10,33 |
+
 ### Limitações registradas
 
 - ROIs de ~25 m: filas longas do Leste saturam o estado.
@@ -159,6 +235,7 @@ reprodutíveis seed a seed e sem frames perdidos.
 ```bash
 # Pré-treino e avaliação só SUMO (percepção oráculo)
 ../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn
+../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception oracle
 ../.venv/bin/python -m experiments.evaluate_policies_sumo --scenario calibrated \
   --dqn-model ../results/models/dqn-v2-pretrain-best.pt \
   --output ../results/evaluation/teste-sumo-oraculo.json

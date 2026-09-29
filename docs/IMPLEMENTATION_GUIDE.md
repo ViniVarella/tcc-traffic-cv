@@ -1186,9 +1186,11 @@ Critério de sucesso:
 Status: concluído com o DQN v2 no cenário calibrado, nas seeds inéditas
 `201`–`203` e com 1800 s controlados. Pela câmera, o DQN v2 superou o ciclo
 fixo (espera 10,3 s × 16,1 s; 1599 × 1503 chegadas) e o max-pressure visual
-(11,1 s; fila de inserção de 104 veículos × 1). A primeira versão (v1, 100 s)
-superava o tempo fixo, mas não o heurístico. Pendente: teste visual no
-cenário `original`.
+(11,1 s; fila de inserção de 104 veículos × 1). As versões são comparadas no
+mesmo ambiente por `experiments.compare_versions`: com percepção oráculo no
+cenário calibrado, a v1 e a v1.1 deixam 250–290 veículos fora da rede, contra
+6 da v2. Pendentes: v1 e v1.1 com percepção visual e teste visual no cenário
+`original`.
 
 ---
 

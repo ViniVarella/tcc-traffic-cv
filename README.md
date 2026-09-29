@@ -11,9 +11,11 @@ os dados internos do SUMO servem para renderização, sincronização, recompens
 de treino e avaliação.
 
 **Versão atual: v2** — DQN com cinco features visuais por faixa, pré-treinado
-só no SUMO e executado com a câmera. No cenário com a demanda medida por drone,
-reduz a espera média em 36% em relação ao ciclo fixo e escoa 6% mais veículos
-(detalhes em [Evolução por versão](#evolução-por-versão)).
+só no SUMO e executado com a câmera. No mesmo ambiente de avaliação (demanda
+medida por drone, Leste saturado), é a única versão que dá mais verde ao
+Leste. Com isso, reduz a espera e zera a fila de entrada, enquanto a v1 e a
+v1.1 deixam centenas de veículos presos fora da rede (ver
+[Comparação no mesmo ambiente](#comparação-no-mesmo-ambiente)).
 
 ## Arquitetura
 
@@ -41,72 +43,28 @@ SUMO ──TraCI──> Python ──UDP/JSON (estado)──> Unity (veículos, 
 
 ## Evolução por versão
 
-| Versão | Período | Política | Entrada da política | Protocolo de teste | Resultado principal |
-|---|---|---|---|---|---|
-| Linha de base | — | Tempo fixo (plano do SUMO) | — | — | Referência de cada versão |
-| **v1** | 2026-09-02 | Heurística por fila visual | Contagem por faixa | Demanda original, seeds 42/7/99, 100 s | Espera −42% contra o tempo fixo |
-| **v1.1** | 2026-09-04 | DQN visual (estado v1, 13 entradas) | Contagem por faixa + fase | Demanda original, seeds 201–203, 100 s | Supera o tempo fixo, mas empata com a v1 (colapsou em "sempre trocar") |
-| **v2** | 2026-09-29 | DQN visual (estado v2, 41 entradas) | Contagem, parados, ocupação, velocidade e espera por faixa + fase | Demanda calibrada (drone), seeds 201–203, 1800 s | Espera −36% e +6% de chegadas contra o ciclo fixo; fila de inserção zerada |
+| Versão | Período | Política | Entrada da política | O que mudou |
+|---|---|---|---|---|
+| Linha de base | — | Ciclo fixo 40/40 | — | Referência: nunca pede troca; o verde máximo alterna as fases |
+| **v1** | 2026-09-02 | Heurística por fila visual | Contagem por faixa | Primeiro controle em malha fechada pela câmera |
+| **v1.1** | 2026-09-04 | DQN (estado v1, 13 entradas) | Contagem por faixa + fase | Troca a regra fixa por uma política aprendida |
+| **v2** | 2026-09-29 | DQN (estado v2, 41 entradas) | Contagem, parados, ocupação, velocidade e espera por faixa + fase | Features cinemáticas, pré-treino só no SUMO, decisões só quando têm efeito, cenário calibrado |
 
-Os números de versões diferentes **não são diretamente comparáveis**. A v2
-mudou o cenário (demanda calibrada), a duração (1800 s em vez de 100 s) e as
-métricas (fila de inserção). Também corrigiu uma dessincronização de fases que
-afetava as execuções das versões v1 e v1.1, cujos valores foram mantidos como
-registro histórico, sem reexecução. Cada tabela abaixo compara políticas dentro
-do mesmo protocolo.
+### v1 — Controle visual heurístico
 
-### Linha de base — tempo fixo
-
-O programa estático do SUMO (`sumo/sp/Cruzamento.net.xml`: verdes de 42/41 s)
-é executado por `experiments.run_fixed_time_baseline`, sem Unity. Na v2, a
-referência passou a ser um **ciclo fixo 40/40** conduzido pela mesma camada de
-segurança das demais políticas (`FixedCyclePolicy`), para que todas usem as
-mesmas transições.
-
-### v1 — Controle visual heurístico (2026-09-02)
-
-**O que foi introduzido:** o primeiro controle em malha fechada pela câmera.
 `TrafficController` soma as contagens visuais de `South` e de `East + West` e
-troca o verde quando a fila oposta supera a atual por uma margem, respeitando
-verde mínimo e máximo.
+troca o verde quando a fila oposta supera a atual por uma margem de 1 veículo,
+ou quando a fila atual está vazia. Verde mínimo e máximo são respeitados.
 
-**Protocolo:** demanda original do netedit, seeds `42`, `7` e `99`, 100 s
-simulados.
+### v1.1 — DQN visual, estado v1
 
-| Métrica (média de 3 seeds) | Tempo fixo | Controle visual | Variação |
-| --- | ---: | ---: | ---: |
-| Veículos concluídos | 50,67 | 60,67 | +19,7% |
-| Vazão | 1842,4 veh/h | 2206,1 veh/h | +19,7% |
-| Tempo médio de viagem | 27,35 s | 26,11 s | −4,6% |
-| Tempo médio de espera | 6,77 s | 3,93 s | −42,0% |
-| Fila média | 8,70 | 3,89 | −55,3% |
-| Fila máxima | 19,67 | 9,33 | −52,5% |
+DQN em PyTorch (`DqnAgent`, MLP 64×2) com 13 entradas: contagens normalizadas
+das 7 faixas, fase em *one-hot* e tempo da fase. A recompensa era a variação
+da espera acumulada do TraCI. O treino rodou nas seeds 1–50 com a Unity no
+loop.
 
-**Limitação:** 100 s é pouco para avaliar a alocação de verde. Com a demanda
-original equilibrada (v/c≈0,5 nas duas fases), o tempo de verde quase não muda
-o resultado.
-
-### v1.1 — DQN visual, estado v1 (2026-09-04)
-
-**O que foi introduzido:** um DQN em PyTorch (`DqnAgent`, MLP 64×2) com 13
-entradas: contagens normalizadas das 7 faixas, fase em *one-hot* e tempo da
-fase. A recompensa de treino usava a espera acumulada do TraCI. O treino
-rodou nas seeds 1–50 com a Unity no loop, e a validação usou as seeds
-1001–1003.
-
-**Protocolo:** demanda original, seeds inéditas `201`–`203`, 100 s simulados.
-
-| Métrica (média de 3 seeds) | Tempo fixo | Heurístico visual | DQN visual v1 |
-| --- | ---: | ---: | ---: |
-| Veículos concluídos | 50,67 | 60,67 | 60,33 |
-| Vazão (veíc./h) | 1842,42 | 2206,06 | 2193,94 |
-| Tempo médio de espera | 6,85 s | 4,41 s | 4,44 s |
-| Fila média | 8,73 | 4,15 | 4,21 |
-| Fila máxima | 18,67 | 10,33 | 10,33 |
-
-**Limitação e diagnóstico:** o DQN pediu troca assim que o verde mínimo
-permitia, virando praticamente um ciclo fixo mínimo. A análise posterior
-encontrou as causas:
+**Por que foi substituída:** a política colapsou em "trocar assim que o verde
+mínimo permite". A análise posterior encontrou as causas:
 
 - O checkpoint "melhor" era o do episódio 4, com 240 passos de gradiente e
   ε≈0,98: o ε decaía por episódio e ainda estava em ≈0,78 no fim do treino, e
@@ -114,9 +72,7 @@ encontrou as causas:
 - A recompensa ficava positiva quando um veículo com espera saía da rede.
 - As transições eram gravadas mesmo quando a ação era ignorada.
 
-### v2 — DQN visual por faixa, estado v2 (2026-09-29)
-
-**O que mudou:**
+### v2 — DQN visual por faixa, estado v2
 
 - **Estado v2 (41 entradas).** Para cada faixa: contagem, parados (< 1,39 m/s
   por ≥ 1 s), ocupação, velocidade média e espera, normalizados pela
@@ -126,44 +82,94 @@ encontrou as causas:
 - **Pré-treino só no SUMO.** Um oráculo TraCI produz as mesmas features a
   partir das posições reais no mesmo trecho das ROIs; um teste de paridade
   garante a equivalência. Cada episódio (300 s de aquecimento + 1800 s) leva
-  ~6 s, contra ~1,5 s por step com a Unity. Com isso foram 40 episódios, com
-  ε linear por decisão, Double DQN e seleção de checkpoint só após treino
-  mínimo.
+  ~6 s, contra ~1,5 s por step com a Unity. Foram 40 episódios, com ε linear
+  por decisão, Double DQN e seleção de checkpoint só após treino mínimo.
 - **Decisões apenas quando têm efeito.** A política decide em verde, entre o
   verde mínimo e o máximo, a cada 5 s. As transições são SMDP, e a recompensa
   é um nível em [−1, 0] com parados, espera e fila de inserção.
 - **Cenário calibrado.** A demanda foi medida nos vídeos de drone: o Leste fica
-  saturado (v/c≈1,0), com chegadas Poisson e inserção realista. A demanda
-  original continua disponível com `--scenario original`.
-- **Correção de base.** O Python passa a manter o controle das fases no SUMO
-  mesmo quando falta um frame. Antes, o programa estático podia pular o
-  *all-red*.
-- **Fila de inserção.** Os veículos que ainda não conseguiram entrar na rede
-  passaram a ser medidos; eles não aparecem na espera média.
-
-**Protocolo:** cenário calibrado, seeds inéditas `201`–`203`, 300 s de
-aquecimento + 1800 s controlados. Nenhum frame foi perdido.
-
-| Política (média de 3 seeds) | Percepção | Espera | Viagem | Chegadas | Fila de inserção final | Verde Leste/Oeste |
-|---|---|---:|---:|---:|---:|---:|
-| Ciclo fixo 40/40 | — | 16,1 s | 36,2 s | 1503 | 97 | 50% |
-| Max-pressure | visual | 11,1 s | 33,9 s | 1498 | 104 | 56% |
-| **DQN v2** | **visual** | **10,3 s** | **32,1 s** | **1599** | **1** | **67%** |
-| DQN v2 | oráculo TraCI | 9,1 s | 30,9 s | 1598 | 6 | 66% |
-
-- O DQN aprendeu a dar mais verde ao Leste saturado. Pela câmera, fica a
-  1,2 s de espera do limite com percepção perfeita. Na seed 1001, a ação
-  coincidiu com a do oráculo em 82,7% das decisões.
-- O max-pressure visual tem espera média parecida, mas deixa 104 veículos
-  esperando para entrar na rede.
-- Com a demanda original, que ele não viu no treino, o DQN v2 com oráculo
-  empata com o max-pressure (5,1 s × 4,6 s de espera), e ambos ficam bem à
-  frente do ciclo fixo (14,9 s).
+  saturado (v/c≈1,0), com chegadas Poisson e inserção realista.
+- **Correções que valem para todas as versões.** O Python passa a manter o
+  controle das fases no SUMO mesmo quando falta um frame (antes o programa
+  estático podia pular o *all-red*), e a fila de inserção passou a ser medida.
 - Um ajuste fino com a Unity no loop (10 episódios) piorou a validação visual.
   A política final é a pré-treinada no SUMO, usada direto com a câmera
   (zero-shot).
 
-**Limitações:**
+## Comparação no mesmo ambiente
+
+Todas as versões rodam no **mesmo ambiente**:
+
+- mesmo cenário, seeds inéditas `201`–`203`, 300 s de aquecimento e 1800 s
+  controlados;
+- mesma camada de segurança, mesmas métricas e a **mesma percepção** — as
+  features por faixa do oráculo TraCI ou as da câmera.
+
+Só a lógica de decisão muda. As regras de cada versão estão em
+`python/experiments/version_policies.py`, e o comparador é
+`python -m experiments.compare_versions`.
+
+**Diferença deliberada em relação às execuções originais:** a v1 e a v1.1
+contavam os veículos pelo centro da bbox com média móvel. Aqui elas recebem a
+mesma contagem por faixa usada pela v2. Também decidem a cada 1 s, como
+faziam originalmente.
+
+### Percepção oráculo (só SUMO)
+
+**Cenário calibrado** (Leste saturado — onde a adaptação importa):
+
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde Leste/Oeste | Trocas |
+|---|---:|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 16,1 s | 36,2 s | 1503 | 97 | 50% | 0 |
+| v1 (heurística) | 12,2 s | 36,9 s | 1349 | 254 | 52% | 126 |
+| v1.1 (DQN estado v1) | 12,9 s | 38,0 s | 1311 | 290 | 50% | 129 |
+| **v2 (DQN estado v2)** | **9,1 s** | **30,9 s** | **1598** | **6** | **66%** | 93 |
+| max-pressure (referência) | 12,8 s | 37,5 s | 1317 | 284 | 50% | 127 |
+
+A v1 e a v1.1 alternam o verde no ciclo mínimo e dividem 50/50. Com o Leste
+saturado, escoam **menos** veículos que o ciclo fixo e deixam 250–290 veículos
+presos fora da rede. A espera média delas parece melhor que a do ciclo fixo só
+porque os veículos presos não entram nessa conta. A v2 é a única que dá mais
+verde ao Leste, e ganha em espera, viagem, chegadas e fila de inserção.
+
+**Cenário original** (demanda equilibrada):
+
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde Leste/Oeste | Trocas |
+|---|---:|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 14,9 s | 37,3 s | 1431 | 37 | 50% | 0 |
+| v1 (heurística) | 4,7 s | 27,4 s | 1473 | 0 | 50% | 129 |
+| v1.1 (DQN estado v1) | 4,6 s | 27,3 s | 1474 | 0 | 50% | 127 |
+| v2 (DQN estado v2) | 5,1 s | 27,6 s | 1472 | 0 | 55% | 116 |
+| max-pressure (referência) | 4,6 s | 27,2 s | 1474 | 0 | 50% | 129 |
+
+Com demanda equilibrada, alternar rápido já é quase ótimo, e todas as versões
+adaptativas empatam. A v2, que não treinou nesse cenário, fica 0,4–0,5 s
+atrás.
+
+### Percepção visual (Unity)
+
+Cenário calibrado, mesmo protocolo, 0 frames perdidos:
+
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde Leste/Oeste |
+|---|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 16,1 s | 36,2 s | 1503 | 97 | 50% |
+| v1 (heurística) | pendente | | | | |
+| v1.1 (DQN estado v1) | pendente | | | | |
+| **v2 (DQN estado v2)** | **10,3 s** | **32,1 s** | **1599** | **1** | **67%** |
+| max-pressure (referência) | 11,1 s | 33,9 s | 1498 | 104 | 56% |
+
+O ciclo fixo não usa percepção, então o resultado é o mesmo das duas tabelas.
+Pela câmera, a v2 fica a 1,2 s de espera do limite com percepção perfeita. Na
+seed 1001, a ação coincidiu com a do oráculo em 82,7% das decisões. As linhas
+pendentes são obtidas com:
+
+```bash
+cd python
+caffeinate -dimsu ../.venv/bin/python -m experiments.compare_versions --scenario calibrated \
+  --perception visual --versions v1,v1.1
+```
+
+### Limitações
 
 - As ROIs das câmeras cobrem só 23–26 m por faixa, e filas longas do Leste
   saturam o estado.
@@ -172,11 +178,13 @@ aquecimento + 1800 s controlados. Nenhum frame foi perdido.
 - A recompensa de treino vem do TraCI; só a política é exclusivamente visual.
 - A avaliação usou três seeds de teste.
 
-Detalhes, medições da diferença visão × oráculo e todos os comandos estão em
-[`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md), seção
-**DQN v2**.
+Os resultados originais da v1 e da v1.1, obtidos em protocolos diferentes
+(100 s, antes da correção das fases), estão preservados como registro
+histórico em
+[`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md). Eles não
+devem ser comparados com a v2.
 
-## Como reproduzir a v2
+## Como reproduzir
 
 Todos os comandos rodam a partir de `python/`, com o ambiente virtual da raiz.
 Modelos e resultados ficam em `results/` e `runs/`, que são locais (não
@@ -187,11 +195,12 @@ cd python
 ../.venv/bin/python -m pip install -r requirements.txt
 ../.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
 
-# Pré-treino e avaliação só no SUMO (percepção oráculo; sem Unity)
+# Pré-treino só no SUMO (percepção oráculo; sem Unity)
 ../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn
-../.venv/bin/python -m experiments.evaluate_policies_sumo --scenario calibrated \
-  --dqn-model ../results/models/dqn-v2-pretrain-best.pt \
-  --output ../results/evaluation/teste-sumo-oraculo.json
+
+# Todas as versões no mesmo ambiente, percepção oráculo (sem Unity; alguns minutos)
+../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception oracle
+../.venv/bin/python -m experiments.compare_versions --scenario original --perception oracle
 ```
 
 Com a Unity aberta na cena `SPImport`, com o Dataset Capture desativado e em
@@ -347,10 +356,11 @@ Na cena `SPImport` a sincronização já está configurada
 Entre em Play Mode antes de executar o script. O terminal deve imprimir
 `state_sent step=...`, e os veículos devem se mover na cena.
 
-### Controlador visual e DQN das versões v1 e v1.1
+### Scripts originais da v1 e da v1.1
 
-Os scripts das versões anteriores continuam disponíveis, com a Unity em Play
-Mode:
+Os scripts originais das versões anteriores, com o pipeline de contagem da
+época, continuam disponíveis com a Unity em Play Mode. Para comparar versões,
+use `experiments.compare_versions`.
 
 ```bash
 cd python
