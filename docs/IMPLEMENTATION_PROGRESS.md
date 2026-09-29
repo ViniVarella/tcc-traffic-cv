@@ -27,8 +27,8 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   comparação no mesmo ambiente e o registro histórico estão na seção seguinte.
 - DQN v2 (features por faixa, pré-treino só SUMO e avaliação visual):
   concluído em 2026-09-29 — seção **DQN v2** abaixo.
-- Pendentes: v1 e v1.1 com percepção visual no mesmo protocolo, teste visual
-  no cenário `original` e, opcionalmente, um ajuste fino visual mais robusto.
+- Pendentes: teste visual no cenário `original` e, opcionalmente, um ajuste
+  fino visual mais robusto.
 
 ## DQN v2 — estado por faixa, pré-treino SUMO e avaliação visual
 
@@ -183,12 +183,23 @@ Percepção oráculo, cenário original:
   as métricas.
 - **No cenário original,** com demanda equilibrada, as versões adaptativas
   empatam; a v2, que não treinou nele, fica 0,4–0,5 s atrás.
-- **Percepção visual:** a v2 (10,3 s) e o max-pressure (11,1 s) já foram medidos
-  com a Unity no mesmo protocolo; a v1 e a v1.1 visuais estão pendentes
-  (`--perception visual --versions v1,v1.1`).
+Percepção visual (Unity), cenário calibrado, 0 frames perdidos:
 
-Arquivos: `results/evaluation/versoes-calibrated-oracle.json` e
-`versoes-original-oracle.json`.
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O |
+|---|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 16,1 s | 36,2 s | 1503 | 97 | 50% |
+| v1 (heurística) | 12,1 s | 36,7 s | 1351 | 253 | 52% |
+| v1.1 (DQN estado v1) | 12,9 s | 38,0 s | 1312 | 289 | 50% |
+| v2 (DQN estado v2) | 10,3 s | 32,1 s | 1599 | 1 | 67% |
+| max-pressure | 11,1 s | 33,9 s | 1498 | 104 | 56% |
+
+Com a câmera, a ordem é a mesma do oráculo: só a v2 dá mais verde ao Leste,
+e a v1/v1.1 ficam abaixo do ciclo fixo em chegadas.
+
+Arquivos: `results/evaluation/versoes-calibrated-oracle.json`,
+`versoes-original-oracle.json` e `versoes-calibrated-visual-v1.json` (v1 e
+v1.1 visuais; a v2 e o max-pressure visuais estão em
+`teste-visual-dqn-zero-shot.json` e `teste-visual-max-pressure.json`).
 
 ### Registro histórico da v1 e da v1.1 (protocolos diferentes)
 

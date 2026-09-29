@@ -153,21 +153,17 @@ Cenário calibrado, mesmo protocolo, 0 frames perdidos:
 | Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde Leste/Oeste |
 |---|---:|---:|---:|---:|---:|
 | Linha de base (ciclo fixo) | 16,1 s | 36,2 s | 1503 | 97 | 50% |
-| v1 (heurística) | pendente | | | | |
-| v1.1 (DQN estado v1) | pendente | | | | |
+| v1 (heurística) | 12,1 s | 36,7 s | 1351 | 253 | 52% |
+| v1.1 (DQN estado v1) | 12,9 s | 38,0 s | 1312 | 289 | 50% |
 | **v2 (DQN estado v2)** | **10,3 s** | **32,1 s** | **1599** | **1** | **67%** |
 | max-pressure (referência) | 11,1 s | 33,9 s | 1498 | 104 | 56% |
 
 O ciclo fixo não usa percepção, então o resultado é o mesmo das duas tabelas.
-Pela câmera, a v2 fica a 1,2 s de espera do limite com percepção perfeita. Na
-seed 1001, a ação coincidiu com a do oráculo em 82,7% das decisões. As linhas
-pendentes são obtidas com:
-
-```bash
-cd python
-caffeinate -dimsu ../.venv/bin/python -m experiments.compare_versions --scenario calibrated \
-  --perception visual --versions v1,v1.1
-```
+Pela câmera, o quadro se repete: a v1 e a v1.1 escoam menos veículos que o
+ciclo fixo e deixam 250–290 veículos fora da rede, enquanto a v2 é a única que
+dá mais verde ao Leste. A v2 fica a 1,2 s de espera do limite com percepção
+perfeita; na seed 1001, a ação coincidiu com a do oráculo em 82,7% das
+decisões.
 
 ### Limitações
 
