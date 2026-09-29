@@ -22,8 +22,158 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   executada em 100 steps)
 - Marco 10: concluído (captura sintética com máscaras de instância, conversão
   para YOLO e primeiro fine-tuning do detector)
-- Marco 11 em diante: pendentes (validação com ROIs alinhadas aos E2,
-  integração do estado visual ao controlador e DQN)
+- Controlador visual heurístico e DQN visual v1 (13 contagens): concluídos
+  em 2026-09 (ver `README.md`); o v1 colapsou em "sempre trocar" — diagnóstico
+  na seção seguinte.
+- DQN v2 (features por faixa, pré-treino só SUMO e avaliação visual):
+  concluído em 2026-09-29 — seção **DQN v2** abaixo.
+- Pendentes: teste visual no cenário `original` e, opcionalmente, um ajuste
+  fino visual mais robusto.
+
+## DQN v2 — estado por faixa, pré-treino SUMO e avaliação visual
+
+Status: concluído (branch `feat/estado-faixa-v2`, 2026-09-28/29). Os números
+abaixo vêm de arquivos locais em `results/` (ignorados pelo Git) e podem ser
+reproduzidos com os comandos do fim da seção.
+
+### Por que o v1 foi substituído
+
+- O checkpoint "melhor" do v1 era o do episódio 4 (240 passos de gradiente,
+  ε≈0,98): o ε decaía por episódio (`0.995**episódio`, ainda ≈0,78 no fim do
+  treino), a validação empatava e o primeiro valor vencia. A política
+  colapsou em "trocar assim que o verde mínimo permite" e empatou com o
+  heurístico.
+- A recompensa somava a espera acumulada só dos veículos ativos: quando um
+  veículo com muita espera saía da rede, a recompensa ficava positiva.
+- A demanda original é equilibrada (v/c≈0,5 nas duas fases), então o tempo de
+  verde quase não muda o resultado.
+
+### Correções de base (valem para qualquer política)
+
+- **Fases do TLS sob controle do Python.** `apply()` só chamava `setPhase` e
+  os steps sem frames pulavam o controlador, então o programa estático do SUMO
+  avançava sozinho. Com 20% de frames ausentes, o SUMO foi 4 vezes do amarelo
+  direto ao verde sem all-red em 600 s. Agora `apply()` fixa a duração da fase
+  e `update_without_vision()` mantém amarelo, all-red e verde máximo quando não
+  há visão. **Resultados gravados antes dessa correção devem ser refeitos.**
+- **Cenários.** `sp.yaml` declara `calibrated` (padrão; demanda medida nos
+  vídeos de drone, Leste com v/c≈1,0) e `original`; escolha com `--scenario`.
+  Na cópia calibrada em `sumo/sp`, as chegadas são Poisson (a seed passa a
+  mudar a demanda) e a inserção é realista (`departLane="best"`,
+  `departSpeed="max"`): com o padrão do SUMO, 231 veículos ficavam pendentes em
+  1200 s no plano estático por causa da própria inserção, contra 49 depois.
+- **Fila de inserção nas métricas.** Veículos que ainda não entraram na rede
+  não aparecem na espera média; as avaliações v2 registram
+  `mean/final_pending_vehicles`.
+
+### Geometria das ROIs
+
+`experiments.check_lane_geometry` projeta as ROIs no solo pela pose e FOV das
+câmeras Unity. As larguras projetadas coincidem com as das lanes (3,0–4,3 m
+para 3,2/4,0 m), mas as ROIs cobrem só **23–26 m por faixa**, terminando na
+linha de retenção, enquanto os E2 atuais cobrem 42,6–45,8 m. Os intervalos
+medidos estão em `lane_geometry` no `sp.yaml`, protegidos por teste. Decisão:
+**manter as ROIs como estão** e declarar a limitação — o estado satura em
+~3–4 veículos por faixa quando a fila do Leste passa da ROI.
+
+### Estado v2 e treino
+
+- Por faixa (7): contagem, parados (< 1,39 m/s por ≥ 1 s, padrão do E2),
+  ocupação espacial, velocidade média e espera, normalizados pela capacidade
+  da ROI (comprimento / 7,5 m); mais a fase em one-hot e o tempo da fase — 41
+  entradas.
+- As features vêm de `ApproachKinematicsTracker`, alimentado por duas fontes
+  com o mesmo contrato: visão (base das bboxes projetada pela homografia da
+  ROI) e oráculo TraCI (posições reais no mesmo intervalo da ROI). Um teste de
+  paridade garante features idênticas para a mesma trajetória.
+- A política só decide em verde, entre o verde mínimo e o máximo, a cada 5 s;
+  as transições são SMDP (recompensa acumulada com desconto γ^k, γ=0,99/s).
+- Recompensa: nível em [−1, 0] sobre as lanes de entrada inteiras (parados,
+  espera nativa e fila de inserção), vinda do TraCI; não é entrada da política.
+- Pré-treino só SUMO com o oráculo: 40 episódios de 300 s de aquecimento +
+  1800 s controlados (~6 s por episódio), seeds 1–40, Double DQN, ε linear por
+  decisão. Melhor checkpoint: episódio 34 (6.797 passos de gradiente), escore
+  de validação −0,059 contra −0,314 do ciclo fixo e −0,340 do max-pressure.
+
+### Resultados — percepção oráculo (seeds 201–203, 1800 s, média)
+
+| Cenário | Política | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O |
+|---|---|---:|---:|---:|---:|---:|
+| calibrado | ciclo fixo 40/40 | 16,1 s | 36,2 s | 1503 | 97 | 50% |
+| calibrado | max-pressure | 12,8 s | 37,5 s | 1317 | 284 | 50% |
+| calibrado | DQN v2 | 9,1 s | 30,9 s | 1598 | 6 | 66% |
+| original | ciclo fixo 40/40 | 14,9 s | 37,3 s | 1431 | 37 | 50% |
+| original | max-pressure | 4,6 s | 27,2 s | 1474 | 0 | 50% |
+| original | DQN v2 | 5,1 s | 27,6 s | 1472 | 0 | 55% |
+
+O DQN v2 aprendeu a dar mais verde ao Leste saturado; no cenário original, em
+que não treinou, empata com o max-pressure.
+
+### Domain gap visão × oráculo (Unity, seed 1001, 900 s)
+
+911 steps, 0 frames perdidos. Com a política pré-treinada usada direto com
+visão (zero-shot), a espera foi 10,9 s contra 8,3 s com o oráculo, com o mesmo
+número de chegadas (790 × 791) e a mesma fração de verde (68%). A ação gulosa
+coincidiu com a do oráculo em 82,7% das 98 decisões.
+
+- Contagem e parados: correlação 0,82–0,95, exceto `south/lane_3` (subconta
+  0,74 veículo em média, r=0,59 — provável oclusão pelas outras faixas).
+- Velocidade subestimada (Leste −1,4 a −1,9 m/s; r≈0,6–0,7) e espera
+  superestimada (até +11,8 s em `south/lane_1`), coerentes com o atraso da
+  regressão de 3 pontos a 1 fps.
+- Offset do ponto de solo (mediana): −0,66 m (Leste), −0,54 m (Sul) e
+  −0,75 m (Oeste); abaixo de 1 m, então `visual_ground_offset_m` ficou em 0.
+
+### Ajuste fino visual
+
+10 episódios de 900 s nas seeds 41–50 (~100 transições por episódio, ~900
+passos de gradiente) pioraram a validação visual: −0,080 (zero-shot) → −0,102
+→ −0,139. O critério manteve o zero-shot; `dqn-v2-visual-best.pt` tem os mesmos
+pesos de `dqn-v2-pretrain-best.pt`. Causa provável, não verificada: o replay
+recomeça vazio e só com as transições correlacionadas do ajuste fino.
+
+### Resultado final — percepção visual (Unity, seeds 201–203, 1800 s, média)
+
+| Política | Percepção | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O |
+|---|---|---:|---:|---:|---:|---:|
+| ciclo fixo 40/40 | — | 16,1 s | 36,2 s | 1503 | 97 | 50% |
+| max-pressure | visual | 11,1 s | 33,9 s | 1498 | 104 | 56% |
+| **DQN v2 (zero-shot)** | **visual** | **10,3 s** | **32,1 s** | **1599** | **1** | **67%** |
+| DQN v2 | oráculo | 9,1 s | 30,9 s | 1598 | 6 | 66% |
+
+Pela câmera, o DQN v2 reduz a espera em 36% em relação ao ciclo fixo, escoa 6%
+mais veículos e zera a fila de inserção; o max-pressure visual tem espera
+parecida, mas acumula 104 veículos esperando para entrar. O custo da visão em
+relação ao oráculo é de 1,2 s de espera. As execuções visuais foram
+reprodutíveis seed a seed e sem frames perdidos.
+
+### Limitações registradas
+
+- ROIs de ~25 m: filas longas do Leste saturam o estado.
+- Velocidade visual subestimada e oclusão na faixa sul mais distante.
+- A recompensa do treino vem do TraCI (a política é que é só visual).
+- Três seeds de teste; o ajuste fino simples não melhorou o zero-shot.
+
+### Comandos (a partir de `python/`)
+
+```bash
+# Pré-treino e avaliação só SUMO (percepção oráculo)
+../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn
+../.venv/bin/python -m experiments.evaluate_policies_sumo --scenario calibrated \
+  --dqn-model ../results/models/dqn-v2-pretrain-best.pt \
+  --output ../results/evaluation/teste-sumo-oraculo.json
+
+# Com a Unity em Play Mode (SPImport, Dataset Capture desativado; reinicie o Play Mode antes de cada comando)
+../.venv/bin/python -m experiments.run_visual_policy --scenario calibrated --policy dqn \
+  --dqn-model ../results/models/dqn-v2-pretrain-best.pt --seeds 201,202,203 --control-seconds 1800 \
+  --step-log-output ../results/logs/teste-visual-dqn-zero-shot.jsonl \
+  --output ../results/evaluation/teste-visual-dqn-zero-shot.json
+../.venv/bin/python -m experiments.evaluate_lane_features \
+  --step-log ../results/logs/etapa11-gap-seed-1001.jsonl \
+  --dqn-model ../results/models/dqn-v2-pretrain-best.pt
+../.venv/bin/python -m experiments.finetune_dqn_visual \
+  --init-checkpoint ../results/models/dqn-v2-pretrain-best.pt
+```
 
 ## Avaliação visão versus E2 — cenário SP
 
@@ -31,11 +181,11 @@ Status: implementada e executada em 100 steps com as câmeras e calibrações
 atuais.
 
 O E2 permanece exclusivamente como verdade de terreno de avaliação. A decisão
-online futura continua recebendo somente a saída visual. A comparação atual é
-diagnóstica, não uma medida direta de erro do detector: os E2 observam apenas
-20 m antes do cruzamento, enquanto as ROIs operacionais podem ter extensão
-maior. Para uma métrica estrita, será criada uma ROI de avaliação alinhada a
-cada E2, preservando as ROIs operacionais.
+online continua recebendo somente a saída visual. A comparação desta seção é
+diagnóstica, não uma medida direta de erro do detector. Na época, os E2
+cobriam 20 m; hoje cobrem 42,6–45,8 m, enquanto as ROIs das câmeras cobrem
+23–26 m. A medida estrita passou a ser a do DQN v2 (seção anterior): visão ×
+oráculo TraCI no mesmo intervalo físico de cada ROI.
 
 ## Dataset sintético para fine-tuning do YOLO
 
@@ -214,11 +364,10 @@ Nas imagens anotadas, uma caixa vermelha `d:<confiança>` é uma detecção YOLO
 ainda sem track; uma caixa verde `id:<n>` é uma associação confirmada pelo
 ByteTrack. Elas não são as ROIs verdes.
 
-Importante: os E2 do cenário cobrem somente 20 m de cada faixa perto do
-cruzamento. A ROI visual usada pelo DQN pode ser maior; nesse caso, a primeira
-comparação também expõe a diferença de área observada. Para uma medida pura de
-detecção, a próxima calibração deve criar uma ROI de avaliação limitada ao
-mesmo trecho do E2, sem substituir a ROI operacional de fila.
+Importante: quando esta comparação foi feita, os E2 cobriam 20 m de cada
+faixa perto do cruzamento, e a diferença de área observada entra no erro. A
+medida no mesmo trecho físico da ROI é a do domain gap do DQN v2
+(`experiments.evaluate_lane_features`).
 
 ## Marco 1 — Estrutura inicial do repositório
 
@@ -704,7 +853,8 @@ Escopo previsto:
 
 ### Marco 8 — Percepção visual e estado do DQN
 
-Em andamento.
+Concluído: estado v1 (contagens) e, depois, estado v2 por faixa — ver a seção
+**DQN v2** no início deste arquivo.
 
 Escopo previsto:
 
@@ -716,7 +866,5 @@ Escopo previsto:
 
 ### Marco 9 em diante
 
-Pendentes conforme o guia:
-
-- controlador semafórico;
-- experimentos comparativos.
+Controlador semafórico e experimentos comparativos concluídos com o DQN v2
+(seção **DQN v2**). Pendente: teste visual no cenário `original`.

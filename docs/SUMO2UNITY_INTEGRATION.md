@@ -198,18 +198,37 @@ ByteTrack e ROIs de faixa, agrega as contagens e só então decide a ação do
 semáforo via TraCI.
 
 O DQN visual pertence ao processo Python, não à Unity. Ele é implementado em
-PyTorch, treinado por `experiments.train_visual_dqn` e carregado por
-`experiments.run_visual_controller --dqn-model ...`. O checkpoint de produção
-é selecionado pela validação, e não simplesmente pelo último episódio.
+PyTorch. O DQN v2 atual é pré-treinado só no SUMO por
+`experiments.pretrain_dqn_sumo` e executado com a Unity por
+`experiments.run_visual_policy` (ajuste fino: `experiments.finetune_dqn_visual`).
+O v1 legado continua em `experiments.train_visual_dqn` e
+`experiments.run_visual_controller`. O checkpoint de produção é selecionado
+pela validação, e não simplesmente pelo último episódio.
+
+Quando a Unity está no loop, o Python processa amarelo, all-red e verde
+máximo em todo step, mesmo sem frames (`update_without_vision()`), e fixa a
+duração de cada fase no SUMO para que o programa estático nunca avance
+sozinho. O `step_id` cresce entre episódios do mesmo processo, para que frames
+atrasados nunca sejam associados a um step novo.
 
 ## Contrato da percepção e do DQN
 
-O script histórico `optimization/sp/traci8.DQN.py` usa 26 entradas derivadas de
-detectores E2 e não é reutilizado pela política visual. O DQN atual recebe 13
-entradas: as contagens normalizadas das sete faixas visuais do SP, as cinco
-fases em *one-hot* e a razão entre o tempo decorrido da fase e o verde máximo.
-O estado é criado por `vision.visual_state.VisualStateEncoder` e alimenta uma
-rede PyTorch com duas ações: manter ou solicitar troca.
+O script `optimization/SP/traci8.DQN.py` usa entradas derivadas de detectores
+E2 e não é reutilizado pela política visual. Há duas versões de estado:
+
+- **v1 (legado, 13 entradas):** contagens normalizadas das sete faixas, cinco
+  fases em *one-hot* e tempo da fase (`VisualStateEncoder`).
+- **v2 (atual, 41 entradas):** para cada uma das sete faixas, contagem,
+  parados, ocupação, velocidade média e espera, normalizados pela capacidade
+  da ROI, mais fase e tempo (`LaneFeatureStateEncoder`). As features são
+  estimadas por visão: a base de cada bbox é projetada pela homografia da ROI
+  de faixa e um rastreador cinemático por câmera calcula a velocidade e o
+  tempo parado. No pré-treino, o mesmo rastreador recebe as posições reais do
+  SUMO restritas ao mesmo intervalo das ROIs (oráculo TraCI, nunca usado no
+  controle implantado).
+
+A rede tem duas ações, manter ou solicitar troca, e no v2 só é consultada em
+pontos de decisão (em verde, entre o verde mínimo e o máximo, a cada 5 s).
 
 A ação passa por `DqnTrafficController`, que impõe verde mínimo/máximo,
 amarelo e *all-red*. Portanto, a rede nunca aplica diretamente uma transição
@@ -219,6 +238,10 @@ As leituras de detectores do SUMO podem permanecer em um logger de *ground
 truth* para medir erro de contagem e qualidade experimental; elas não podem
 alimentar a decisão online.
 
+A recompensa do treino vem do TraCI (parados, espera e fila de inserção nas
+lanes de entrada). Ela é sinal de aprendizado, não entrada da política, e deve
+ser declarada assim no texto.
+
 No cenário SP, a avaliação offline é alinhada pelo mesmo `step_id` do frame e
 usa um mapeamento explícito de ROI para detector E2 no perfil
 `python/configs/sp.yaml`. O log `results/ground_truth/sp-e2.jsonl` armazena
@@ -227,10 +250,12 @@ somente `lane_counts` visuais com `vehicle_count`, preservando as outras duas
 métricas como contexto experimental, pois elas ainda não têm estimadores
 visuais semanticamente equivalentes.
 
-Os detectores E2 do SP possuem extensão de 20 m. Uma ROI de fila maior pode
-ser mais útil para a decisão, mas não é diretamente comparável ao E2; quando
-for necessário isolar a qualidade da percepção, deve existir uma ROI de
-avaliação separada e limitada ao mesmo trecho físico do detector.
+Os detectores E2 do SP cobrem hoje 42,6–45,8 m, mas as ROIs das câmeras
+cobrem só 23–26 m por faixa (medido por `experiments.check_lane_geometry` a
+partir da pose e do FOV; intervalos em `lane_geometry` no `sp.yaml`). Portanto,
+visão e E2 não são diretamente comparáveis. A comparação estrita da
+percepção é visão × oráculo TraCI no intervalo de cada ROI, feita por
+`experiments.evaluate_lane_features`.
 
 ## Limites verificados
 
@@ -246,13 +271,18 @@ avaliação separada e limitada ao mesmo trecho físico do detector.
 
 ## Estado experimental e próximo marco
 
-O DQN visual foi treinado com seeds `1`–`50`, validado nas seeds `1001`–`1003`
-e comparado, nas seeds inéditas `201`–`203`, ao tempo fixo e ao controlador
-heurístico visual. Ambos os controladores visuais superaram o tempo fixo; o
-DQN ficou ligeiramente abaixo do heurístico porque aprendeu a solicitar troca
-assim que o verde mínimo termina.
+O DQN v1 colapsou em "trocar assim que o verde mínimo termina" e empatou com
+o heurístico visual. O DQN v2 substituiu-o:
 
-O próximo marco é criar perfis SP de demanda assimétrica, treinar com cenários
-equilibrados e assimétricos e restringir as decisões DQN aos estados em que a
-ação pode alterar a fase. O ramo norte permanece apenas como saída da mão única
-iniciada no sul e, por isso, não recebe câmera.
+- cenário principal com a demanda calibrada pelo drone (Leste saturado);
+- pré-treino só SUMO nas seeds 1–40 e validação em 1001–1003;
+- teste com a Unity nas seeds inéditas 201–203, com 1800 s controlados.
+
+Pela câmera, o DQN v2 teve 10,3 s de espera média e 1599 chegadas, com fila de
+inserção de 1 veículo no fim. O ciclo fixo teve 16,1 s, 1503 chegadas e fila
+de 97 veículos; o max-pressure visual teve 11,1 s, 1498 chegadas e fila de 104
+veículos. Com percepção oráculo, o mesmo DQN teve 9,1 s. Detalhes e comandos
+em `docs/IMPLEMENTATION_PROGRESS.md`, seção **DQN v2**.
+
+Pendente: teste visual no cenário `original`. O ramo norte permanece apenas
+como saída da mão única iniciada no sul e, por isso, não recebe câmera.
