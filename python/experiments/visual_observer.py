@@ -24,6 +24,9 @@ from vision.visual_lane_features import VisualLaneFeatureSource
 from vision.visual_pipeline import VisualPipeline
 
 
+MISSING_STREAK_WARNING = 10
+
+
 def features_record(features: dict[tuple[str, str], LaneFeatures] | None) -> dict[str, Any] | None:
     return None if features is None else {f"{camera}/{lane}": asdict(values) for (camera, lane), values in features.items()}
 
@@ -57,6 +60,7 @@ class UnityVisualObserver:
         self.next_step_id = 0
         self.last_record: dict[str, Any] | None = None
         self.missing_frames = 0
+        self.missing_streak = 0
 
     def begin_episode(self, client: Any, seed: int) -> Callable[[float], dict[tuple[str, str], LaneFeatures] | None]:
         self.pipeline.reset()
@@ -82,9 +86,16 @@ class UnityVisualObserver:
             oracle = None if shadow is None else shadow.observe(client, sim_time)
             if bundle is None or not bundle.is_complete:
                 self.missing_frames += 1
+                self.missing_streak += 1
+                if self.missing_streak % MISSING_STREAK_WARNING == 0:
+                    # A Unity sem foco deixa de renderizar se "Run In Background" estiver desligado.
+                    print(f"vision_missing_streak steps={self.missing_streak} step_id={step_id} "
+                          "aviso=sem frames da Unity; confira Play Mode e Run In Background (ou mantenha a Unity em foco)",
+                          flush=True)
                 features = None
                 visual_observations: dict[str, list[LaneObservation]] = {}
             else:
+                self.missing_streak = 0
                 features = self.visual_source.observe(self.pipeline.process_bundle(bundle), sim_time)
                 visual_observations = self.visual_source.last_observations
             self.last_record = {

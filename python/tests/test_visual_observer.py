@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import io
 import json
 from pathlib import Path
@@ -96,6 +97,19 @@ class UnityVisualObserverTests(unittest.TestCase):
         record = observer.last_record
         self.assertIsNone(record["visual"])
         self.assertEqual(record["oracle"]["east/lane_0"]["vehicle_count"], 1)
+
+    def test_long_missing_streak_prints_a_focus_warning(self) -> None:
+        bridge = FakeBridge()
+        bridge.drop_steps = set(range(12))
+        observer = _observer(bridge, shadow=False)
+        observe = observer.begin_episode(FakeClient(), seed=1)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            for time in range(1, 14):
+                observe(float(time))
+        self.assertEqual(output.getvalue().count("vision_missing_streak"), 1)
+        self.assertIn("Run In Background", output.getvalue())
+        self.assertEqual((observer.missing_frames, observer.missing_streak), (12, 0))
 
     def test_step_logger_writes_only_matching_steps(self) -> None:
         observer = _observer(FakeBridge())
