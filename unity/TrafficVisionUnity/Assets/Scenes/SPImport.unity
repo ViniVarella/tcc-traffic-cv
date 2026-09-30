@@ -6935,6 +6935,8 @@ MonoBehaviour:
   - {fileID: 8550200907514385824, guid: 051105536786f4b6da6dd5920147e980, type: 3}
   - {fileID: 6819982009064687464, guid: ec3c8492c9c6844fb969cd46d6f4d895, type: 3}
   - {fileID: 800257199876369042, guid: 9d033a119a42f439da21007ce9a4b91a, type: 3}
+  emergencyPrefab: {fileID: 8594577995257790863, guid: bee37458f234949dd9d5bb0532d663c8, type: 3}
+  emergencyTypeId: emergency
   prefabScale: {x: 1, y: 1, z: 1}
   prefabVerticalOffset: 0
   prefabYawOffset: -90

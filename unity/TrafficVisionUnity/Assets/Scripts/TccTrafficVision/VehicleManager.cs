@@ -7,6 +7,13 @@ namespace TccTrafficVision
     {
         [SerializeField] private Transform vehiclesRoot;
         [SerializeField] private List<GameObject> vehiclePrefabs = new List<GameObject>();
+        // Emergency vehicles (SUMO type "emergency") always use this prefab and
+        // never one of the passenger cars above. It is normalized to the same
+        // axes as the car FBXs, so prefabYawOffset applies to it as well. When
+        // it is missing (the model is not redistributed with the repository),
+        // they fall back to a red box.
+        [SerializeField] private GameObject emergencyPrefab;
+        [SerializeField] private string emergencyTypeId = "emergency";
         [SerializeField] private Vector3 prefabScale = Vector3.one;
         [SerializeField] private float prefabVerticalOffset;
         // The imported vehicle FBXs use a lateral forward axis, unlike SUMO
@@ -95,6 +102,11 @@ namespace TccTrafficVision
 
         private GameObject SelectVehiclePrefab(string vehicleId, string vehicleType)
         {
+            if (IsEmergency(vehicleType))
+            {
+                return emergencyPrefab;
+            }
+
             if (vehiclePrefabs == null || vehiclePrefabs.Count == 0)
             {
                 return null;
@@ -111,6 +123,12 @@ namespace TccTrafficVision
             }
 
             return null;
+        }
+
+        private bool IsEmergency(string vehicleType)
+        {
+            return !string.IsNullOrEmpty(emergencyTypeId) &&
+                   string.Equals(vehicleType, emergencyTypeId, System.StringComparison.OrdinalIgnoreCase);
         }
 
         private static int StableHash(string value)
@@ -168,6 +186,11 @@ namespace TccTrafficVision
         private static Color GetVehicleColor(string vehicleType)
         {
             string normalizedType = vehicleType?.ToLowerInvariant() ?? string.Empty;
+            if (normalizedType.Contains("emergency"))
+            {
+                return new Color(0.86f, 0.08f, 0.08f);
+            }
+
             if (normalizedType.Contains("bus"))
             {
                 return new Color(0.96f, 0.55f, 0.16f);

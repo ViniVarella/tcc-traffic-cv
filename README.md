@@ -252,6 +252,23 @@ Play Mode (reinicie o Play Mode antes de cada comando):
 O detector ajustado (`runs/results/models/yolov8n-unity-run-002-mask/weights/best.pt`)
 tem uma única classe, e os scripts v2 já usam `--classes 0` por padrão.
 
+## Modelo da ambulância
+
+O modelo 3D da ambulância usado na Unity vem do RigModels.com, com licença
+apenas para uso pessoal/estudante, e por isso **não é versionado**. Para
+reproduzir:
+
+1. Baixe o modelo "Ambulance" em https://rigmodels.com e copie a pasta, com
+   `ambulance.fbx` e as texturas, para
+   `unity/TrafficVisionUnity/Assets/Art/TrafficModels/Models/Cars/Ambulance/`.
+2. Na Unity, com `SPImport` aberta, rode *Traffic Vision > Vehicles > Create
+   SP Emergency Prefab* e salve a cena.
+3. Para conferir, entre em Play Mode e rode
+   `python -m experiments.test_sumo_to_unity --config configs/sp.yaml --steps 120 --send-interval 0.1 --emergency-interval 20`.
+   Se a ambulância andar de ré, rode *Flip SP Emergency Prefab*.
+
+Sem o modelo, as viaturas de emergência aparecem como blocos vermelhos.
+
 ## Principais módulos
 
 - `python/sumo`: cliente TraCI, seleção de cenário, oráculo TraCI das

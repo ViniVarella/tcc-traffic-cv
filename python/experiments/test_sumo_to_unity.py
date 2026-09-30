@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 import json
 import shutil
 from pathlib import Path
@@ -14,6 +15,8 @@ import yaml
 from bridge import FrameBundleCollector, UnityBridge
 from experiments.scenario_config import add_scenario_argument
 from sumo import GroundTruthCollector, SumoClient, SumoStateExtractor
+from sumo.emergency import EmergencySettings, EmergencyTraffic
+from vision.lane_features import load_lane_geometries
 
 
 def load_config(config_path: Path) -> dict[str, Any]:
@@ -87,6 +90,15 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
         help=(
             "Diretório para PNGs de máscara por instância enviados pela Unity. "
             "Requer --receive-frames e é usado para gerar rótulos YOLO precisos."
+        ),
+    )
+    parser.add_argument(
+        "--emergency-interval",
+        type=float,
+        default=None,
+        help=(
+            "Insere uma viatura de emergência (tipo 'emergency') a cada N segundos simulados, "
+            "alternando Sul, Leste e Oeste. Serve para conferir o modelo da ambulância e para o dataset."
         ),
     )
     add_scenario_argument(parser)
@@ -177,8 +189,18 @@ def main() -> None:
                 f"{missing_detector_ids}. Disponíveis: {sorted(available_detector_ids)}"
             )
 
+        emergency_traffic = None
+        if args.emergency_interval is not None:
+            geometries = load_lane_geometries(config)
+            approach_edges = {camera: geometry.sumo_lane.rsplit("_", 1)[0] for (camera, _), geometry in geometries.items()}
+            emergency_settings = replace(EmergencySettings.from_config(config), interval_s=args.emergency_interval,
+                                         jitter_s=0.0, first_after_s=min(5.0, args.emergency_interval), announce_before_s=0.0)
+            emergency_traffic = EmergencyTraffic(emergency_settings, approach_edges, seed=0, start_s=0.0, end_s=float(args.steps))
+
         for step in range(args.steps):
             sim_time = sumo_client.step()
+            if emergency_traffic is not None:
+                emergency_traffic.step(sumo_client, sim_time)
             vehicles = sumo_client.get_vehicle_state()
             traffic_light_state = sumo_client.get_traffic_light_state(tls_id)
             if args.ground_truth_output is not None:
