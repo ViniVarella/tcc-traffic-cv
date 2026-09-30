@@ -123,6 +123,9 @@ class BuildUnityYoloDatasetTests(unittest.TestCase):
                 files = list((output / "images" / split_name).glob(f"{run_name}_*.jpg"))
                 self.assertEqual(len(files), 2)
             self.assertIn("1: emergency", (output / "data.yaml").read_text(encoding="utf-8"))
+            strided = build_dataset(None, None, root / "strided", DatasetSplit(), seed=1,
+                                    runs=[CaptureRun.from_dir(path) for path in run_dirs], frame_stride=2)
+            self.assertEqual(strided["train"] + strided["val"] + strided["test"], 3)
 
 
 if __name__ == "__main__":

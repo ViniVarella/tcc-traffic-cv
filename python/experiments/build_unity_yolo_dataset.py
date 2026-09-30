@@ -52,6 +52,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--output-dir", type=Path, required=True, help="Diretório novo que receberá images/, labels/ e data.yaml.")
     parser.add_argument("--seed", type=int, default=42, help="Semente do particionamento reprodutível.")
+    parser.add_argument(
+        "--frame-stride",
+        type=int,
+        default=1,
+        help="Usa um frame a cada N de cada câmera; frames vizinhos (1 s) são quase idênticos.",
+    )
     parser.add_argument("--train", type=float, default=0.8)
     parser.add_argument("--val", type=float, default=0.1)
     parser.add_argument("--test", type=float, default=0.1)
@@ -155,8 +161,11 @@ def build_dataset(
     seed: int,
     masks_root: Path | None = None,
     runs: list[CaptureRun] | None = None,
+    frame_stride: int = 1,
 ) -> dict[str, int]:
     split.validate()
+    if frame_stride < 1:
+        raise ValueError("--frame-stride deve ser pelo menos 1.")
     if output_dir.exists():
         raise FileExistsError(f"A saída já existe; escolha um diretório novo: {output_dir}")
     if runs:
@@ -171,7 +180,7 @@ def build_dataset(
     for run in runs:
         for camera_dir in sorted(path for path in run.frames_root.iterdir() if path.is_dir()):
             labels_dir = run.labels_root / camera_dir.name
-            for frame_path in sorted(camera_dir.glob("*.jpg")):
+            for frame_path in sorted(camera_dir.glob("*.jpg"))[::frame_stride]:
                 label_path = labels_dir / f"{frame_path.stem}.json"
                 if not label_path.is_file():
                     raise FileNotFoundError(f"Rótulo ausente para {frame_path}: {label_path}")
@@ -228,6 +237,7 @@ def main() -> None:
         seed=args.seed,
         masks_root=args.masks_root.resolve() if args.masks_root else None,
         runs=[CaptureRun.from_dir(path.resolve()) for path in args.run_dir],
+        frame_stride=args.frame_stride,
     )
     print("dataset_complete " + " ".join(f"{key}={value}" for key, value in counts.items()) + f" output={args.output_dir}")
 
