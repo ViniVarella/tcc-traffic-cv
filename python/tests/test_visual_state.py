@@ -63,8 +63,8 @@ class BuildStateEncoderTests(unittest.TestCase):
         encoder = build_state_encoder(SP_CONFIG, SP_CONFIG["dqn"]["state_version"])
         self.assertIsInstance(encoder, LaneFeatureStateEncoder)
         self.assertEqual(encoder.state_size, SP_CONFIG["dqn"]["state_size"])
-        # Capacidades vêm das ROIs medidas (~25 m / 7,5 m).
-        self.assertAlmostEqual(encoder.capacities[("east", "lane_0")], 25.5 / 7.5)
+        # Capacidades vêm das ROIs medidas (60 m / 7,5 m = 8 veículos parados).
+        self.assertAlmostEqual(encoder.capacities[("east", "lane_0")], 60.0 / 7.5)
 
     def test_version_1_keeps_legacy_contract(self) -> None:
         self.assertEqual(build_state_encoder(SP_CONFIG, 1).state_size, 13)

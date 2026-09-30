@@ -68,19 +68,20 @@ vision_evaluation:
 # em metros desde o início da lane (roi_end fica na linha de retenção). Medida por
 # `python -m experiments.check_lane_geometry` a partir da pose/FOV exportados; um
 # teste falha se a calibração mudar sem atualizar estes valores. As ROIs cobrem
-# ~23-26 m, bem menos que os E2 (42,6-45,8 m): as features por faixa usam este
-# intervalo nas duas fontes (visão e TraCI), nunca o intervalo do E2.
+# 60 m em todas as faixas (gerado por experiments.extend_lane_rois), mais que os
+# E2 (42,6-45,8 m): as features por faixa usam este intervalo nas duas fontes
+# (visão e TraCI), nunca o intervalo do E2.
 lane_geometry:
   south:
-    lane_0: {sumo_lane: "E3_0", roi_start_m: 52.8, roi_end_m: 77.9, width_m: 3.2}
-    lane_1: {sumo_lane: "E3_1", roi_start_m: 52.4, roi_end_m: 78.0, width_m: 3.2}
-    lane_2: {sumo_lane: "E3_2", roi_start_m: 52.0, roi_end_m: 78.0, width_m: 3.2}
-    lane_3: {sumo_lane: "E3_3", roi_start_m: 51.8, roi_end_m: 78.0, width_m: 3.2}
+    lane_0: {sumo_lane: "E3_0", roi_start_m: 17.9, roi_end_m: 77.9, width_m: 3.2}
+    lane_1: {sumo_lane: "E3_1", roi_start_m: 17.9, roi_end_m: 77.9, width_m: 3.2}
+    lane_2: {sumo_lane: "E3_2", roi_start_m: 17.9, roi_end_m: 77.9, width_m: 3.2}
+    lane_3: {sumo_lane: "E3_3", roi_start_m: 17.9, roi_end_m: 77.9, width_m: 3.2}
   east:
-    lane_0: {sumo_lane: "E2_0", roi_start_m: 43.0, roi_end_m: 68.5, width_m: 4.0}
-    lane_1: {sumo_lane: "E2_1", roi_start_m: 43.4, roi_end_m: 68.5, width_m: 4.0}
+    lane_0: {sumo_lane: "E2_0", roi_start_m: 8.4, roi_end_m: 68.4, width_m: 4.0}
+    lane_1: {sumo_lane: "E2_1", roi_start_m: 8.4, roi_end_m: 68.4, width_m: 4.0}
   west:
-    lane_0: {sumo_lane: "E6_0", roi_start_m: 50.8, roi_end_m: 74.0, width_m: 3.2}
+    lane_0: {sumo_lane: "E6_0", roi_start_m: 14.5, roi_end_m: 74.5, width_m: 3.2}
 
 # Parâmetros das features por faixa (vision/lane_features.py). "Parado" segue os
 # padrões do E2 do SUMO (1,39 m/s por 1 s). oracle_noise degrada a fonte TraCI do

@@ -52,6 +52,19 @@ def image_point_to_ground(pose: dict[str, Any], aspect: float, u: float, v: floa
     return float(ground[0]), float(ground[2])
 
 
+def ground_to_image_point(pose: dict[str, Any], aspect: float, x: float, y: float) -> tuple[float, float]:
+    """Inverso de ``image_point_to_ground``: (x, y) SUMO no chão -> (u, v) normalizados."""
+    origin = np.array([pose["position"][axis] for axis in ("x", "y", "z")], dtype=float)
+    camera = camera_rotation(pose["rotationEulerDegrees"]).T @ (np.array([x, 0.0, y]) - origin)
+    if camera[2] <= 0:
+        raise ValueError(f"O ponto ({x:.2f}, {y:.2f}) está atrás da câmera.")
+    tan_half = math.tan(math.radians(float(pose["fieldOfView"])) / 2.0)
+    return (
+        float((camera[0] / camera[2] / (tan_half * aspect) + 1.0) / 2.0),
+        float((1.0 - camera[1] / camera[2] / tan_half) / 2.0),
+    )
+
+
 def lane_shapes(net_path: Path) -> dict[str, tuple[list[tuple[float, float]], float]]:
     shapes = {}
     for lane in ElementTree.parse(net_path).getroot().iter("lane"):
