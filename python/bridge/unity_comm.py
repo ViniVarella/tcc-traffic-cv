@@ -15,6 +15,9 @@ from .protocol import FramePacket, SimulationState
 from .serialization import serialize_state
 
 
+FRAME_SERVER_BACKLOG = 64
+
+
 class UnityBridge:
     """Gerencia o contrato de troca entre o orquestrador Python e a Unity.
 
@@ -72,7 +75,10 @@ class UnityBridge:
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind((self.frame_host, self.frame_port))
-        server.listen(4)
+        # A Unity abre uma conexão por câmera, todas quase ao mesmo tempo. Com a
+        # fila antiga (4), o macOS recusava as excedentes ("Connection reset by
+        # peer") quando havia mais de 5 câmeras, como na captura do dataset (9).
+        server.listen(FRAME_SERVER_BACKLOG)
         server.settimeout(self.timeout)
         self._frame_server = server
 
