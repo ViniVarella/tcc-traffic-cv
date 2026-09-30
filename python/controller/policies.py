@@ -46,3 +46,46 @@ class QueueBasedPolicy:
             for key, value in visual_counts.items()
             if key.startswith(f"{direction}/") and isinstance(value, (int, float))
         )
+
+
+# Aproximações servidas por cada verde lógico do cenário SP.
+GREEN_GROUPS = {"EAST_WEST_GREEN": ("east", "west"), "SOUTH_GREEN": ("south",)}
+KEEP, SWITCH = 0, 1
+
+
+class FixedCyclePolicy:
+    """Nunca pede troca: o verde dura até o verde máximo (ciclo fixo seguro)."""
+
+    name = "fixed_cycle"
+
+    def __call__(self, state: Any, lane_features: dict[tuple[str, str], Any], phase: Any) -> int:
+        return KEEP
+
+
+class MaxPressurePolicy:
+    """Troca quando a fila parada do grupo oposto supera a do atual mais o custo da troca.
+
+    Sem ``margin``, o custo é o que o grupo atual descarregaria durante amarelo +
+    all-red (~1 veículo a cada 2 s por faixa), como em ``optimization/SP``.
+    """
+
+    name = "max_pressure"
+
+    def __init__(self, lost_time_s: float = 4.0, margin: float | None = None) -> None:
+        self.lost_time_s = float(lost_time_s)
+        self.margin = margin
+
+    def __call__(self, state: Any, lane_features: dict[tuple[str, str], Any], phase: Any) -> int:
+        current = GREEN_GROUPS[phase.name]
+        opposing = next(group for name, group in GREEN_GROUPS.items() if name != phase.name)
+        current_queue = _group_queue(lane_features, current)
+        opposing_queue = _group_queue(lane_features, opposing)
+        if current_queue < 1:
+            return SWITCH if opposing_queue > 0 else KEEP
+        lanes = sum(camera in current for camera, _ in lane_features)
+        margin = self.margin if self.margin is not None else lanes * self.lost_time_s / 2.0
+        return SWITCH if opposing_queue > current_queue + margin else KEEP
+
+
+def _group_queue(lane_features: dict[tuple[str, str], Any], cameras: tuple[str, ...]) -> int:
+    return sum(features.stopped_count for (camera, _), features in lane_features.items() if camera in cameras)

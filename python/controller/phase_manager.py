@@ -5,6 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+# Duração aplicada via TraCI após cada ``setPhase``. O controlador Python decide
+# todas as transições; sem isso o programa estático da rede avançaria sozinho
+# (por exemplo, do amarelo South direto para o verde E/W, sem all-red).
+SUMO_PHASE_HOLD_SECONDS = 100_000.0
+
+
 @dataclass(frozen=True, slots=True)
 class PhaseState:
     """Fase SUMO e o instante simulado em que ela começou."""

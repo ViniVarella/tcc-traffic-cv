@@ -20,6 +20,9 @@ class Transition(NamedTuple):
     reward: float
     next_state: np.ndarray
     done: bool
+    # Desconto aplicado ao valor do próximo estado: gamma para transições de um
+    # step ou gamma ** k para transições SMDP que duram k steps.
+    discount: float
 
 
 @dataclass(frozen=True)
@@ -33,6 +36,11 @@ class DqnConfig:
     replay_capacity: int = 50_000
     min_replay_size: int = 256
     target_update_interval: int = 250
+    # 1 = contagens (13 entradas); 2 = features por faixa. Checkpoints antigos
+    # não gravavam o campo e por isso carregam como versão 1.
+    state_version: int = 1
+    # Double DQN: a rede online escolhe a ação do próximo estado e a rede-alvo a avalia.
+    double_dqn: bool = False
 
 
 class QNetwork(nn.Module):
@@ -65,6 +73,13 @@ class DqnAgent:
         self.optimizer = torch.optim.Adam(self.online.parameters(), lr=config.learning_rate)
         self.replay: Deque[Transition] = deque(maxlen=config.replay_capacity)
         self.training_steps = 0
+        self.metadata: dict[str, Any] = {}
+
+    def q_values(self, state: np.ndarray) -> np.ndarray:
+        """Valores Q da rede online para um estado (diagnóstico e política gulosa)."""
+        with torch.no_grad():
+            values = self.online(torch.as_tensor(self._validate_state(state), dtype=torch.float32, device=self.device).unsqueeze(0))
+        return values.squeeze(0).cpu().numpy()
 
     def select_action(self, state: np.ndarray, epsilon: float, explore: bool = True) -> int:
         if not 0.0 <= epsilon <= 1.0:
@@ -76,13 +91,18 @@ class DqnAgent:
             values = self.online(torch.as_tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0))
         return int(values.argmax(dim=1).item())
 
-    def remember(self, state: np.ndarray, action: int, reward: float, next_state: np.ndarray, done: bool) -> None:
+    def remember(self, state: np.ndarray, action: int, reward: float, next_state: np.ndarray, done: bool,
+                 discount: float | None = None) -> None:
         if not 0 <= action < self.config.action_size:
             raise ValueError(f"Ação inválida: {action}.")
-        self.replay.append(Transition(self._validate_state(state), action, float(reward), self._validate_state(next_state), bool(done)))
+        discount = self.config.gamma if discount is None else float(discount)
+        if not 0.0 <= discount <= 1.0:
+            raise ValueError("discount deve estar entre 0 e 1.")
+        self.replay.append(Transition(self._validate_state(state), action, float(reward), self._validate_state(next_state),
+                                      bool(done), discount))
 
     def train_step(self) -> float | None:
-        if len(self.replay) < self.config.min_replay_size:
+        if len(self.replay) < max(self.config.min_replay_size, self.config.batch_size):
             return None
         batch = self._random.sample(self.replay, self.config.batch_size)
         states = torch.as_tensor(np.stack([item.state for item in batch]), dtype=torch.float32, device=self.device)
@@ -90,9 +110,15 @@ class DqnAgent:
         rewards = torch.as_tensor([item.reward for item in batch], dtype=torch.float32, device=self.device)
         next_states = torch.as_tensor(np.stack([item.next_state for item in batch]), dtype=torch.float32, device=self.device)
         dones = torch.as_tensor([item.done for item in batch], dtype=torch.float32, device=self.device)
+        discounts = torch.as_tensor([item.discount for item in batch], dtype=torch.float32, device=self.device)
         q_values = self.online(states).gather(1, actions).squeeze(1)
         with torch.no_grad():
-            targets = rewards + self.config.gamma * (1.0 - dones) * self.target(next_states).max(dim=1).values
+            if self.config.double_dqn:
+                next_actions = self.online(next_states).argmax(dim=1, keepdim=True)
+                next_values = self.target(next_states).gather(1, next_actions).squeeze(1)
+            else:
+                next_values = self.target(next_states).max(dim=1).values
+            targets = rewards + discounts * (1.0 - dones) * next_values
         loss = functional.smooth_l1_loss(q_values, targets)
         self.optimizer.zero_grad()
         loss.backward()
@@ -125,6 +151,7 @@ class DqnAgent:
         if "optimizer_state" in checkpoint:
             agent.optimizer.load_state_dict(checkpoint["optimizer_state"])
         agent.training_steps = int(checkpoint.get("training_steps", 0))
+        agent.metadata = dict(checkpoint.get("metadata", {}))
         agent.online.eval()
         return agent
 

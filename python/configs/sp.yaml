@@ -3,7 +3,12 @@ experiment:
   seed: 42
 
 sumo:
-  config_path: "../sumo/sp/Cruzamento.sumocfg"
+  # calibrated: demanda medida nos vídeos de drone (Leste saturado, v/c ~1,0).
+  # original: demanda do netedit, equilibrada entre as fases (v/c ~0,5).
+  scenarios:
+    calibrated: "../sumo/sp/Cruzamento.calibrated.sumocfg"
+    original: "../sumo/sp/Cruzamento.sumocfg"
+  default_scenario: "calibrated"
   gui: false
   step_length: 1.0
   traci_port: 8873
@@ -59,9 +64,50 @@ vision_evaluation:
     west:
       lane_0: "e2_0" # E6_0
 
+# Extensão física das ROIs de faixa das câmeras Unity ao longo de cada lane SUMO,
+# em metros desde o início da lane (roi_end fica na linha de retenção). Medida por
+# `python -m experiments.check_lane_geometry` a partir da pose/FOV exportados; um
+# teste falha se a calibração mudar sem atualizar estes valores. As ROIs cobrem
+# ~23-26 m, bem menos que os E2 (42,6-45,8 m): as features por faixa usam este
+# intervalo nas duas fontes (visão e TraCI), nunca o intervalo do E2.
+lane_geometry:
+  south:
+    lane_0: {sumo_lane: "E3_0", roi_start_m: 52.8, roi_end_m: 77.9, width_m: 3.2}
+    lane_1: {sumo_lane: "E3_1", roi_start_m: 52.4, roi_end_m: 78.0, width_m: 3.2}
+    lane_2: {sumo_lane: "E3_2", roi_start_m: 52.0, roi_end_m: 78.0, width_m: 3.2}
+    lane_3: {sumo_lane: "E3_3", roi_start_m: 51.8, roi_end_m: 78.0, width_m: 3.2}
+  east:
+    lane_0: {sumo_lane: "E2_0", roi_start_m: 43.0, roi_end_m: 68.5, width_m: 4.0}
+    lane_1: {sumo_lane: "E2_1", roi_start_m: 43.4, roi_end_m: 68.5, width_m: 4.0}
+  west:
+    lane_0: {sumo_lane: "E6_0", roi_start_m: 50.8, roi_end_m: 74.0, width_m: 3.2}
+
+# Parâmetros das features por faixa (vision/lane_features.py). "Parado" segue os
+# padrões do E2 do SUMO (1,39 m/s por 1 s). oracle_noise degrada a fonte TraCI do
+# pré-treino; visual_ground_offset_m corrige a posição do ponto de solo da bbox.
+# Ambos são calibrados pela medição do domain gap visão × TraCI.
+lane_state:
+  kinematics:
+    stop_speed_mps: 1.39
+    stop_time_s: 1.0
+    move_speed_mps: 2.0
+    vehicle_length_m: 5.0
+    ghost_ttl_s: 3.0
+  visual_ground_offset_m: 0.0
+  oracle_noise:
+    position_std_m: 0.0
+    drop_probability: 0.0
+    untracked_probability: 0.0
+
 dqn:
   model_path: "../results/models/visual-dqn-sp.pt"
-  state_size: 13
+  # v2: 7 faixas × (contagem, parados, ocupação, velocidade, espera) + 5 fases
+  # + tempo da fase = 41. O v1 (13 contagens/fase) segue carregável pelos
+  # checkpoints antigos; max_lane_count só vale para ele.
+  state_version: 2
+  state_size: 41
+  max_speed_mps: 13.89
+  waiting_reference_seconds: 60
   actions: ["keep", "switch"]
   max_lane_count: 10
   hidden_size: 64

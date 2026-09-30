@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from experiments.scenario_config import add_scenario_argument
 from sumo import SumoClient
 
 
@@ -25,6 +26,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
         default=base_dir / "configs" / "sp.yaml",
         help="Perfil YAML do cenário SP.",
     )
+    add_scenario_argument(parser)
     return parser.parse_args()
 
 
@@ -35,7 +37,7 @@ def main() -> None:
     config_path = args.config.resolve()
     config = load_config(config_path)
 
-    sumo_client = SumoClient.from_config(config=config, base_dir=base_dir)
+    sumo_client = SumoClient.from_config(config=config, base_dir=base_dir, scenario_override=args.scenario)
     tls_config = config["traffic_light"]
     tls_id = str(tls_config["id"])
     expected_phase_count = int(tls_config["phase_count"])

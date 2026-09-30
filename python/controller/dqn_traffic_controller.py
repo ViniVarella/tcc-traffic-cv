@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .phase_manager import PhaseManager
+from .phase_manager import SUMO_PHASE_HOLD_SECONDS, PhaseManager
 
 
 class DqnTrafficController:
@@ -25,6 +25,13 @@ class DqnTrafficController:
     def update(self, sim_time: float, action: int) -> dict[str, Any]:
         if action not in {self.KEEP, self.SWITCH}:
             raise ValueError(f"Ação DQN inválida: {action}.")
+        return self._update(sim_time, action)
+
+    def update_without_vision(self, sim_time: float) -> dict[str, Any]:
+        """Avança só as transições obrigatórias quando não há frames para decidir."""
+        return self._update(sim_time, None)
+
+    def _update(self, sim_time: float, action: int | None) -> dict[str, Any]:
         phase = self.phase_manager.get_current_phase()
         elapsed = self.phase_manager.elapsed(sim_time)
         next_phase, reason = self._next_phase(phase.name, elapsed, action)
@@ -36,8 +43,9 @@ class DqnTrafficController:
     def apply(self, sumo_client: Any, decision: dict[str, Any]) -> None:
         if decision["action"] == "set_phase":
             sumo_client.set_traffic_light_phase(self.tls_id, int(decision["phase_index"]))
+            sumo_client.set_traffic_light_phase_duration(self.tls_id, SUMO_PHASE_HOLD_SECONDS)
 
-    def _next_phase(self, name: str, elapsed: float, action: int) -> tuple[str | None, str]:
+    def _next_phase(self, name: str, elapsed: float, action: int | None) -> tuple[str | None, str]:
         if name == PhaseManager.EAST_WEST_YELLOW:
             if elapsed < self.yellow_seconds:
                 return None, "east_west_yellow_in_progress"
@@ -62,8 +70,10 @@ class DqnTrafficController:
                 return yellow, "max_green_reached"
             if elapsed < self.min_green_seconds:
                 return None, "min_green_not_reached"
+            if action is None:
+                return None, "vision_unavailable"
             return (yellow, "dqn_switch") if action == self.SWITCH else (None, "dqn_keep")
         raise RuntimeError(f"Fase lógica desconhecida: {name!r}")
 
-    def _decision(self, action: str, phase: Any, sim_time: float, requested_action: int, reason: str) -> dict[str, Any]:
+    def _decision(self, action: str, phase: Any, sim_time: float, requested_action: int | None, reason: str) -> dict[str, Any]:
         return {"tls_id": self.tls_id, "sim_time": float(sim_time), "action": action, "phase_name": phase.name, "phase_index": phase.phase_index, "requested_action": requested_action, "reason": reason}

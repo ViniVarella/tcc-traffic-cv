@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import unittest
 
+from controller.phase_manager import SUMO_PHASE_HOLD_SECONDS
 from controller.traffic_controller import TrafficController
 
 
@@ -38,15 +39,28 @@ class TrafficControllerTests(unittest.TestCase):
         decision = self.controller.update(40, {"south": 0, "east": 0, "west": 0})
         self.assertEqual((decision["action"], decision["phase_index"], decision["reason"]), ("set_phase", 1, "max_green_reached"))
 
-    def test_apply_only_sends_real_phase_changes(self) -> None:
-        class Client:
-            def __init__(self) -> None:
-                self.calls: list[tuple[str, int]] = []
-
-            def set_traffic_light_phase(self, tls_id: str, phase: int) -> None:
-                self.calls.append((tls_id, phase))
-
-        client = Client()
+    def test_apply_only_sends_real_phase_changes_and_holds_them(self) -> None:
+        client = RecordingClient()
         self.controller.apply(client, self.controller.update(0, {"south": 1, "east": 1, "west": 0}))
         self.controller.apply(client, self.controller.update(10, {"south": 4, "east": 0, "west": 0}))
-        self.assertEqual(client.calls, [("tls", 1)])
+        self.assertEqual(client.calls, [("phase", "tls", 1), ("duration", "tls", SUMO_PHASE_HOLD_SECONDS)])
+
+    def test_without_vision_keeps_green_but_completes_mandatory_transitions(self) -> None:
+        self.assertEqual(self.controller.update_without_vision(20)["reason"], "vision_unavailable")
+        self.assertEqual(self.controller.update_without_vision(40)["reason"], "max_green_reached")
+        self.assertEqual(self.controller.update_without_vision(43)["phase_index"], 2)
+        south_green = self.controller.update_without_vision(44)
+        self.assertEqual((south_green["phase_index"], south_green["demand"]), (3, None))
+
+
+class RecordingClient:
+    """Registra as chamadas TraCI feitas por ``apply``."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, float]] = []
+
+    def set_traffic_light_phase(self, tls_id: str, phase: int) -> None:
+        self.calls.append(("phase", tls_id, phase))
+
+    def set_traffic_light_phase_duration(self, tls_id: str, duration: float) -> None:
+        self.calls.append(("duration", tls_id, duration))

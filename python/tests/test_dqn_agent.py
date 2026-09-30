@@ -43,6 +43,28 @@ class DqnAgentTests(unittest.TestCase):
             agent.online(torch.from_numpy(state)).detach().numpy(),
         ))
 
+    def test_metadata_survives_checkpoint_and_version_defaults_to_legacy(self) -> None:
+        agent = DqnAgent(DqnConfig(state_size=2, hidden_size=4, state_version=2), device="cpu")
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / "agent.pt"
+            agent.save(path, {"scenario": "calibrated", "feature_source": "traci"})
+            restored = DqnAgent.load(path, device="cpu")
+            checkpoint = torch.load(path, weights_only=True)
+            del checkpoint["config"]["state_version"]
+            torch.save(checkpoint, path)
+            legacy = DqnAgent.load(path, device="cpu")
+        self.assertEqual((restored.config.state_version, restored.metadata["scenario"]), (2, "calibrated"))
+        self.assertEqual(legacy.config.state_version, 1)
+
+    def test_training_waits_for_a_full_batch_even_with_small_min_replay(self) -> None:
+        agent = DqnAgent(DqnConfig(state_size=1, hidden_size=4, batch_size=4, min_replay_size=1), device="cpu")
+        state = np.array([0.5], dtype=np.float32)
+        for _ in range(3):
+            agent.remember(state, 0, 0.0, state, False)
+            self.assertIsNone(agent.train_step())
+        agent.remember(state, 1, 0.0, state, False)
+        self.assertIsNotNone(agent.train_step())
+
 
 if __name__ == "__main__":
     unittest.main()
