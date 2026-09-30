@@ -31,10 +31,21 @@ class DqnTrafficController:
         """Avança só as transições obrigatórias quando não há frames para decidir."""
         return self._update(sim_time, None)
 
-    def _update(self, sim_time: float, action: int | None) -> dict[str, Any]:
+    def update_preemption(self, sim_time: float, target_green: str) -> dict[str, Any]:
+        """Leva o semáforo ao verde de um veículo de emergência e o mantém lá.
+
+        No verde-alvo, mantém mesmo além do verde máximo; no outro verde, inicia
+        o amarelo sem esperar o verde mínimo. Amarelo e all-red nunca são
+        pulados; ao fim do all-red segue direto para o verde-alvo.
+        """
+        if target_green not in {PhaseManager.EAST_WEST_GREEN, PhaseManager.SOUTH_GREEN}:
+            raise ValueError(f"Verde de preempção inválido: {target_green!r}.")
+        return self._update(sim_time, None, preempt_target=target_green)
+
+    def _update(self, sim_time: float, action: int | None, preempt_target: str | None = None) -> dict[str, Any]:
         phase = self.phase_manager.get_current_phase()
         elapsed = self.phase_manager.elapsed(sim_time)
-        next_phase, reason = self._next_phase(phase.name, elapsed, action)
+        next_phase, reason = self._next_phase(phase.name, elapsed, action, preempt_target)
         if next_phase is None:
             return self._decision("hold", phase, sim_time, action, reason)
         applied = self.phase_manager.set_phase(next_phase, sim_time)
@@ -45,7 +56,7 @@ class DqnTrafficController:
             sumo_client.set_traffic_light_phase(self.tls_id, int(decision["phase_index"]))
             sumo_client.set_traffic_light_phase_duration(self.tls_id, SUMO_PHASE_HOLD_SECONDS)
 
-    def _next_phase(self, name: str, elapsed: float, action: int | None) -> tuple[str | None, str]:
+    def _next_phase(self, name: str, elapsed: float, action: int | None, preempt_target: str | None = None) -> tuple[str | None, str]:
         if name == PhaseManager.EAST_WEST_YELLOW:
             if elapsed < self.yellow_seconds:
                 return None, "east_west_yellow_in_progress"
@@ -59,6 +70,8 @@ class DqnTrafficController:
         if name == PhaseManager.ALL_RED:
             if elapsed < self.all_red_seconds:
                 return None, "all_red_in_progress"
+            if preempt_target is not None:
+                self.phase_manager.pending_green = preempt_target
             next_green = self.phase_manager.pending_green
             if next_green is None:
                 raise RuntimeError("All-red sem uma fase verde pendente.")
@@ -66,6 +79,8 @@ class DqnTrafficController:
             return next_green, "all_red_complete"
         if name in {PhaseManager.EAST_WEST_GREEN, PhaseManager.SOUTH_GREEN}:
             yellow = PhaseManager.EAST_WEST_YELLOW if name == PhaseManager.EAST_WEST_GREEN else PhaseManager.SOUTH_YELLOW
+            if preempt_target is not None:
+                return (None, "preemption_hold") if name == preempt_target else (yellow, "preemption_switch")
             if elapsed >= self.max_green_seconds:
                 return yellow, "max_green_reached"
             if elapsed < self.min_green_seconds:

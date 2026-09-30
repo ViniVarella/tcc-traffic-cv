@@ -100,6 +100,25 @@ lane_state:
     drop_probability: 0.0
     untracked_probability: 0.0
 
+# Veículos de emergência (sumo/emergency.py): inseridos por TraCI numa agenda
+# reproduzível pela seed, depois do aquecimento, obedecendo ao semáforo (sem o
+# dispositivo bluelight). O aviso V2I anuncia cada viatura announce_before_s
+# antes de ela entrar na rede. A preempção assume o semáforo quando o tempo
+# estimado até a linha de retenção fica abaixo de activation_eta_s; pode
+# encurtar o verde mínimo, mas nunca pula amarelo nem all-red.
+emergency:
+  interval_s: 180
+  jitter_s: 60
+  first_after_s: 30
+  announce_before_s: 15
+  speed_factor: 1.0
+  routes:
+    south: [["E3", "E1"], ["E3", "E0"], ["E3", "E5"]]
+    east: [["E2", "E0"], ["E2", "E5"]]
+    west: [["E6", "E1"]]
+  preemption:
+    activation_eta_s: 20
+
 dqn:
   model_path: "../results/models/visual-dqn-sp.pt"
   # v2: 7 faixas × (contagem, parados, ocupação, velocidade, espera) + 5 fases
