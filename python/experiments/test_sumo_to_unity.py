@@ -93,6 +93,12 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Seed do SUMO e da agenda de viaturas; use uma por execução de captura do dataset.",
+    )
+    parser.add_argument(
         "--emergency-interval",
         type=float,
         default=None,
@@ -127,7 +133,7 @@ def main() -> None:
 
     config = load_config(args.config.resolve())
 
-    sumo_client = SumoClient.from_config(config=config, base_dir=base_dir, scenario_override=args.scenario)
+    sumo_client = SumoClient.from_config(config=config, base_dir=base_dir, seed_override=args.seed, scenario_override=args.scenario)
     unity_bridge = UnityBridge.from_config(config)
     state_extractor = SumoStateExtractor()
     tls_id = str(config["traffic_light"]["id"])
@@ -195,7 +201,8 @@ def main() -> None:
             approach_edges = {camera: geometry.sumo_lane.rsplit("_", 1)[0] for (camera, _), geometry in geometries.items()}
             emergency_settings = replace(EmergencySettings.from_config(config), interval_s=args.emergency_interval,
                                          jitter_s=0.0, first_after_s=min(5.0, args.emergency_interval), announce_before_s=0.0)
-            emergency_traffic = EmergencyTraffic(emergency_settings, approach_edges, seed=0, start_s=0.0, end_s=float(args.steps))
+            emergency_traffic = EmergencyTraffic(emergency_settings, approach_edges, seed=args.seed or 0,
+                                                 start_s=0.0, end_s=float(args.steps))
 
         for step in range(args.steps):
             sim_time = sumo_client.step()

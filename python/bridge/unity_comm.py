@@ -9,6 +9,8 @@ from typing import Any
 
 import yaml
 
+from vision.dataset_classes import class_for_vehicle_type
+
 from .protocol import FramePacket, SimulationState
 from .serialization import serialize_state
 
@@ -169,7 +171,8 @@ class UnityBridge:
                 annotation = {
                     "vehicle_id": str(item["vehicle_id"]),
                     "vehicle_type": str(item.get("vehicle_type", "")),
-                    "class_id": int(item.get("class_id", 0)),
+                    # A classe vem do tipo SUMO, não do valor enviado pela Unity.
+                    "class_id": class_for_vehicle_type(str(item.get("vehicle_type", ""))),
                     "color_r": int(item.get("color_r", 0)),
                     "color_g": int(item.get("color_g", 0)),
                     "color_b": int(item.get("color_b", 0)),
@@ -181,8 +184,6 @@ class UnityBridge:
             except (KeyError, TypeError, ValueError) as exception:
                 raise ValueError(f"Invalid Unity ground-truth vehicle: {item!r}") from exception
 
-            if annotation["class_id"] != 0:
-                raise ValueError("Only the vehicle class_id=0 is supported by the synthetic dataset.")
             if not all(0 <= annotation[key] <= 255 for key in ("color_r", "color_g", "color_b")):
                 raise ValueError(f"Unity ground-truth color is invalid: {item!r}")
             if not all(0.0 <= annotation[key] <= 1.0 for key in ("center_x", "center_y", "width", "height")):

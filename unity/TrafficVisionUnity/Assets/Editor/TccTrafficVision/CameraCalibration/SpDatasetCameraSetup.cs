@@ -19,16 +19,18 @@ namespace TccTrafficVision.Editor.CameraCalibration
 
         private static readonly CameraDefinition[] Definitions =
         {
-            // In this scene's orientation, inward aim requires the opposite
-            // yaw signs: left turns right (-12°) and right turns left (+12°).
-            new CameraDefinition("south_ds_left", "SP Dataset South Left", new Vector3(0.5f, 6.8f, -9.5f), new Vector3(28f, -157f, 0f), 45f),
-            new CameraDefinition("south_ds_right", "SP Dataset South Right", new Vector3(9.0f, 4.0f, -19.0f), new Vector3(18f, -158f, 0f), 32f),
-            // East and west view directions are perpendicular to south, so
-            // their inward horizontal offsets use the opposite yaw signs.
-            new CameraDefinition("east_ds_near", "SP Dataset East Near", new Vector3(8.8f, 7.0f, -5.0f), new Vector3(27f, 104f, 0f), 40f),
-            new CameraDefinition("east_ds_far", "SP Dataset East Far", new Vector3(17.0f, 4.2f, 1.0f), new Vector3(14f, 146f, 0f), 25f),
-            new CameraDefinition("west_ds_near", "SP Dataset West Near", new Vector3(-13.0f, 7.0f, -1.0f), new Vector3(28f, -81f, 0f), 40f),
-            new CameraDefinition("west_ds_far", "SP Dataset West Far", new Vector3(-21.0f, 4.0f, -9.0f), new Vector3(12f, -39f, 0f), 23f),
+            // Variants of the operational poses (SpSouthCameraSetup), all framing
+            // the stop line up to 60 m upstream: higher/lower, shifted sideways
+            // (south) or closer/farther (east, west). Unlike the operational
+            // cameras, south_ds_right lets the south signal post touch the lane
+            // edge (~0.5% of the lane area): partial occlusion is useful training
+            // data, and the labels come from visible-pixel masks.
+            new CameraDefinition("south_ds_left", "SP Dataset South Left", new Vector3(-4.63f, 10f, -6.25f), new Vector3(20.5f, 172.92f, 0f), 32f),
+            new CameraDefinition("south_ds_right", "SP Dataset South Right", new Vector3(-0.46f, 8f, -9.02f), new Vector3(19.99f, 178.1f, 0f), 33.8f),
+            new CameraDefinition("east_ds_near", "SP Dataset East Near", new Vector3(7.39f, 8f, -6.87f), new Vector3(19.87f, 103.68f, 0f), 33.5f),
+            new CameraDefinition("east_ds_far", "SP Dataset East Far", new Vector3(-3.64f, 6f, -1.91f), new Vector3(9.06f, 106.02f, 0f), 12.4f),
+            new CameraDefinition("west_ds_near", "SP Dataset West Near", new Vector3(-3.59f, 11f, -1.97f), new Vector3(16.86f, 280.88f, 0f), 23f),
+            new CameraDefinition("west_ds_far", "SP Dataset West Far", new Vector3(9.37f, 7.5f, -7.48f), new Vector3(8.09f, 283.45f, 0f), 9.1f),
         };
 
         [MenuItem("Traffic Vision/Dataset/Create SP Dataset Cameras")]
