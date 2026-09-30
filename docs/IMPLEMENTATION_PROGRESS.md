@@ -27,7 +27,97 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   comparação no mesmo ambiente e o registro histórico estão na seção seguinte.
 - DQN v2 (features por faixa, pré-treino só SUMO e avaliação visual):
   concluído em 2026-09-29 — seção **DQN v2** abaixo.
-- Pendente (opcional): um ajuste fino visual mais robusto.
+- Câmeras reposicionadas, ROIs de 60 m e preempção para veículos de
+  emergência por aviso V2I: concluídos em 2026-09-30 — seção **Ambiente com
+  ROIs de 60 m e preempção** abaixo.
+- Pendentes: dataset e YOLO com a classe ambulância (ângulos novos das
+  câmeras), detecção visual das viaturas, pré-treino da v2 com os dois
+  cenários e avaliações visuais no ambiente novo.
+
+## Ambiente com ROIs de 60 m e preempção para emergências
+
+Status: câmeras, ROIs e preempção V2I concluídos (branch `feat/cameras-60m`,
+2026-09-30). **Muda o ambiente:** os resultados da seção DQN v2 abaixo foram
+obtidos com as ROIs de ~25 m e não se comparam com os desta seção.
+
+### Câmeras e ROIs
+
+- As câmeras antigas ficavam a ~5 m de altura, na mesma altura das caixas dos
+  semáforos, que cobriam parte das faixas, e viam só ~25 m de cada uma.
+- As poses novas (menus *Traffic Vision > Cameras > Create SP … Camera*)
+  foram calculadas a partir da geometria das lanes e dos postes. Cada câmera
+  fica 15–30 m depois da linha de retenção, a 6–9 m de altura, mirando no
+  meio do trecho de 60 m. A oclusão pelos postes foi medida por área na
+  imagem, com folga para a carroceria: 0%.
+- As ROIs de faixa foram desenhadas na linha de retenção e estendidas por
+  cálculo até **60,0 m** em todas as faixas (`experiments.extend_lane_rois`,
+  importadas na cena pelo menu *Import SP Calibration JSON*). A borda
+  distante fica a ~8% do topo da imagem; um carro a 60 m tem ~31–53 px de
+  altura. A capacidade de cada ROI passou de ~3,4 para 8 veículos parados.
+- O YOLO atual foi treinado com os ângulos antigos e precisa ser retreinado.
+
+### Versões no ambiente novo (percepção oráculo, seeds 201–203, 1800 s)
+
+A v2 foi pré-treinada de novo para as ROIs de 60 m
+(`dqn-v2-roi60-pretrain-best.pt`: episódio 34, escore −0,058 contra −0,314 do
+ciclo fixo e −0,300 do max-pressure).
+
+| Versão | Calibrado: espera | Chegadas | Fila de inserção | Original: espera | Chegadas |
+|---|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 16,1 s | 1503 | 97 | 14,9 s | 1431 |
+| v1 (heurística) | 10,3 s | 1486 | 117 | 4,7 s | 1473 |
+| v1.1 (DQN estado v1) | 12,9 s | 1312 | 289 | 4,6 s | 1474 |
+| v2 (DQN estado v2) | 10,1 s | 1602 | 0 | 8,3 s | 1469 |
+| max-pressure | 10,8 s | 1492 | 108 | 4,6 s | 1474 |
+
+- Com ROIs maiores, a v1 e o max-pressure passam a enxergar filas longas e
+  melhoram no calibrado; a v2 continua a única que zera a fila de inserção.
+- **No cenário original, a v2 piorou** (8,3 s, contra 4,6 s das demais): dá
+  64% do verde ao Leste mesmo com demanda equilibrada, sinal de
+  especialização no cenário calibrado, o único usado no treino. A correção
+  natural é pré-treinar com os dois cenários.
+
+### Preempção por aviso V2I (percepção oráculo, seeds 201–203, 1800 s)
+
+- Viaturas de emergência entram a cada ~3 min (10 por seed, 30 por política),
+  sorteadas entre Sul, Leste e Oeste, obedecendo ao semáforo.
+- O aviso V2I chega 15 s antes de a viatura entrar na rede. A preempção
+  assume quando ela está a ≤ 20 s da linha de retenção: mantém o verde dela
+  (além do verde máximo, se preciso) ou encerra o outro verde sem esperar o
+  mínimo. Amarelo e all-red nunca são pulados.
+- Métrica da viatura: perda de tempo até cruzar a linha de retenção
+  (`getTimeLoss`).
+
+| Cenário | Política | Perda média da viatura | Perda máxima | Viaturas sem parar | Espera do tráfego | Chegadas |
+|---|---|---:|---:|---:|---:|---:|
+| calibrado | ciclo fixo | 19,6 → **1,1 s** | 50,4 → 4,3 s | 44% → 100% | 16,1 → 17,1 s | 1511 → 1576 |
+| calibrado | v2 | 14,1 → **1,1 s** | 41,4 → 3,8 s | 30% → 100% | 10,1 → 11,5 s | 1612 → 1609 |
+| calibrado | max-pressure | 15,9 → **1,3 s** | 42,7 → 4,4 s | 31% → 100% | 11,0 → 14,9 s | 1493 → 1556 |
+| original | ciclo fixo | 17,0 → **1,0 s** | 47,5 → 3,8 s | 40% → 100% | 14,9 → 18,4 s | 1438 → 1425 |
+| original | v2 | 8,9 → **1,1 s** | 37,9 → 3,5 s | 50% → 100% | 8,5 → 11,7 s | 1481 → 1474 |
+| original | max-pressure | 9,8 → **1,3 s** | 20,3 → 3,7 s | 37% → 100% | 4,6 → 7,2 s | 1484 → 1481 |
+
+(Cada célula mostra sem → com preempção.)
+
+- Com preempção, todas as viaturas cruzam sem parar, com ~1 s de perda média
+  e no máximo ~4 s, independentemente da política.
+- O custo é de +1 a +4 s na espera média do restante do tráfego. No ciclo
+  fixo e no max-pressure calibrados, as chegadas até aumentam, porque as
+  preempções quebram ciclos mal repartidos para o Leste saturado.
+- Arquivos: `results/evaluation/preempcao-{calibrated,original}-oracle.json`,
+  `versoes-roi60-{calibrated,original}-oracle.json`.
+
+### Comandos
+
+```bash
+../.venv/bin/python -m experiments.extend_lane_rois --length 60     # ROIs a partir da borda próxima
+../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn \
+  --checkpoint-output ../results/models/dqn-v2-roi60-pretrain-last.pt \
+  --best-checkpoint-output ../results/models/dqn-v2-roi60-pretrain-best.pt
+../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception oracle \
+  --v2-dqn-model ../results/models/dqn-v2-roi60-pretrain-best.pt
+../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated
+```
 
 ## DQN v2 — estado por faixa, pré-treino SUMO e avaliação visual
 

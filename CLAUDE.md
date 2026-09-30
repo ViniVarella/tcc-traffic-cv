@@ -102,12 +102,37 @@ usa chegadas Poisson (`period="exp(...)"`) e inserção realista
 - Faixas monitoradas (7): south 4 (edge E3), east 2 (E2), west 1 (E6).
   Ordem estável das features em `vision/visual_state.py::SP_LANE_ORDER`.
 - Detectores E2 `e2_0..e2_6` em `sumo/sp/Cruzamento.add.xml` (IDs são contrato
-  com `sp.yaml` e scripts; não renomeie). Eles cobrem 42,6–45,8 m, mas as ROIs
-  das câmeras Unity cobrem só ~23–26 m por faixa (`lane_geometry` em
-  `sp.yaml`, medido por `experiments.check_lane_geometry` e protegido por
-  teste). Compare visão com TraCI no intervalo da ROI, não no do E2.
+  com `sp.yaml` e scripts; não renomeie). Eles cobrem 42,6–45,8 m; as ROIs das
+  câmeras cobrem **60 m** por faixa (`lane_geometry` em `sp.yaml`, medido por
+  `experiments.check_lane_geometry` e protegido por teste). Compare visão com
+  TraCI no intervalo da ROI, não no do E2.
+- As poses das câmeras (menus *Create SP … Camera* em `SpSouthCameraSetup.cs`)
+  foram calculadas para enquadrar linha de retenção + 60 m sem oclusão pelos
+  postes. Se mover uma câmera ou um poste, recalcule as poses e regenere as
+  ROIs: desenhe a borda próxima na calibração, rode
+  `experiments.extend_lane_rois --length 60`, importe com *Traffic Vision >
+  Cameras > Import SP Calibration JSON* e salve a cena (a cena é a fonte que o
+  "Export calibration JSON" regrava).
 - Métricas de avaliação devem incluir a fila de inserção (`*_pending_vehicles`):
   veículos que ainda não entraram na rede não aparecem na espera média.
+- Só um SUMO por vez: todos os scripts usam a porta TraCI 8873, e um segundo
+  processo derruba a conexão do primeiro.
+- O SUMO instalado (1.22) é mais antigo que o `traci` pinado (1.26):
+  `simulation.findRoute` falha; as rotas das viaturas são `[entrada, saída]`.
+
+## Veículos de emergência
+
+- `sumo/emergency.py` insere viaturas (tipo `emergency`, sem `bluelight`, então
+  obedecem ao semáforo) numa agenda reproduzível pela seed, depois do
+  aquecimento, e emite o aviso V2I (`EmergencyRequest`: aproximação e tempo
+  até a linha de retenção) desde `announce_before_s` antes de entrarem.
+- `controller/preemption.py` atende uma viatura por vez (menor tempo estimado,
+  dentro de `activation_eta_s`) até ela cruzar a linha;
+  `DqnTrafficController.update_preemption` mantém o verde-alvo além do máximo
+  e pode encurtar o verde mínimo (decisão do usuário), **nunca** amarelo nem
+  all-red. Durante a preempção a política não é consultada.
+- Parâmetros em `emergency:` no `sp.yaml`; avaliação em
+  `experiments.evaluate_preemption` (mesma agenda para todas as políticas).
 - Alterar `sp.yaml` pode invalidar calibrações de câmera, o state encoder e
   checkpoints.
 
@@ -268,6 +293,12 @@ Todos a partir de `python/`:
 
 # Ajuste fino visual a partir do pré-treino (Unity em Play Mode; horas)
 ../.venv/bin/python -m experiments.finetune_dqn_visual --init-checkpoint ../results/models/dqn-v2-pretrain-best.pt
+
+# Preempção para emergências (mesma agenda de viaturas; só SUMO)
+../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated
+
+# Estender ROIs de faixa a partir da borda próxima desenhada na calibração
+../.venv/bin/python -m experiments.extend_lane_rois --length 60
 
 # Conferir ROIs de faixa × lanes SUMO (sem SUMO/Unity)
 ../.venv/bin/python -m experiments.check_lane_geometry

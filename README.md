@@ -194,6 +194,27 @@ histórico em
 [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md). Eles não
 devem ser comparados com a v2.
 
+## Prioridade para veículos de emergência
+
+Viaturas de emergência avisam sua aproximação por V2I (como no despacho por
+GPS dos sistemas reais), e o semáforo abre para o sentido de onde elas vêm:
+
+- se o verde já é delas, é mantido, até além do verde máximo;
+- se não é, o outro verde termina na hora, sem esperar o mínimo;
+- amarelo e all-red nunca são pulados.
+
+No mesmo ambiente (ROIs de 60 m, percepção oráculo, seeds 201–203, 30
+viaturas por política), a perda de tempo média das viaturas até a linha de
+retenção cai de 14–20 s para ~1 s, e todas cruzam sem parar. O custo é de +1
+a +4 s na espera média do restante do tráfego. A detecção visual das viaturas
+(nova classe "ambulância" no YOLO) é a próxima etapa, para comparar as duas
+fontes. Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
+
+**Mudança de ambiente em 2026-09-30:** as câmeras foram reposicionadas e as
+ROIs passaram a cobrir 60 m por faixa. As tabelas de comparação acima são do
+ambiente anterior (ROIs de ~25 m); as do ambiente novo estão no documento de
+progresso, e as avaliações visuais serão refeitas depois do novo YOLO.
+
 ## Como reproduzir
 
 Todos os comandos rodam a partir de `python/`, com o ambiente virtual da raiz.
