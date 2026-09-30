@@ -284,5 +284,6 @@ de 97 veículos; o max-pressure visual teve 11,1 s, 1498 chegadas e fila de 104
 veículos. Com percepção oráculo, o mesmo DQN teve 9,1 s. Detalhes e comandos
 em `docs/IMPLEMENTATION_PROGRESS.md`, seção **DQN v2**.
 
-Pendente: teste visual no cenário `original`. O ramo norte permanece apenas
+No cenário `original`, com a câmera, as versões adaptativas empatam (v1 4,6 s;
+v2 5,4 s; ciclo fixo 14,9 s). O ramo norte permanece apenas
 como saída da mão única iniciada no sul e, por isso, não recebe câmera.

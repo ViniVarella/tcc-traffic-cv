@@ -1189,8 +1189,8 @@ fixo (espera 10,3 s × 16,1 s; 1599 × 1503 chegadas) e o max-pressure visual
 (11,1 s; fila de inserção de 104 veículos × 1). As versões são comparadas no
 mesmo ambiente por `experiments.compare_versions`: com percepção oráculo no
 cenário calibrado, a v1 e a v1.1 deixam 250–290 veículos fora da rede, contra
-6 da v2; com percepção visual, 253–289 contra 1. Pendente: teste visual no
-cenário `original`.
+6 da v2; com percepção visual, 253–289 contra 1. No cenário `original`, as
+versões adaptativas empatam com as duas percepções.
 
 ---
 

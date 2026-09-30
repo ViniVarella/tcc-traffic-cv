@@ -27,8 +27,7 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   comparação no mesmo ambiente e o registro histórico estão na seção seguinte.
 - DQN v2 (features por faixa, pré-treino só SUMO e avaliação visual):
   concluído em 2026-09-29 — seção **DQN v2** abaixo.
-- Pendentes: teste visual no cenário `original` e, opcionalmente, um ajuste
-  fino visual mais robusto.
+- Pendente (opcional): um ajuste fino visual mais robusto.
 
 ## DQN v2 — estado por faixa, pré-treino SUMO e avaliação visual
 
@@ -196,8 +195,21 @@ Percepção visual (Unity), cenário calibrado, 0 frames perdidos:
 Com a câmera, a ordem é a mesma do oráculo: só a v2 dá mais verde ao Leste,
 e a v1/v1.1 ficam abaixo do ciclo fixo em chegadas.
 
+Percepção visual (Unity), cenário original, 0 frames perdidos:
+
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O |
+|---|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 14,9 s | 37,3 s | 1431 | 37 | 50% |
+| v1 (heurística) | 4,6 s | 27,2 s | 1473 | 0 | 50% |
+| v1.1 (DQN estado v1) | 4,6 s | 27,2 s | 1474 | 0 | 50% |
+| v2 (DQN estado v2) | 5,4 s | 28,0 s | 1469 | 1 | 56% |
+| max-pressure | 5,8 s | 28,3 s | 1472 | 0 | 49% |
+
+No cenário equilibrado, as versões adaptativas empatam também com a câmera; a
+v2 fica 0,8 s atrás da v1 em espera, com as mesmas chegadas.
+
 Arquivos: `results/evaluation/versoes-calibrated-oracle.json`,
-`versoes-original-oracle.json` e `versoes-calibrated-visual-v1.json` (v1 e
+`versoes-original-oracle.json`, `versoes-original-visual.json` e `versoes-calibrated-visual-v1.json` (v1 e
 v1.1 visuais; a v2 e o max-pressure visuais estão em
 `teste-visual-dqn-zero-shot.json` e `teste-visual-max-pressure.json`).
 

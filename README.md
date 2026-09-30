@@ -148,7 +148,7 @@ atrás.
 
 ### Percepção visual (Unity)
 
-Cenário calibrado, mesmo protocolo, 0 frames perdidos:
+Cenário calibrado (Leste saturado), mesmo protocolo, 0 frames perdidos:
 
 | Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde Leste/Oeste |
 |---|---:|---:|---:|---:|---:|
@@ -164,6 +164,20 @@ ciclo fixo e deixam 250–290 veículos fora da rede, enquanto a v2 é a única 
 dá mais verde ao Leste. A v2 fica a 1,2 s de espera do limite com percepção
 perfeita; na seed 1001, a ação coincidiu com a do oráculo em 82,7% das
 decisões.
+
+Cenário original (demanda equilibrada), mesmo protocolo, 0 frames perdidos:
+
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde Leste/Oeste |
+|---|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 14,9 s | 37,3 s | 1431 | 37 | 50% |
+| v1 (heurística) | 4,6 s | 27,2 s | 1473 | 0 | 50% |
+| v1.1 (DQN estado v1) | 4,6 s | 27,2 s | 1474 | 0 | 50% |
+| v2 (DQN estado v2) | 5,4 s | 28,0 s | 1469 | 1 | 56% |
+| max-pressure | 5,8 s | 28,3 s | 1472 | 0 | 49% |
+
+Com a câmera, as versões adaptativas continuam empatadas e muito à frente do
+ciclo fixo. A v2, que não treinou nesse cenário, fica 0,8 s atrás da v1 em
+espera média, com as mesmas chegadas e sem fila de inserção.
 
 ### Limitações
 
