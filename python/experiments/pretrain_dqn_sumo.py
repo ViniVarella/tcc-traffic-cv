@@ -30,6 +30,8 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Pré-treina o DQN v2 no SUMO com features por faixa do oráculo TraCI.")
     parser.add_argument("--config", type=Path, default=base_dir / "configs" / "sp.yaml")
     add_scenario_argument(parser)
+    parser.add_argument("--scenarios", default=None,
+                        help="Lista (ex.: calibrated,original): os episódios de treino alternam entre eles e a validação usa todos.")
     parser.add_argument("--episodes", type=int, default=40)
     parser.add_argument("--seed-start", type=int, default=1)
     parser.add_argument("--validation-episodes", type=int, default=3)
@@ -64,7 +66,9 @@ def main() -> None:
 
     config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
     settings = EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval, args.gamma)
-    environment = Environment(config, base_dir, args.scenario, settings)
+    scenarios = [item.strip() for item in args.scenarios.split(",") if item.strip()] if args.scenarios else [args.scenario]
+    environments = [Environment(config, base_dir, scenario, settings) for scenario in scenarios]
+    environment = environments[0]
     dqn = config["dqn"]
     agent = DqnAgent(DqnConfig(
         state_size=environment.encoder.state_size, hidden_size=int(dqn["hidden_size"]), gamma=args.gamma,
@@ -81,16 +85,24 @@ def main() -> None:
         "feature_source": "traci_oracle", "oracle_noise": asdict(environment.noise), "decision_interval_s": args.decision_interval,
         "gamma_per_second": args.gamma, "warmup_s": args.warmup_seconds, "control_s": args.control_seconds,
         "validation_seeds": validation_seeds, "double_dqn": args.double_dqn,
+        "training_scenarios": [scenario or config["sumo"].get("default_scenario") for scenario in scenarios],
     }
     logs: list[dict[str, Any]] = []
 
     def validate(label: str, validation_policy: Policy) -> tuple[float, float | None]:
-        outcomes = [environment.run(seed, validation_policy)[0] for seed in validation_seeds]
+        """Média do escore em todas as seeds de validação de todos os cenários de treino."""
+        outcomes, per_scenario = [], {}
+        for env in environments:
+            runs = [env.run(seed, validation_policy) for seed in validation_seeds]
+            for seed, (outcome, scenario) in zip(validation_seeds, runs):
+                logs.append({"split": "validation", "policy": label, "scenario": scenario, "seed": seed, **outcome.summary()})
+            per_scenario[runs[0][1]] = sum(outcome.mean_reward for outcome, _ in runs) / len(runs)
+            outcomes += [outcome for outcome, _ in runs]
         score = sum(outcome.mean_reward for outcome in outcomes) / len(outcomes)
         rates = [outcome.switch_rate for outcome in outcomes if outcome.switch_rate is not None]
         switch_rate = None if not rates else sum(rates) / len(rates)
-        for seed, outcome in zip(validation_seeds, outcomes):
-            logs.append({"split": "validation", "policy": label, "seed": seed, **outcome.summary()})
+        if len(per_scenario) > 1:
+            print("dqn_v2_validation_by_scenario policy=" + label + " " + " ".join(f"{name}={value:.4f}" for name, value in per_scenario.items()))
         return score, switch_rate
 
     try:
@@ -99,12 +111,12 @@ def main() -> None:
             print(f"dqn_v2_reference policy={label} validation_score={score:.4f} switch_rate={switch_rate}")
         for episode, seed in enumerate(training_seeds):
             started = perf_counter()
-            outcome, scenario = environment.run(seed, policy, learner=agent)
+            outcome, scenario = environments[episode % len(environments)].run(seed, policy, learner=agent)
             epsilon = policy.current_epsilon()
             logs.append({"split": "train", "episode": episode, "seed": seed, "epsilon": epsilon,
                          "gradient_steps": agent.training_steps, "replay_size": len(agent.replay), **outcome.summary()})
             agent.save(args.checkpoint_output, {**metadata_base, "kind": "latest", "scenario": scenario, "training_episode": episode})
-            print(f"dqn_v2_episode episode={episode} seed={seed} reward={outcome.mean_reward:.4f} switch_rate={outcome.switch_rate} "
+            print(f"dqn_v2_episode episode={episode} seed={seed} scenario={scenario} reward={outcome.mean_reward:.4f} switch_rate={outcome.switch_rate} "
                   f"epsilon={epsilon:.3f} gradient_steps={agent.training_steps} seconds={perf_counter() - started:.1f}")
             if (episode + 1) % args.validation_interval and episode + 1 != args.episodes:
                 continue

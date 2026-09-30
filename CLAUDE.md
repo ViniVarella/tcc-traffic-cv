@@ -276,8 +276,9 @@ Todos a partir de `python/`:
 ../.venv/bin/python -m experiments.compare_control_experiments \
   --baseline <a.json> --visual-adaptive <b.json> --output <saida.json>
 
-# Pré-treino do DQN v2 só com SUMO (~12 s por episódio de 2100 steps)
-../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn
+# Pré-treino do DQN v2 só com SUMO. Use os dois cenários: treinada só no
+# calibrado, a v2 especializa e piora com demanda equilibrada.
+../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated,original
 
 # Avaliar ciclo fixo, max-pressure e checkpoints v2 com percepção oráculo (só SUMO)
 ../.venv/bin/python -m experiments.evaluate_policies_sumo --scenario calibrated \

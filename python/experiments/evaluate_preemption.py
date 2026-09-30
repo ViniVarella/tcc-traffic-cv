@@ -35,7 +35,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--warmup-seconds", type=float, default=300.0)
     parser.add_argument("--control-seconds", type=float, default=1800.0)
     parser.add_argument("--v1-dqn-model", type=Path, default=models / "visual-dqn-sp-best.pt")
-    parser.add_argument("--v2-dqn-model", type=Path, default=models / "dqn-v2-roi60-pretrain-best.pt")
+    parser.add_argument("--v2-dqn-model", type=Path, default=models / "dqn-v2-roi60-mix-pretrain-best.pt")
     parser.add_argument("--output", type=Path, default=None)
     return parser.parse_args()
 

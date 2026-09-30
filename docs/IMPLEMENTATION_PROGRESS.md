@@ -31,8 +31,8 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   emergência por aviso V2I: concluídos em 2026-09-30 — seção **Ambiente com
   ROIs de 60 m e preempção** abaixo.
 - Pendentes: dataset e YOLO com a classe ambulância (ângulos novos das
-  câmeras), detecção visual das viaturas, pré-treino da v2 com os dois
-  cenários e avaliações visuais no ambiente novo.
+  câmeras), detecção visual das viaturas e avaliações visuais no ambiente
+  novo.
 
 ## Ambiente com ROIs de 60 m e preempção para emergências
 
@@ -72,10 +72,24 @@ ciclo fixo e −0,300 do max-pressure).
 
 - Com ROIs maiores, a v1 e o max-pressure passam a enxergar filas longas e
   melhoram no calibrado; a v2 continua a única que zera a fila de inserção.
-- **No cenário original, a v2 piorou** (8,3 s, contra 4,6 s das demais): dá
-  64% do verde ao Leste mesmo com demanda equilibrada, sinal de
-  especialização no cenário calibrado, o único usado no treino. A correção
-  natural é pré-treinar com os dois cenários.
+- **No cenário original, essa v2 piorou** (8,3 s, contra 4,6 s das demais):
+  dava 64% do verde ao Leste mesmo com demanda equilibrada, porque treinou só
+  no cenário calibrado.
+
+**v2 pré-treinada com os dois cenários** (`--scenarios calibrated,original`,
+episódios alternados, validação nos dois; `dqn-v2-roi60-mix-pretrain-best.pt`,
+episódio 34). É a v2 de referência do ambiente novo:
+
+| Versão | Calibrado: espera | Chegadas | Fila de inserção | Original: espera | Chegadas |
+|---|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 16,1 s | 1503 | 97 | 14,9 s | 1431 |
+| v1 (heurística) | 10,3 s | 1486 | 117 | 4,7 s | 1473 |
+| v2 treinada só no calibrado | 10,1 s | 1602 | 0 | 8,3 s | 1469 |
+| **v2 treinada nos dois cenários** | **8,6 s** | **1603** | **4** | **4,4 s** | **1474** |
+| max-pressure | 10,8 s | 1492 | 108 | 4,6 s | 1474 |
+
+Treinar com os dois cenários melhorou a v2 nos dois: no calibrado, reduz a
+espera em 1,5 s mantendo as chegadas; no original, passa de pior a melhor.
 
 ### Preempção por aviso V2I (percepção oráculo, seeds 201–203, 1800 s)
 
@@ -104,19 +118,25 @@ ciclo fixo e −0,300 do max-pressure).
 - O custo é de +1 a +4 s na espera média do restante do tráfego. No ciclo
   fixo e no max-pressure calibrados, as chegadas até aumentam, porque as
   preempções quebram ciclos mal repartidos para o Leste saturado.
+- Com a v2 treinada nos dois cenários, o resultado se mantém: perda média
+  9,5 → 1,1 s (calibrado) e 10,1 → 1,3 s (original), 100% sem parar, com a
+  espera do tráfego passando de 8,7 → 10,3 s e 4,5 → 7,1 s.
 - Arquivos: `results/evaluation/preempcao-{calibrated,original}-oracle.json`,
-  `versoes-roi60-{calibrated,original}-oracle.json`.
+  `preempcao-mix-{calibrated,original}-oracle.json`,
+  `versoes-roi60-{calibrated,original}-oracle.json` e
+  `versoes-roi60-mix-{calibrated,original}-oracle.json`.
 
 ### Comandos
 
 ```bash
 ../.venv/bin/python -m experiments.extend_lane_rois --length 60     # ROIs a partir da borda próxima
-../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn \
-  --checkpoint-output ../results/models/dqn-v2-roi60-pretrain-last.pt \
-  --best-checkpoint-output ../results/models/dqn-v2-roi60-pretrain-best.pt
+../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated,original \
+  --checkpoint-output ../results/models/dqn-v2-roi60-mix-pretrain-last.pt \
+  --best-checkpoint-output ../results/models/dqn-v2-roi60-mix-pretrain-best.pt
 ../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception oracle \
-  --v2-dqn-model ../results/models/dqn-v2-roi60-pretrain-best.pt
-../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated
+  --v2-dqn-model ../results/models/dqn-v2-roi60-mix-pretrain-best.pt
+../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated \
+  --v2-dqn-model ../results/models/dqn-v2-roi60-mix-pretrain-best.pt
 ```
 
 ## DQN v2 — estado por faixa, pré-treino SUMO e avaliação visual
