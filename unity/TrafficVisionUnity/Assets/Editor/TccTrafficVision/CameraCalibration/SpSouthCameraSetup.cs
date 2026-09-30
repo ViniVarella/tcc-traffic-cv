@@ -10,6 +10,14 @@ namespace TccTrafficVision.Editor.CameraCalibration
     /// <summary>
     /// Creates disabled SP traffic cameras. Their poses are starting points;
     /// the ROI editor remains the authority for final visual calibration.
+    ///
+    /// The poses frame each approach from its stop line (bottom of the image)
+    /// up to 60 m upstream (top), aimed at the middle of that stretch. Each
+    /// camera sits 15-30 m past the stop line and 6-9 m high, so no signal
+    /// post (housing, arm or pole) covers the lanes, with a margin for the
+    /// vehicle body. They were computed from the SUMO lane geometry and the
+    /// post transforms in SpDynamicSyncSetup; re-export the calibration JSON
+    /// after applying them.
     /// </summary>
     public static class SpSouthCameraSetup
     {
@@ -25,9 +33,9 @@ namespace TccTrafficVision.Editor.CameraCalibration
             CreateOrConfigureCamera(new CameraDefinition(
                 "south",
                 SouthCameraName,
-                new Vector3(4.8f, 5.25f, -13.2f),
-                new Vector3(22.613f, -160f, 0f),
-                38.8f));
+                new Vector3(-1.63f, 8f, -6.08f),
+                new Vector3(17.08f, 176.74f, 0f),
+                26.0f));
         }
 
         [MenuItem("Traffic Vision/Cameras/Create SP East Camera")]
@@ -36,9 +44,9 @@ namespace TccTrafficVision.Editor.CameraCalibration
             CreateOrConfigureCamera(new CameraDefinition(
                 "east",
                 EastCameraName,
-                new Vector3(12.1f, 5.07f, -1.6f),
-                new Vector3(18.343f, 123.797f, -2.175f),
-                28.7f));
+                new Vector3(2.1f, 6f, -3.67f),
+                new Vector3(11.41f, 105.89f, 0f),
+                16.7f));
         }
 
         [MenuItem("Traffic Vision/Cameras/Create SP West Camera")]
@@ -47,9 +55,9 @@ namespace TccTrafficVision.Editor.CameraCalibration
             CreateOrConfigureCamera(new CameraDefinition(
                 "west",
                 WestCameraName,
-                new Vector3(-17.46f, 5f, -4.75f),
-                new Vector3(14.902f, -63.164f, 0f),
-                25.7f));
+                new Vector3(3.63f, 9f, -5.73f),
+                new Vector3(11.15f, 283.11f, 0f),
+                12.9f));
         }
 
         private static void CreateOrConfigureCamera(CameraDefinition definition)
