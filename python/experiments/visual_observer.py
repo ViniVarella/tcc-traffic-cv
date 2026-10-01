@@ -112,10 +112,12 @@ class UnityVisualObserver:
 def add_vision_arguments(parser: Any) -> None:
     """Argumentos de câmera/YOLO/ByteTrack compartilhados pelos scripts visuais v2."""
     parser.add_argument("--camera-ids", default="south,east,west")
-    parser.add_argument("--model", default="../runs/results/models/yolov8n-unity-run-002-mask/weights/best.pt")
-    parser.add_argument("--classes", default="0", help="O detector ajustado tem uma classe; use 2,3,5,7 só para pesos COCO.")
+    parser.add_argument("--model", default="../runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt")
+    parser.add_argument("--classes", default="0,1",
+                        help="Detector ajustado: 0 vehicle, 1 emergency (as duas entram nas contagens). "
+                             "Pesos de uma classe (run-002): 0; pesos COCO: 2,3,5,7.")
     parser.add_argument("--confidence", type=float, default=0.15)
-    parser.add_argument("--image-size", type=int, default=1280)
+    parser.add_argument("--image-size", type=int, default=960, help="Mesmo tamanho do treino do detector de duas classes.")
     parser.add_argument("--frame-rate", type=float, default=1.0)
     parser.add_argument("--track-match-threshold", type=float, default=0.6)
     parser.add_argument("--send-interval", type=float, default=0.1)

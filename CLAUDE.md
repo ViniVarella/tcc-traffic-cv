@@ -236,8 +236,12 @@ carregam como v1):
   gerados com SUMO 1.26; confira a versão local com `sumo --version`.
 - Modelos e resultados são artefatos locais ignorados (`*.pt`, `runs/`,
   `results/*`). Verifique se existem antes de rodar experimentos:
-  - detector YOLO ajustado: `runs/results/models/yolov8n-unity-run-002-mask/weights/best.pt`
-    (classe única → sempre passe `--classes 0`; o padrão `2,3,5,7` é para COCO);
+  - detector YOLO de duas classes (`0 vehicle`, `1 emergency`):
+    `runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`, padrão dos
+    scripts v2 com `--classes 0,1 --image-size 960` (as duas classes entram nas
+    contagens; `--classes 0` apagaria as viaturas). O anterior,
+    `yolov8n-unity-run-002-mask` (classe única → `--classes 0`), fica nos scripts
+    legados da v1; o padrão `2,3,5,7` é só para pesos COCO;
   - checkpoints DQN: `results/models/visual-dqn-sp*.pt`.
 - `TEMP_*.txt` na raiz são arquivos locais (ignorados) com comandos longos para
   copiar/colar — o usuário prefere esse formato quando a CLI fica extensa.
@@ -303,6 +307,9 @@ Todos a partir de `python/`:
 
 # Conferir ROIs de faixa × lanes SUMO (sem SUMO/Unity)
 ../.venv/bin/python -m experiments.check_lane_geometry
+
+# YOLO de duas classes por classe e faixa de distância no split de teste (sem SUMO/Unity)
+../.venv/bin/python -m experiments.evaluate_yolo_classes
 
 # Treino legado do DQN v1 (longo; exige Unity em Play Mode e YOLO). Confira --help antes.
 ../.venv/bin/python -m experiments.train_visual_dqn --help

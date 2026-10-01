@@ -206,9 +206,9 @@ GPS dos sistemas reais), e o semáforo abre para o sentido de onde elas vêm:
 No mesmo ambiente (ROIs de 60 m, percepção oráculo, seeds 201–203, 30
 viaturas por política), a perda de tempo média das viaturas até a linha de
 retenção cai de 14–20 s para ~1 s, e todas cruzam sem parar. O custo é de +1
-a +4 s na espera média do restante do tráfego. A detecção visual das viaturas
-(nova classe "ambulância" no YOLO) é a próxima etapa, para comparar as duas
-fontes. Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
+a +4 s na espera média do restante do tráfego. O YOLO já foi treinado com
+a classe `emergency` (recall de 99,7% no teste, 100% nos 60 m das ROIs); usar
+essa detecção visual como segunda fonte, comparada ao V2I, é a próxima etapa. Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 
 **Mudança de ambiente em 2026-09-30:** as câmeras foram reposicionadas e as
 ROIs passaram a cobrir 60 m por faixa. As tabelas de comparação acima são do
@@ -249,8 +249,12 @@ Play Mode (reinicie o Play Mode antes de cada comando):
   --dqn-model ../results/models/dqn-v2-pretrain-best.pt
 ```
 
-O detector ajustado (`runs/results/models/yolov8n-unity-run-002-mask/weights/best.pt`)
-tem uma única classe, e os scripts v2 já usam `--classes 0` por padrão.
+O detector ajustado (`runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`)
+tem duas classes, `0 vehicle` e `1 emergency`; os scripts v2 já usam esse modelo
+com `--classes 0,1` e `--image-size 960` por padrão. O detector anterior
+(`yolov8n-unity-run-002-mask`, uma classe, `--classes 0`) continua nos scripts
+legados da v1. Recall no teste: veículos 100% / 99,5% / 97,2% em 0–20 / 20–40 /
+40–60 m da ROI ([detalhes](docs/IMPLEMENTATION_PROGRESS.md)).
 
 ## Modelo da ambulância
 

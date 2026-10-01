@@ -579,6 +579,63 @@ faixa perto do cruzamento, e a diferença de área observada entra no erro. A
 medida no mesmo trecho físico da ROI é a do domain gap do DQN v2
 (`experiments.evaluate_lane_features`).
 
+### Segundo fine-tuning: duas classes (veículo e emergência), câmeras de 60 m
+
+Status: concluído em 2026-10-01. Substitui o detector `run-002` no pipeline v2.
+
+**Captura.** 8 execuções (seeds 301–308, alternando os cenários calibrado e
+original), 250 steps cada, com as 3 câmeras operacionais nas poses novas e 6
+câmeras de dataset em poses variantes (`south_ds_left/right`,
+`east_ds_near/far`, `west_ds_near/far`). Viaturas entram a cada
+`--emergency-interval` para haver exemplos da classe `emergency`. As caixas vêm
+das máscaras de instância; a classe vem do tipo SUMO do veículo
+(`vision/dataset_classes.py`: `0 vehicle`, `1 emergency`).
+
+**Dataset.** A partição é por execução inteira (`runs.json`): treino 301–303 e
+306–308, validação 305 (calibrado), teste 304 (original), para que frames
+vizinhos não vazem entre partições. A versão completa
+(`unity-cam60-2cls`) tem 18.000 imagens e 148.907 caixas (6.297 de emergência).
+O treino usou `--frame-stride 3` (`unity-cam60-2cls-s3`): 4.536 imagens de
+treino, 756 de validação e 756 de teste, com 49.869 caixas (2.104 de emergência).
+
+**Treino.** A partir do `run-002`, 15 épocas, `imgsz=960`, `batch=4`, MPS
+(Apple M5), 13,2 h. Checkpoint:
+`runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`. Na
+validação: `mAP50 = 0,995`, `mAP50-95 = 0,983` (veículo 0,981; emergência 0,985).
+
+**Teste por classe e distância** (`experiments.evaluate_yolo_classes`, run-304,
+confiança 0,15 como em operação, IoU 0,5, casamento sem olhar a classe). A
+distância de cada rótulo é o centro da base da caixa projetado pela homografia
+da ROI de faixa, a mesma regra da visão em operação; por isso só as câmeras
+operacionais têm faixas de distância.
+
+| Classe | Faixa da ROI | Rótulos | Recall | Confundido com a outra classe |
+|---|---|---|---|---|
+| veículo | 0–20 m | 756 | 100% | 0 |
+| veículo | 20–40 m | 382 | 99,5% | 0 |
+| veículo | 40–60 m | 287 | 97,2% | 0 |
+| veículo | todas as 9 câmeras | 5.924 | 99,3% | 0,1% |
+| emergência | 0–20 m | 44 | 100% | 0 |
+| emergência | 20–40 m | 36 | 100% | 0 |
+| emergência | 40–60 m | 7 | 100% | 0 |
+| emergência | todas as 9 câmeras | 317 | 99,7% | 1 caso (fora da ROI) |
+
+Há 90 falsos positivos (todos `vehicle`) em 756 imagens, espalhados entre as
+câmeras. Limitações: treino e teste vêm da mesma Unity, e a faixa de 40–60 m
+tem só 7 viaturas no teste, o que é pouca base estatística. O teste que importa
+é a malha fechada (YOLO + ByteTrack a 1 fps), feito nas avaliações visuais.
+
+**Uso.** Os scripts v2 (`add_vision_arguments` em
+`experiments/visual_observer.py`) passam a usar este modelo com
+`--classes 0,1` e `--image-size 960` por padrão. As duas classes entram nas
+contagens por faixa (uma viatura também ocupa a via); `--classes 0` com este
+modelo apagaria as viaturas do estado. Os scripts legados da v1
+(`run_visual_controller`, `train_visual_dqn`) mantêm seus padrões.
+
+```bash
+../.venv/bin/python -m experiments.evaluate_yolo_classes   # sem SUMO/Unity, ~10 min
+```
+
 ## Marco 1 — Estrutura inicial do repositório
 
 Status: concluído
