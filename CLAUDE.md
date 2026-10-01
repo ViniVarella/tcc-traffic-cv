@@ -131,8 +131,15 @@ usa chegadas Poisson (`period="exp(...)"`) e inserção realista
   `DqnTrafficController.update_preemption` mantém o verde-alvo além do máximo
   e pode encurtar o verde mínimo (decisão do usuário), **nunca** amarelo nem
   all-red. Durante a preempção a política não é consultada.
+- Fonte do pedido (`Environment.run(emergency_detection=...)`): `v2i`,
+  `vision` ou `both` (união). A visão (`vision/visual_emergency.py`) trabalha
+  por aproximação, não por `track_id` (a 1 fps a viatura cruza a ROI em ~4
+  frames): classe `emergency` dentro de uma ROI em `confirm_frames` frames
+  seguidos; sem vê-la, o pedido segue pelo tempo estimado até a linha +
+  `hold_margin_s`. Uma viatura por aproximação de cada vez.
 - Parâmetros em `emergency:` no `sp.yaml`; avaliação em
-  `experiments.evaluate_preemption` (mesma agenda para todas as políticas).
+  `experiments.evaluate_preemption` (mesma agenda para todas as políticas;
+  `--perception visual` com Unity compara `v2i`, `vision` e `both`).
 - Alterar `sp.yaml` pode invalidar calibrações de câmera, o state encoder e
   checkpoints.
 

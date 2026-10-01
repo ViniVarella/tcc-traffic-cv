@@ -47,7 +47,7 @@ class EmergencySettings:
 
     @classmethod
     def from_config(cls, config: Mapping[str, Any]) -> "EmergencySettings":
-        raw = {key: value for key, value in dict(config.get("emergency", {})).items() if key != "preemption"}
+        raw = {key: value for key, value in dict(config.get("emergency", {})).items() if key not in ("preemption", "visual_detection")}
         if "routes" in raw:
             raw["routes"] = {approach: tuple(tuple(pair) for pair in pairs) for approach, pairs in raw["routes"].items()}
         return cls(**raw)
@@ -94,6 +94,8 @@ class _Tracked:
     waiting: float = 0.0
     approach_time_loss: float = 0.0
     approach_stops: int = 0
+    on_approach: bool = False
+    first_visual_s: float | None = None
 
 
 class EmergencyTraffic:
@@ -104,6 +106,7 @@ class EmergencyTraffic:
         self.approach_edges = dict(approach_edges)
         self._vehicles = [_Tracked(plan) for plan in build_schedule(settings, seed, start_s, end_s)]
         self._type_ready = False
+        self._visual_events: dict[str, bool] = {}
 
     def step(self, client: EmergencyClient, sim_time: float) -> list[EmergencyRequest]:
         if not self._type_ready:
@@ -124,6 +127,7 @@ class EmergencyTraffic:
                 continue
             state = client.get_vehicle_road_state(plan.vehicle_id)
             if state is None:
+                vehicle.on_approach = False
                 if vehicle.seen:
                     vehicle.arrived_s = sim_time
                 else:
@@ -132,7 +136,8 @@ class EmergencyTraffic:
                 continue
             vehicle.seen = True
             self._observe(vehicle, state, sim_time)
-            if state["road_id"] == self.approach_edges[plan.approach]:
+            vehicle.on_approach = state["road_id"] == self.approach_edges[plan.approach]
+            if vehicle.on_approach:
                 remaining = max(0.0, float(state["lane_length"]) - float(state["lane_position"]))
                 speed = max(float(state["speed"]), self.settings.free_speed_mps / 2)
                 requests.append(EmergencyRequest(plan.vehicle_id, plan.approach, remaining / speed))
@@ -141,6 +146,24 @@ class EmergencyTraffic:
                 vehicle.approach_time_loss = vehicle.time_loss
                 vehicle.approach_stops = vehicle.stops
         return requests
+
+    def present_on(self, approach: str) -> bool:
+        """Há viatura na edge de entrada desta aproximação, antes da linha de retenção?"""
+        return any(vehicle.on_approach and vehicle.plan.approach == approach for vehicle in self._vehicles)
+
+    def note_visual(self, requests: list[EmergencyRequest], sim_time: float) -> None:
+        """Registra os pedidos visuais do step para medir antecedência e alarmes falsos.
+
+        Chame depois de ``step`` no mesmo step. Um evento visual é verdadeiro se,
+        quando aparece, há viatura na aproximação; a primeira detecção de cada
+        viatura é o primeiro step com pedido visual na aproximação dela.
+        """
+        for request in requests:
+            if request.vehicle_id not in self._visual_events:
+                self._visual_events[request.vehicle_id] = self.present_on(request.approach)
+            for vehicle in self._vehicles:
+                if vehicle.on_approach and vehicle.plan.approach == request.approach and vehicle.first_visual_s is None:
+                    vehicle.first_visual_s = sim_time
 
     def _full_approach_s(self) -> float:
         return 75.0 / self.settings.free_speed_mps
@@ -166,10 +189,23 @@ class EmergencyTraffic:
             "mean_stops": mean([vehicle.approach_stops for vehicle in done]),
             "share_without_stops": mean([float(vehicle.approach_stops == 0) for vehicle in done]),
             "mean_waiting_s": mean([vehicle.waiting for vehicle in done]),
+            # Antecedência do aviso até a viatura cruzar a linha: V2I (anúncio do
+            # despacho) e visão (primeira detecção confirmada na ROI).
+            "mean_v2i_lead_s": mean([vehicle.passed_stop_line_s - (vehicle.plan.depart_s - self.settings.announce_before_s)
+                                     for vehicle in done]),
+            "visual_detection": {
+                "detected": sum(vehicle.first_visual_s is not None for vehicle in done),
+                "share_detected": mean([float(vehicle.first_visual_s is not None) for vehicle in done]),
+                "mean_lead_s": mean([vehicle.passed_stop_line_s - vehicle.first_visual_s
+                                     for vehicle in done if vehicle.first_visual_s is not None]),
+                "events": len(self._visual_events),
+                "false_events": sum(not real for real in self._visual_events.values()),
+            },
             "vehicles": [
                 {"id": vehicle.plan.vehicle_id, "approach": vehicle.plan.approach, "depart_s": vehicle.plan.depart_s,
                  "crossed_s": vehicle.passed_stop_line_s, "time_loss_at_crossing_s": vehicle.approach_time_loss,
-                 "stops_before_crossing": vehicle.approach_stops, "waiting_s": vehicle.waiting}
+                 "stops_before_crossing": vehicle.approach_stops, "waiting_s": vehicle.waiting,
+                 "first_visual_s": vehicle.first_visual_s}
                 for vehicle in self._vehicles
             ],
         }

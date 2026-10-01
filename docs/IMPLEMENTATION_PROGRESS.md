@@ -56,6 +56,45 @@ obtidos com as ROIs de ~25 m e não se comparam com os desta seção.
   altura. A capacidade de cada ROI passou de ~3,4 para 8 veículos parados.
 - O YOLO atual foi treinado com os ângulos antigos e precisa ser retreinado.
 
+### Detecção visual de viaturas (segunda fonte de preempção)
+
+Status: implementada em 2026-10-01; falta a avaliação em malha fechada com a
+Unity.
+
+- **Regra** (`vision/visual_emergency.py`): por aproximação, não por
+  `track_id`. A 1 fps uma viatura a ~14 m/s cruza os 60 m da ROI em ~4 frames,
+  e o ByteTrack não mantém a identidade dela com segurança. Há viatura quando
+  algum objeto da classe `emergency` cai numa ROI de faixa em
+  `confirm_frames = 2` frames seguidos. A distância até a linha é a posição
+  na ROI (mesma homografia das features) + `roi_start_m`. O tempo até a linha
+  usa a velocidade medida entre frames, com piso na metade da velocidade
+  livre, a mesma regra do V2I. Sem ver a viatura (saiu da ROI rumo à linha,
+  ficou oculta ou faltou frame), o pedido continua por esse tempo +
+  `hold_margin_s = 3 s` e então se encerra. O pedido entra na mesma
+  `EmergencyPreemption` do V2I.
+- **Fontes comparadas:** `v2i`, `vision` e `both` (união). Na mesma agenda,
+  política e percepção das features, muda só a fonte do pedido.
+- **Métricas novas** por viatura e por episódio: antecedência do V2I e da
+  visão até a linha, viaturas detectadas pela visão, eventos visuais e
+  alarmes falsos (evento sem viatura na aproximação). Em
+  `sem_preempcao` com a Unity, a visão também é medida, sem agir.
+- **Teste offline** nos frames capturados do run-304 (sem preempção, YOLO +
+  ByteTrack sobre os JPEGs): as 10 passagens de viatura pelas ROIs foram
+  detectadas, sem evento falso. A distância visual fica ~1 m acima da real.
+  A primeira detecção ocorre a ≤ 55 m, e o pedido confirmado sai a ~40 m da
+  linha: ~3–4 s em velocidade livre, menos que amarelo + all-red (4 s). Por
+  isso se espera que a visão sozinha reduza o atraso das viaturas, mas não o
+  elimine como o V2I (que avisa ~15 s antes de a viatura entrar na rede).
+  Viaturas paradas na fila dentro da ROI são vistas e pedem passagem.
+- **Limitações:** uma viatura por aproximação de cada vez; a visão não vê
+  viaturas antes da ROI.
+
+```bash
+# Unity em Play Mode (SPImport); ~45 min por seed, política e modo
+../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated --perception visual \
+  --versions v2 --seeds 201,202,203
+```
+
 ### Versões no ambiente novo (percepção oráculo, seeds 201–203, 1800 s)
 
 A v2 foi pré-treinada de novo para as ROIs de 60 m

@@ -118,6 +118,13 @@ emergency:
     west: [["E6", "E1"]]
   preemption:
     activation_eta_s: 20
+  # Detecção visual (vision/visual_emergency.py): classe emergency dentro de uma
+  # ROI em confirm_frames frames seguidos; sem vê-la, o pedido segue pelo tempo
+  # estimado até a linha + hold_margin_s. A velocidade mínima da estimativa é a
+  # mesma do V2I (metade da velocidade livre).
+  visual_detection:
+    confirm_frames: 2
+    hold_margin_s: 3.0
 
 dqn:
   model_path: "../results/models/visual-dqn-sp.pt"
