@@ -58,8 +58,8 @@ obtidos com as ROIs de ~25 m e não se comparam com os desta seção.
 
 ### Detecção visual de viaturas (segunda fonte de preempção)
 
-Status: implementada em 2026-10-01; falta a avaliação em malha fechada com a
-Unity.
+Status: implementada e avaliada em malha fechada em 2026-10-02 (resultados no
+fim desta seção).
 
 - **Regra** (`vision/visual_emergency.py`): por aproximação, não por
   `track_id`. A 1 fps uma viatura a ~14 m/s cruza os 60 m da ROI em ~4 frames,
@@ -94,6 +94,37 @@ Unity.
 ../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated --perception visual \
   --versions v2 --seeds 201,202,203
 ```
+
+#### Resultado em malha fechada (percepção visual)
+
+Mesmo ambiente para os quatro modos: cenário calibrado, política v2
+(`dqn-v2-pretrain-best.pt`), percepção visual (YOLO de duas classes + ByteTrack,
+1 fps), seeds 201–203, aquecimento 300 s + 1800 s, a mesma agenda de 30
+viaturas. Muda só a fonte do pedido. `missing_frames = 0`. Arquivo:
+`results/evaluation/preempcao-calibrated-visual.json`.
+
+| Modo | Perda média da viatura | Perda máx. | Sem parar | Espera do tráfego | Chegadas |
+|---|---|---|---|---|---|
+| sem preempção | 15,8 s | 52,6 s | 37% | 10,3 s | 1580 |
+| V2I | 1,2 s | 3,8 s | 97% | 11,7 s | 1592 |
+| visão | 7,2 s | 25,8 s | 53% | 10,7 s | 1572 |
+| V2I + visão | 1,4 s | 6,9 s | 100% | 11,7 s | 1592 |
+
+- **Detecção visual:** 30/30 viaturas detectadas e 0 alarmes falsos em 30
+  eventos, em todos os modos.
+- **Visão sozinha** reduz a perda média em ~55% (15,8 → 7,2 s), mas não a zera:
+  o pedido sai a ~40 m da linha, e a antecedência média até a linha foi 6,9 s,
+  contra ~30 s do V2I. Quando a viatura chega no vermelho, amarelo + all-red
+  (4 s) e a fila à frente ainda a atrasam. Custa pouco ao tráfego (+0,4 s na
+  espera média).
+- **V2I** continua sendo a melhor fonte (1,2 s); custa +1,4 s na espera média.
+- **V2I + visão** fica igual ao V2I (diferenças dentro da variação entre
+  seeds) e foi o único modo em que 100% das viaturas cruzaram sem parar. A
+  visão serve de redundância quando o aviso V2I falha.
+- **Ressalva:** a antecedência da visão depende do modo. Sem preempção (14,2 s)
+  as viaturas ficam paradas na fila dentro da ROI e são vistas por mais tempo.
+  A fila de inserção no fim do episódio varia muito entre seeds (0–87) e não
+  serve para comparar os modos.
 
 ### Versões no ambiente novo (percepção oráculo, seeds 201–203, 1800 s)
 

@@ -206,9 +206,20 @@ GPS dos sistemas reais), e o semáforo abre para o sentido de onde elas vêm:
 No mesmo ambiente (ROIs de 60 m, percepção oráculo, seeds 201–203, 30
 viaturas por política), a perda de tempo média das viaturas até a linha de
 retenção cai de 14–20 s para ~1 s, e todas cruzam sem parar. O custo é de +1
-a +4 s na espera média do restante do tráfego. O YOLO já foi treinado com
-a classe `emergency` (recall de 99,7% no teste, 100% nos 60 m das ROIs); usar
-essa detecção visual como segunda fonte, comparada ao V2I, é a próxima etapa. Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
+a +4 s na espera média do restante do tráfego. A câmera também detecta as
+viaturas (classe `emergency` do YOLO dentro das ROIs) e serve como segunda
+fonte. Em malha fechada com percepção visual (v2, cenário calibrado, seeds
+201–203, 30 viaturas):
+
+| Fonte do pedido | Perda média da viatura | Sem parar | Espera do tráfego |
+|---|---|---|---|
+| nenhuma | 15,8 s | 37% | 10,3 s |
+| V2I | 1,2 s | 97% | 11,7 s |
+| visão | 7,2 s | 53% | 10,7 s |
+| V2I + visão | 1,4 s | 100% | 11,7 s |
+
+A visão detectou as 30 viaturas, sem alarme falso, mas só as vê nos últimos
+60 m. Sozinha, reduz o atraso pela metade; junto do V2I, serve de redundância. Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 
 **Mudança de ambiente em 2026-09-30:** as câmeras foram reposicionadas e as
 ROIs passaram a cobrir 60 m por faixa. As tabelas de comparação acima são do
