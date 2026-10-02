@@ -98,7 +98,8 @@ fim desta seção).
 #### Resultado em malha fechada (percepção visual)
 
 Mesmo ambiente para os quatro modos: cenário calibrado, política v2
-(`dqn-v2-pretrain-best.pt`), percepção visual (YOLO de duas classes + ByteTrack,
+(`dqn-v2-roi60-mix-pretrain-best.pt`, pré-treinado nas ROIs de 60 m com os dois cenários),
+percepção visual (YOLO de duas classes + ByteTrack,
 1 fps), seeds 201–203, aquecimento 300 s + 1800 s, a mesma agenda de 30
 viaturas. Muda só a fonte do pedido. `missing_frames = 0`. Arquivo:
 `results/evaluation/preempcao-calibrated-visual.json`.
