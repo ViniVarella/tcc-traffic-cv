@@ -114,7 +114,32 @@ contavam os veículos pelo centro da bbox com média móvel. Aqui elas recebem a
 mesma contagem por faixa usada pela v2. Também decidem a cada 1 s, como
 faziam originalmente.
 
-### Percepção oráculo (só SUMO)
+### Ambiente atual (câmeras e ROIs de 60 m), cenário calibrado
+
+Câmeras reposicionadas, ROIs de 60 m por faixa, YOLO de duas classes e a v2
+pré-treinada nos dois cenários (`dqn-v2-roi60-mix-pretrain-best.pt`). Seeds
+201–203, 0 frames perdidos na percepção visual.
+
+| Versão | Espera (visual) | Chegadas (visual) | Fila de inserção (visual) | Espera (oráculo) | Chegadas (oráculo) |
+|---|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 16,1 s | 1503 | 97 | 16,1 s | 1503 |
+| v1 (heurística) | 11,1 s | 1423 | 179 | 10,3 s | 1486 |
+| v1.1 (DQN estado v1) | 12,9 s | 1311 | 290 | 12,9 s | 1312 |
+| **v2 (DQN estado v2)** | **10,6 s** | **1556** | **45** | **8,6 s** | **1603** |
+| max-pressure (referência) | 10,5 s | 1528 | 74 | 10,8 s | 1492 |
+
+Pela câmera, a v2 reduz a espera do ciclo fixo em 34% e é a versão que mais
+escoa veículos, com a menor fila de inserção. O max-pressure empata na espera,
+mas escoa menos. A percepção custa à v2 2 s de espera em relação ao oráculo:
+a câmera subconta ~1 veículo por faixa no Leste saturado, e a ação com
+features visuais coincide com a do oráculo em 71% das decisões. Detalhes e
+domain gap em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
+
+As tabelas abaixo são do **ambiente anterior** (câmeras antigas, ROIs de
+~25 m, YOLO de uma classe) e ficam como registro; não se comparam com a de
+cima.
+
+### Percepção oráculo (só SUMO) — ambiente anterior
 
 **Cenário calibrado** (Leste saturado — onde a adaptação importa):
 
@@ -146,7 +171,7 @@ Com demanda equilibrada, alternar rápido já é quase ótimo, e todas as versõ
 adaptativas empatam. A v2, que não treinou nesse cenário, fica 0,4–0,5 s
 atrás.
 
-### Percepção visual (Unity)
+### Percepção visual (Unity) — ambiente anterior
 
 Cenário calibrado (Leste saturado), mesmo protocolo, 0 frames perdidos:
 
@@ -181,8 +206,9 @@ espera média, com as mesmas chegadas e sem fila de inserção.
 
 ### Limitações
 
-- As ROIs das câmeras cobrem só 23–26 m por faixa, e filas longas do Leste
-  saturam o estado.
+- No ambiente anterior, as ROIs cobriam só 23–26 m por faixa, e filas
+  longas do Leste saturavam o estado. No atual, a câmera subconta o Leste
+  saturado em ~1 veículo por faixa.
 - A velocidade visual é subestimada.
 - Há oclusão na faixa sul mais distante.
 - A recompensa de treino vem do TraCI; só a política é exclusivamente visual.
@@ -223,8 +249,8 @@ A visão detectou as 30 viaturas, sem alarme falso, mas só as vê nos últimos
 
 **Mudança de ambiente em 2026-09-30:** as câmeras foram reposicionadas e as
 ROIs passaram a cobrir 60 m por faixa. As tabelas de comparação acima são do
-ambiente anterior (ROIs de ~25 m); as do ambiente novo estão no documento de
-progresso, e as avaliações visuais serão refeitas depois do novo YOLO.
+ambiente anterior (ROIs de ~25 m), salvo a do ambiente atual em "Comparação
+no mesmo ambiente".
 
 ## Como reproduzir
 

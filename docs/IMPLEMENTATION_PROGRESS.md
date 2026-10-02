@@ -162,6 +162,59 @@ episódio 34). É a v2 de referência do ambiente novo:
 Treinar com os dois cenários melhorou a v2 nos dois: no calibrado, reduz a
 espera em 1,5 s mantendo as chegadas; no original, passa de pior a melhor.
 
+### Versões no ambiente novo — percepção visual (Unity, cenário calibrado)
+
+Rodado em 2026-10-02: `compare_versions --scenario calibrated --perception visual`,
+seeds 201–203, 300 s + 1800 s, YOLO de duas classes (`--classes 0,1`, 960 px),
+v2 = `dqn-v2-roi60-mix-pretrain-best.pt`, sem viaturas de emergência.
+`missing_frames = 0`. Arquivo: `results/evaluation/versoes-calibrated-visual.json`;
+logs por step em `results/logs/versoes-calibrated-visual-<versão>.jsonl`.
+
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas | Oráculo: espera / chegadas / fila |
+|---|---:|---:|---:|---:|---:|---:|---|
+| Linha de base (ciclo fixo) | 16,1 s | 36,2 s | 1503 | 97 | 50% | 0 | 16,1 s / 1503 / 97 |
+| v1 (heurística) | 11,1 s | 35,2 s | 1423 | 179 | 55% | 118 | 10,3 s / 1486 / 117 |
+| v1.1 (DQN estado v1) | 12,9 s | 38,0 s | 1311 | 290 | 50% | 129 | 12,9 s / 1312 / 289 |
+| **v2 (DQN estado v2)** | **10,6 s** | **32,8 s** | **1556** | **45** | 59% | 88 | 8,6 s / 1603 / 4 |
+| max-pressure | 10,5 s | 33,7 s | 1528 | 74 | 60% | 106 | 10,8 s / 1492 / 108 |
+
+A coluna do oráculo é a mesma configuração com percepção perfeita (tabelas
+acima). Leitura:
+
+- **Ciclo fixo × adaptativos:** com câmera, a v2 reduz a espera em 34%
+  (16,1 → 10,6 s), a viagem em 9% e a fila de inserção de 97 para 45, com mais
+  chegadas (+53). A v1 e a v1.1 esperam menos que o ciclo fixo, mas deixam mais
+  veículos fora da rede (179 e 290): escoam menos.
+- **v2 × max-pressure:** espera praticamente igual (10,6 × 10,5 s), mas a v2
+  tem mais chegadas (+28), viagem 0,9 s menor e fila de inserção menor (45 × 74).
+- **Custo da percepção na v2:** +2,0 s de espera, −47 chegadas e +41 na fila em
+  relação ao oráculo. É a maior perda entre as versões; a v1.1 não muda (alterna
+  no ciclo mínimo, independente do estado) e o max-pressure fica igual ao
+  oráculo, dentro da variação.
+- A v1 e a v1.1 usam checkpoints e regras das câmeras antigas (~25 m); aqui
+  entram sem retreino.
+
+**Domain gap visão × oráculo** (`evaluate_lane_features` no log da v2, 5.433
+steps, todos com visão; `results/evaluation/domain-gap-roi60-calibrated-v2.json`):
+
+| Faixa | Contagem (viés) | Parados (viés) | Espera (viés) | Velocidade (viés) |
+|---|---:|---:|---:|---:|
+| east/lane_0 | −0,68 | −0,02 | +6,0 s | −1,31 m/s |
+| east/lane_1 | −1,12 | −0,53 | −3,1 s | −0,61 m/s |
+| south/lane_0–3 | +0,03 a +0,15 | +0,06 a +0,30 | +0,8 a +4,9 s | −0,4 a −1,2 m/s |
+| west/lane_0 | −0,02 | +0,04 | +0,5 s | −0,30 m/s |
+
+- O erro está concentrado no **Leste**, a aproximação saturada que mais pesa:
+  a câmera conta ~0,7–1,1 veículo a menos por faixa. Com isso a v2 visual dá
+  59% do verde ao Leste/Oeste, contra 63% com o oráculo, e acumula fila.
+- A velocidade visual é subestimada em todas as faixas, e a espera do sul é
+  superestimada.
+- O ponto de solo da visão fica ~0,7–0,8 m a montante do oráculo (mediana:
+  −0,81 m no leste, −0,76 m no sul, −0,69 m no oeste);
+  `lane_state.visual_ground_offset_m` continua 0.
+- A ação do DQN com features visuais coincide com a ação com features do
+  oráculo em **71,1%** das 605 decisões.
+
 ### Preempção por aviso V2I (percepção oráculo, seeds 201–203, 1800 s)
 
 - Viaturas de emergência entram a cada ~3 min (10 por seed, 30 por política),
