@@ -128,6 +128,10 @@ pré-treinada nos dois cenários (`dqn-v2-roi60-mix-pretrain-best.pt`). Seeds
 | **v2 (DQN estado v2)** | **10,6 s** | **1556** | **45** | **8,6 s** | **1603** |
 | max-pressure (referência) | 10,5 s | 1528 | 74 | 10,8 s | 1492 |
 
+> **Em revisão:** esta tabela e a da preempção com visão foram obtidas antes da
+> correção do filtro da ROI de aproximação (2026-10-03), que deixava os últimos
+> ~10 m de cada ROI sem veículos. Serão refeitas.
+
 Pela câmera, a v2 reduz a espera do ciclo fixo em 34% e é a versão que mais
 escoa veículos, com a menor fila de inserção. O max-pressure empata na espera,
 mas escoa menos. A percepção custa à v2 2 s de espera em relação ao oráculo:
