@@ -19,6 +19,16 @@ class RoiFilterTests(unittest.TestCase):
 
         self.assertEqual(filtered, [detections[0]])
 
+    def test_bottom_center_anchor_keeps_far_box_whose_center_is_outside(self) -> None:
+        roi = [[10, 10], [90, 10], [90, 90], [10, 90]]
+        # Caixa alta perto da borda superior: centro (y=7) fora, base (y=14) dentro.
+        detection = {"bbox": [40.0, 0.0, 60.0, 14.0], "confidence": 0.9, "class_id": 0}
+
+        self.assertEqual(filter_detections_to_roi([detection], roi), [])
+        self.assertEqual(filter_detections_to_roi([detection], roi, anchor="bottom_center"), [detection])
+        with self.assertRaises(ValueError):
+            filter_detections_to_roi([detection], roi, anchor="top")
+
     def test_uses_detections_when_no_track_is_confirmed(self) -> None:
         detections = [{"bbox": [20.0, 20.0, 40.0, 40.0], "confidence": 0.3, "class_id": 2}]
 

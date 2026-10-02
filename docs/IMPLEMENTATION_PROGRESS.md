@@ -215,6 +215,35 @@ steps, todos com visão; `results/evaluation/domain-gap-roi60-calibrated-v2.json
 - A ação do DQN com features visuais coincide com a ação com features do
   oráculo em **71,1%** das 605 decisões.
 
+### Correção: filtro da ROI de aproximação pela base da caixa (2026-10-03)
+
+A análise da subcontagem do Leste (log da v2 visual acima) mostrou:
+
+- **Leste, 50–60 m: ~100% dos veículos perdidos nas duas faixas**, mesmo
+  isolados (sem veículo à frente). Não era oclusão: o YOLO detecta esses
+  veículos (98,6% no teste), mas `filter_detections_to_roi` descartava a
+  detecção porque usava o **centro** da caixa. Num carro distante, visto de
+  lado, o centro cai fora do polígono de aproximação, embora a base (o ponto de
+  solo usado pela homografia das faixas) esteja dentro da faixa.
+- O mesmo acontecia nas outras câmeras. No replay offline do run-304 (250
+  frames por câmera), objetos projetados a 50–60 m, com centro → com base:
+  Leste 2 → 195, Sul 46 → 192, Oeste 3 → 30. Abaixo de 50 m não muda.
+- A geometria está correta: com o veículo detectado, a distância visual fica
+  +0,8 m da do oráculo em todas as faixas e distâncias.
+- A faixa 1 do Leste também perde 17–40% a 10–50 m, mais com fila parada (35%)
+  que em movimento (26%). Aí as detecções brutas já faltam: é oclusão pela
+  faixa 0 no ângulo lateral da câmera Leste, e não se corrige no filtro.
+
+Correção: `filter_detections_to_roi(..., anchor="bottom_center")` no
+`VisualPipeline`, com o mesmo ponto de solo das features por faixa (o padrão
+`center` continua para o legado `test_unity_vision`). Na detecção de viaturas,
+o pedido passa a sair a ~55–60 m da linha, em vez de ~40 m.
+
+**Consequência:** os resultados com percepção visual de 2026-10-02 (versões e
+preempção) foram obtidos com o filtro pelo centro. Cada tabela continua
+internamente comparável (todas as linhas tinham o mesmo filtro), mas precisa
+ser refeita com a correção para valer como resultado do ambiente atual.
+
 ### Preempção por aviso V2I (percepção oráculo, seeds 201–203, 1800 s)
 
 - Viaturas de emergência entram a cada ~3 min (10 por seed, 30 por política),
