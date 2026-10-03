@@ -164,11 +164,59 @@ espera em 1,5 s mantendo as chegadas; no original, passa de pior a melhor.
 
 ### Versões no ambiente novo — percepção visual (Unity, cenário calibrado)
 
+Rodado em 2026-10-03, depois da correção do filtro da ROI de aproximação
+(próxima seção): `compare_versions --scenario calibrated --perception visual`,
+seeds 201–203, 300 s + 1800 s, YOLO de duas classes, v2 =
+`dqn-v2-roi60-mix-pretrain-best.pt`, sem viaturas. `missing_frames = 0`.
+Arquivo: `results/evaluation/versoes-calibrated-visual.json`.
+
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas | Oráculo: espera / chegadas / fila |
+|---|---:|---:|---:|---:|---:|---:|---|
+| Linha de base (ciclo fixo) | 16,1 s | 36,2 s | 1503 | 97 | 50% | 0 | 16,1 s / 1503 / 97 |
+| v1 (heurística) | 10,3 s | 33,9 s | 1488 | 112 | 59% | 112 | 10,3 s / 1486 / 117 |
+| v1.1 (DQN estado v1) | 12,9 s | 38,0 s | 1312 | 289 | 50% | 129 | 12,9 s / 1312 / 289 |
+| **v2 (DQN estado v2)** | **9,1 s** | **30,3 s** | **1596** | **11** | 61% | 80 | 8,6 s / 1603 / 4 |
+| max-pressure | 10,6 s | 33,7 s | 1542 | 59 | 61% | 103 | 10,8 s / 1492 / 108 |
+
+Espera por seed (201/202/203): v2 9,4 / 9,1 / 9,0 s; max-pressure 10,7 / 10,6 /
+10,4 s; v1 10,6 / 10,0 / 10,3 s.
+
+- **Ciclo fixo × v2 com câmera:** espera −43% (16,1 → 9,1 s), viagem −16%,
+  +93 chegadas, fila de inserção 97 → 11.
+- **v2 × max-pressure e v1:** a v2 vence nas três seeds, com 1,5 s a menos de
+  espera que o max-pressure e +54 chegadas.
+- **Custo da percepção na v2:** caiu de +2,0 s para **+0,5 s** de espera em
+  relação ao oráculo (−7 chegadas, +7 na fila). A v1 com câmera agora iguala a
+  v1 com oráculo.
+- **Verdes da v2:** Leste/Oeste com média de 23,6 s (2% terminam no mínimo, 5%
+  chegam aos 40 s); Sul com média de 15,1 s (35% no mínimo).
+
+**Domain gap** (log da v2, 5.433 steps;
+`results/evaluation/domain-gap-roi60-calibrated-v2.json`):
+
+| Faixa | Contagem (MAE / viés) | Veículos perdidos | Velocidade (viés) | Espera (viés) |
+|---|---|---:|---:|---:|
+| east/lane_0 | 0,26 / +0,18 | 7% | −1,44 m/s | +7,3 s |
+| east/lane_1 | 0,30 / −0,18 | 20% | −0,87 m/s | +0,4 s |
+| south/lane_0–3 | 0,08–0,23 / +0,06 a +0,19 | 1% | −0,3 a −1,0 m/s | +1,4 a +5,2 s |
+| west/lane_0 | 0,03 / +0,03 | 0,2% | −0,16 m/s | +0,4 s |
+
+- A ação do DQN com features visuais coincide com a do oráculo em **84,8%**
+  das 640 decisões (era 71,1% antes da correção).
+- O que sobra no Leste é a oclusão da faixa 1 pela faixa 0 (ângulo lateral da
+  câmera). A velocidade continua subestimada e a espera superestimada, sem
+  impedir a v2 de ficar a 0,5 s do oráculo.
+- Com esse resultado, o ajuste fino visual não é necessário para a conclusão
+  principal.
+
+#### Antes da correção do filtro (2026-10-02, registro)
+
+
 Rodado em 2026-10-02: `compare_versions --scenario calibrated --perception visual`,
 seeds 201–203, 300 s + 1800 s, YOLO de duas classes (`--classes 0,1`, 960 px),
 v2 = `dqn-v2-roi60-mix-pretrain-best.pt`, sem viaturas de emergência.
-`missing_frames = 0`. Arquivo: `results/evaluation/versoes-calibrated-visual.json`;
-logs por step em `results/logs/versoes-calibrated-visual-<versão>.jsonl`.
+`missing_frames = 0`. Arquivo: `results/evaluation/versoes-calibrated-visual-filtro-centro.json`;
+logs por step em `results/logs/versoes-calibrated-visual-<versão>-filtro-centro.jsonl`.
 
 | Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas | Oráculo: espera / chegadas / fila |
 |---|---:|---:|---:|---:|---:|---:|---|
@@ -195,7 +243,7 @@ acima). Leitura:
   entram sem retreino.
 
 **Domain gap visão × oráculo** (`evaluate_lane_features` no log da v2, 5.433
-steps, todos com visão; `results/evaluation/domain-gap-roi60-calibrated-v2.json`):
+steps, todos com visão; domain gap recalculado a partir do log `-filtro-centro`):
 
 | Faixa | Contagem (viés) | Parados (viés) | Espera (viés) | Velocidade (viés) |
 |---|---:|---:|---:|---:|

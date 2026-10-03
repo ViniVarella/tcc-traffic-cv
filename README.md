@@ -123,21 +123,20 @@ pré-treinada nos dois cenários (`dqn-v2-roi60-mix-pretrain-best.pt`). Seeds
 | Versão | Espera (visual) | Chegadas (visual) | Fila de inserção (visual) | Espera (oráculo) | Chegadas (oráculo) |
 |---|---:|---:|---:|---:|---:|
 | Linha de base (ciclo fixo) | 16,1 s | 1503 | 97 | 16,1 s | 1503 |
-| v1 (heurística) | 11,1 s | 1423 | 179 | 10,3 s | 1486 |
-| v1.1 (DQN estado v1) | 12,9 s | 1311 | 290 | 12,9 s | 1312 |
-| **v2 (DQN estado v2)** | **10,6 s** | **1556** | **45** | **8,6 s** | **1603** |
-| max-pressure (referência) | 10,5 s | 1528 | 74 | 10,8 s | 1492 |
+| v1 (heurística) | 10,3 s | 1488 | 112 | 10,3 s | 1486 |
+| v1.1 (DQN estado v1) | 12,9 s | 1312 | 289 | 12,9 s | 1312 |
+| **v2 (DQN estado v2)** | **9,1 s** | **1596** | **11** | **8,6 s** | **1603** |
+| max-pressure (referência) | 10,6 s | 1542 | 59 | 10,8 s | 1492 |
 
-> **Em revisão:** esta tabela e a da preempção com visão foram obtidas antes da
-> correção do filtro da ROI de aproximação (2026-10-03), que deixava os últimos
-> ~10 m de cada ROI sem veículos. Serão refeitas.
+Pela câmera, a v2 reduz a espera do ciclo fixo em 43% (16,1 → 9,1 s), é a
+versão que mais escoa veículos e quase zera a fila de inserção. Fica a 0,5 s
+do limite com percepção perfeita, e a ação com features visuais coincide com a
+do oráculo em 85% das decisões. O max-pressure e a v1 ficam em 10,3–10,6 s,
+com mais veículos presos fora da rede. Detalhes e domain gap em
+[`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 
-Pela câmera, a v2 reduz a espera do ciclo fixo em 34% e é a versão que mais
-escoa veículos, com a menor fila de inserção. O max-pressure empata na espera,
-mas escoa menos. A percepção custa à v2 2 s de espera em relação ao oráculo:
-a câmera subconta ~1 veículo por faixa no Leste saturado, e a ação com
-features visuais coincide com a do oráculo em 71% das decisões. Detalhes e
-domain gap em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
+> A tabela da preempção com visão ainda é anterior à correção do filtro da ROI
+> de aproximação (2026-10-03) e será refeita.
 
 As tabelas abaixo são do **ambiente anterior** (câmeras antigas, ROIs de
 ~25 m, YOLO de uma classe) e ficam como registro; não se comparam com a de
@@ -211,8 +210,8 @@ espera média, com as mesmas chegadas e sem fila de inserção.
 ### Limitações
 
 - No ambiente anterior, as ROIs cobriam só 23–26 m por faixa, e filas
-  longas do Leste saturavam o estado. No atual, a câmera subconta o Leste
-  saturado em ~1 veículo por faixa.
+  longas do Leste saturavam o estado. No atual, a faixa 1 do Leste
+  perde ~20% dos veículos por oclusão pela faixa 0 (ângulo lateral da câmera).
 - A velocidade visual é subestimada.
 - Há oclusão na faixa sul mais distante.
 - A recompensa de treino vem do TraCI; só a política é exclusivamente visual.
