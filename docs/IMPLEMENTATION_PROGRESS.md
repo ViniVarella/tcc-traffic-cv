@@ -104,6 +104,37 @@ percepção visual (YOLO de duas classes + ByteTrack,
 viaturas. Muda só a fonte do pedido. `missing_frames = 0`. Arquivo:
 `results/evaluation/preempcao-calibrated-visual.json`.
 
+Rodado de novo em 2026-10-03, depois da correção do filtro da ROI de
+aproximação (seção "Correção" abaixo).
+
+| Modo | Perda média da viatura | Perda máx. | Sem parar | Espera do tráfego | Chegadas | Fila de inserção |
+|---|---|---|---|---|---|---|
+| sem preempção | 13,2 s | 26,2 s | 37% | 9,4 s | 1608 | 8 |
+| V2I | 1,4 s | 5,6 s | 100% | 10,5 s | 1606 | 11 |
+| visão | 4,2 s | 19,5 s | 80% | 9,9 s | 1605 | 11 |
+| V2I + visão | 1,2 s | 4,0 s | 100% | 11,3 s | 1609 | 6 |
+
+Perda média da viatura por seed (201/202/203): sem 12,0 / 13,0 / 14,6 s;
+V2I 1,8 / 1,2 / 1,2 s; visão 6,2 / 2,5 / 3,7 s; ambos 1,3 / 1,0 / 1,3 s.
+
+- **Detecção visual:** 30/30 viaturas detectadas e 0 alarmes falsos em 30
+  eventos, em todos os modos.
+- **Visão sozinha** reduz a perda média em 68% (13,2 → 4,2 s), e 80% das
+  viaturas cruzam sem parar (37% sem preempção). Não zera o atraso: a
+  antecedência média até a linha é de 6,7 s, contra ~30 s do V2I, e uma viatura
+  que chega no vermelho ainda espera amarelo + all-red (4 s) e a fila à frente.
+  Custa +0,5 s na espera média do tráfego.
+- **V2I** é a melhor fonte isolada (1,4 s, 100% sem parar); custa +1,1 s.
+- **V2I + visão** é o melhor modo (1,2 s, perda máxima 4,0 s, 100% sem parar),
+  igual ao V2I dentro da variação entre seeds. A visão serve de redundância
+  quando o aviso V2I falha.
+- A antecedência da visão depende do modo: sem preempção (16,1 s) as viaturas
+  ficam paradas na fila dentro da ROI e são vistas por mais tempo.
+
+#### Antes da correção do filtro (2026-10-02, registro)
+
+Arquivo: `results/evaluation/preempcao-calibrated-visual-filtro-centro.json`.
+
 | Modo | Perda média da viatura | Perda máx. | Sem parar | Espera do tráfego | Chegadas |
 |---|---|---|---|---|---|
 | sem preempção | 15,8 s | 52,6 s | 37% | 10,3 s | 1580 |
@@ -122,7 +153,7 @@ viaturas. Muda só a fonte do pedido. `missing_frames = 0`. Arquivo:
 - **V2I + visão** fica igual ao V2I (diferenças dentro da variação entre
   seeds) e foi o único modo em que 100% das viaturas cruzaram sem parar. A
   visão serve de redundância quando o aviso V2I falha.
-- **Ressalva:** a antecedência da visão depende do modo. Sem preempção (14,2 s)
+- A antecedência da visão depende do modo. Sem preempção (14,2 s)
   as viaturas ficam paradas na fila dentro da ROI e são vistas por mais tempo.
   A fila de inserção no fim do episódio varia muito entre seeds (0–87) e não
   serve para comparar os modos.

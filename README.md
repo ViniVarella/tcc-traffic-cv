@@ -135,9 +135,6 @@ do oráculo em 85% das decisões. O max-pressure e a v1 ficam em 10,3–10,6 s,
 com mais veículos presos fora da rede. Detalhes e domain gap em
 [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 
-> A tabela da preempção com visão ainda é anterior à correção do filtro da ROI
-> de aproximação (2026-10-03) e será refeita.
-
 As tabelas abaixo são do **ambiente anterior** (câmeras antigas, ROIs de
 ~25 m, YOLO de uma classe) e ficam como registro; não se comparam com a de
 cima.
@@ -242,13 +239,13 @@ fonte. Em malha fechada com percepção visual (v2, cenário calibrado, seeds
 
 | Fonte do pedido | Perda média da viatura | Sem parar | Espera do tráfego |
 |---|---|---|---|
-| nenhuma | 15,8 s | 37% | 10,3 s |
-| V2I | 1,2 s | 97% | 11,7 s |
-| visão | 7,2 s | 53% | 10,7 s |
-| V2I + visão | 1,4 s | 100% | 11,7 s |
+| nenhuma | 13,2 s | 37% | 9,4 s |
+| V2I | 1,4 s | 100% | 10,5 s |
+| visão | 4,2 s | 80% | 9,9 s |
+| V2I + visão | 1,2 s | 100% | 11,3 s |
 
 A visão detectou as 30 viaturas, sem alarme falso, mas só as vê nos últimos
-60 m. Sozinha, reduz o atraso pela metade; junto do V2I, serve de redundância. Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
+60 m. Sozinha, reduz o atraso em 68%; junto do V2I, serve de redundância. Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 
 **Mudança de ambiente em 2026-09-30:** as câmeras foram reposicionadas e as
 ROIs passaram a cobrir 60 m por faixa. As tabelas de comparação acima são do
