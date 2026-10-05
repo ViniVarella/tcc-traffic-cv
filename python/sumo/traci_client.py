@@ -32,6 +32,7 @@ class SumoClient:
         self.traci_port = traci_port
         self.scenario = scenario
         self._started = False
+        self._vehicle_lanes: dict[str, str] = {}
 
     @classmethod
     def from_config(
@@ -80,6 +81,7 @@ class SumoClient:
 
         traci.start(sumo_cmd, port=self.traci_port)
         self._started = True
+        self._vehicle_lanes = {}
 
     def step(self) -> float:
         """Avanca um passo da simulacao e retorna o tempo simulado."""
@@ -161,26 +163,54 @@ class SumoClient:
             "occupancy": float(traci.lanearea.getLastStepOccupancy(detector_id)),
         }
 
+    def vehicle_lane_id(self, lane_id: str) -> str:
+        """Traduz a faixa lógica ``<edge>_<k>`` (k-ésima faixa de veículos) no ID real.
+
+        O perfil e as ROIs numeram só as faixas de veículos. Na rede com
+        pedestres a calçada ocupa a faixa 0 e as de veículos ganham +1
+        (``E3_0`` → ``E3_1``); na rede sem calçadas a tradução é a identidade.
+        """
+        cached = self._vehicle_lanes.get(lane_id)
+        if cached is not None:
+            return cached
+        self._ensure_started()
+        edge_id, _, index = lane_id.rpartition("_")
+        if not edge_id or not index.isdigit():
+            raise ValueError(f"ID de faixa inválido: {lane_id!r}")
+        lanes = [f"{edge_id}_{position}" for position in range(int(traci.edge.getLaneNumber(edge_id)))]
+        vehicle_lanes = [lane for lane in lanes if list(traci.lane.getAllowed(lane)) != ["pedestrian"]]
+        if int(index) >= len(vehicle_lanes):
+            raise ValueError(f"A edge {edge_id!r} não tem a faixa de veículos {index}.")
+        self._vehicle_lanes[lane_id] = vehicle_lanes[int(index)]
+        return self._vehicle_lanes[lane_id]
+
+    def pedestrian_link_count(self, tls_id: str) -> int:
+        """Links do semáforo que controlam faixas de pedestre (0 na rede sem pedestres)."""
+        self._ensure_started()
+        return sum(1 for links in traci.trafficlight.getControlledLinks(tls_id)
+                   if links and str(links[0][0]).startswith(":"))
+
     def get_lane_vehicle_positions(self, lane_id: str) -> list[tuple[str, float]]:
-        """Retorna ``(id, posição da frente na lane em m)`` dos veículos da lane."""
+        """Retorna ``(id, posição da frente na lane em m)`` dos veículos da faixa lógica."""
         self._ensure_started()
         return [
             (str(vehicle_id), float(traci.vehicle.getLanePosition(vehicle_id)))
-            for vehicle_id in traci.lane.getLastStepVehicleIDs(lane_id)
+            for vehicle_id in traci.lane.getLastStepVehicleIDs(self.vehicle_lane_id(lane_id))
         ]
 
     def get_incoming_lane_metrics(self, lane_ids: list[str] | tuple[str, ...]) -> dict[str, float | int]:
-        """Soma parados e espera nativa nas lanes informadas e mede a fila de inserção."""
+        """Soma parados e espera nativa nas faixas lógicas informadas e mede a fila de inserção."""
         self._ensure_started()
+        lanes = [self.vehicle_lane_id(lane_id) for lane_id in lane_ids]
         return {
-            "halting_vehicles": sum(int(traci.lane.getLastStepHaltingNumber(lane_id)) for lane_id in lane_ids),
-            "waiting_time_s": sum(float(traci.lane.getWaitingTime(lane_id)) for lane_id in lane_ids),
+            "halting_vehicles": sum(int(traci.lane.getLastStepHaltingNumber(lane_id)) for lane_id in lanes),
+            "waiting_time_s": sum(float(traci.lane.getWaitingTime(lane_id)) for lane_id in lanes),
             "pending_vehicles": len(traci.simulation.getPendingVehicles()),
         }
 
     def get_lane_length(self, lane_id: str) -> float:
         self._ensure_started()
-        return float(traci.lane.getLength(lane_id))
+        return float(traci.lane.getLength(self.vehicle_lane_id(lane_id)))
 
     def get_teleport_count(self) -> int:
         """Veículos que iniciaram teleporte no último step (bloqueio > time-to-teleport)."""

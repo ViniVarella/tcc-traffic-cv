@@ -8,6 +8,10 @@ sumo:
   scenarios:
     calibrated: "../sumo/sp/Cruzamento.calibrated.sumocfg"
     original: "../sumo/sp/Cruzamento.sumocfg"
+    # Mesmas demandas de veículos + pedestres (rede Cruzamento.ped.net.xml com
+    # calçadas e faixas de pedestre; gerada por experiments.build_pedestrian_network).
+    calibrated_ped: "../sumo/sp/Cruzamento.calibrated.ped.sumocfg"
+    original_ped: "../sumo/sp/Cruzamento.ped.sumocfg"
   default_scenario: "calibrated"
   gui: false
   step_length: 1.0
@@ -30,6 +34,22 @@ traffic_light:
     all_red: 2
     secondary_green: 3
     secondary_yellow: 4
+    # Só na rede com pedestres (Cruzamento.ped.net.xml).
+    pedestrian_green: 5
+    pedestrian_clearance: 6
+
+# Fase exclusiva de pedestres (só nos cenários *_ped): todos os veículos no
+# vermelho e todas as faixas de pedestre no verde, a cada every_cycles ciclos
+# (L/O → Sul → L/O → Sul → pedestres). O verde cobre o maior percurso em "L"
+# (travessia + esquina + travessia vizinha = 48,05 m, esquina Sudoeste) a
+# 1,2 m/s; a liberação é vermelho total. Valores de
+# experiments.build_pedestrian_network.
+pedestrians:
+  every_cycles: 2
+  walking_speed_mps: 1.2
+  longest_l_m: 48.05
+  green_seconds: 41
+  clearance_seconds: 3
 
 traffic_control:
   # Controlador heurístico inicial. Suas entradas são somente as filas visuais.

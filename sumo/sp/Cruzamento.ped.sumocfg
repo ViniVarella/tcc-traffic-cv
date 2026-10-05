@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Variante com pedestres de Cruzamento.rou.xml (gerada por experiments.build_pedestrian_network). -->
+
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="Cruzamento.ped.net.xml"/>
+        <route-files value="Cruzamento.rou.xml,Cruzamento.pedestrians.rou.xml"/>
+        <additional-files value="Cruzamento.ped.add.xml"/>
+    </input>
+
+</sumoConfiguration>

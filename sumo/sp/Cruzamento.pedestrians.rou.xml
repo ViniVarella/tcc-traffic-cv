@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Gerado por python -m experiments.build_pedestrian_network. Demanda
+     sintética (o drone não mediu pedestres): chegadas Poisson entre as
+     calçadas de todas as vias, divididas igualmente entre os pares. -->
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <personFlow id="ped_E0_E1" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E0" to="E1" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E0_E2" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E0" to="E2" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E0_E3" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E0" to="E3" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E0_E5" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E0" to="E5" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E0_E6" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E0" to="E6" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E1_E0" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E1" to="E0" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E1_E2" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E1" to="E2" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E1_E3" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E1" to="E3" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E1_E5" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E1" to="E5" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E1_E6" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E1" to="E6" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E2_E0" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E2" to="E0" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E2_E1" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E2" to="E1" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E2_E3" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E2" to="E3" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E2_E5" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E2" to="E5" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E2_E6" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E2" to="E6" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E3_E0" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E3" to="E0" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E3_E1" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E3" to="E1" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E3_E2" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E3" to="E2" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E3_E5" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E3" to="E5" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E3_E6" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E3" to="E6" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E5_E0" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E5" to="E0" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E5_E1" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E5" to="E1" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E5_E2" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E5" to="E2" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E5_E3" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E5" to="E3" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E5_E6" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E5" to="E6" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E6_E0" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E6" to="E0" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E6_E1" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E6" to="E1" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E6_E2" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E6" to="E2" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E6_E3" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E6" to="E3" arrivalPos="random"/>
+    </personFlow>
+    <personFlow id="ped_E6_E5" begin="0.00" end="3600.00" period="exp(0.002778)" departPos="random">
+        <walk from="E6" to="E5" arrivalPos="random"/>
+    </personFlow>
+</routes>
