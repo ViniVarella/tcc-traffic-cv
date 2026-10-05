@@ -50,6 +50,12 @@ pedestrians:
   longest_l_m: 48.05
   green_seconds: 41
   clearance_seconds: 3
+  # Recompensa de treino nos cenários *_ped: (1 − w)·veículos − w·pedestres,
+  # com pedestres = min(1, soma da espera atual dos pedestres parados / ref.).
+  # Sem este termo, o v3 aprendeu a segurar o verde para espaçar a fase de
+  # pedestres (registro em docs/IMPLEMENTATION_PROGRESS.md).
+  reward_weight: 0.3
+  reward_waiting_reference_s: 1200  # p90 da soma com o ciclo fixo (calibrated_ped)
 
 traffic_control:
   # Controlador heurístico inicial. Suas entradas são somente as filas visuais.

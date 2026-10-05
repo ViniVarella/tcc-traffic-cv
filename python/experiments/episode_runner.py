@@ -79,15 +79,30 @@ class DqnPolicy:
 
 @dataclass(frozen=True, slots=True)
 class RewardModel:
-    """Recompensa de nível sobre as lanes de entrada inteiras (verdade de terreno)."""
+    """Recompensa de nível sobre as lanes de entrada inteiras (verdade de terreno).
+
+    Com ``pedestrian_weight`` > 0 (cenários com pedestres), vira
+    ``(1 − w)·veículos − w·min(1, espera dos pedestres parados / referência)``,
+    ainda em [−1, 0]; ``lane_metrics`` precisa de ``pedestrian_waiting_s``.
+    """
 
     lanes: tuple[str, ...]
     capacity: float
     weights: RewardWeights = RewardWeights()
+    pedestrian_weight: float = 0.0
+    pedestrian_reference_s: float = 600.0
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.pedestrian_weight <= 1.0 or self.pedestrian_reference_s <= 0:
+            raise ValueError("pedestrian_weight deve estar em [0, 1] e a referência ser positiva.")
 
     def __call__(self, lane_metrics: Mapping[str, float | int]) -> float:
         snapshot = TrafficSnapshot(int(lane_metrics["halting_vehicles"]), float(lane_metrics["waiting_time_s"]), int(lane_metrics["pending_vehicles"]))
-        return level_reward(snapshot, self.capacity, self.weights)
+        vehicles = level_reward(snapshot, self.capacity, self.weights)
+        if self.pedestrian_weight == 0.0:
+            return vehicles
+        pedestrians = min(1.0, float(lane_metrics["pedestrian_waiting_s"]) / self.pedestrian_reference_s)
+        return (1.0 - self.pedestrian_weight) * vehicles - self.pedestrian_weight * pedestrians
 
 
 @dataclass(slots=True)
@@ -161,6 +176,8 @@ def run_episode(
                         pending_vehicles=int(lane_metrics["pending_vehicles"]), teleports=client.get_teleport_count())
         if pedestrians is not None:
             pedestrians.observe(sim_time, client.get_pedestrian_speeds())
+        if reward.pedestrian_weight > 0:
+            lane_metrics = {**lane_metrics, "pedestrian_waiting_s": client.get_pedestrian_waiting_s()}
         step_reward = reward(lane_metrics)
         lane_features = observe(sim_time)
         preempt_target = None if emergency is None else emergency(sim_time)

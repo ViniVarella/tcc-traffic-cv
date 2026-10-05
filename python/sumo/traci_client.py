@@ -195,6 +195,11 @@ class SumoClient:
         self._ensure_started()
         return {str(person_id): float(traci.person.getSpeed(person_id)) for person_id in traci.person.getIDList()}
 
+    def get_pedestrian_waiting_s(self) -> float:
+        """Soma da espera atual (consecutiva, parado) dos pedestres na rede."""
+        self._ensure_started()
+        return sum(float(traci.person.getWaitingTime(person_id)) for person_id in traci.person.getIDList())
+
     def get_lane_vehicle_positions(self, lane_id: str) -> list[tuple[str, float]]:
         """Retorna ``(id, posição da frente na lane em m)`` dos veículos da faixa lógica."""
         self._ensure_started()

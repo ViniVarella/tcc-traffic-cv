@@ -85,8 +85,10 @@ class Environment:
             pedestrian_phase = client.pedestrian_link_count(self.tls_id) > 0
             if self.state_version == 3 and not pedestrian_phase:
                 raise ValueError("O estado v3 exige um cenário com pedestres (ex.: calibrated_ped).")
+            pedestrian_reward = self.config.get("pedestrians", {}) if pedestrian_phase else {}
             reward = RewardModel(self.reward_lanes, incoming_lane_capacity([client.get_lane_length(lane) for lane in self.reward_lanes]),
-                                 self.reward_weights)
+                                 self.reward_weights, float(pedestrian_reward.get("reward_weight", 0.0)),
+                                 float(pedestrian_reward.get("reward_waiting_reference_s", 600.0)))
             if observer is None:
                 source = self.oracle_source(seed)
                 observe: Observer = lambda sim_time: source.observe(client, sim_time)
