@@ -46,6 +46,8 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--epsilon-decay-fraction", type=float, default=0.5,
                         help="Fração das decisões estimadas do treino em que ε decai linearmente.")
     parser.add_argument("--double-dqn", action="store_true")
+    parser.add_argument("--pedestrian-reward-weight", type=float, default=None,
+                        help="Substitui pedestrians.reward_weight do perfil (cenários com pedestres).")
     parser.add_argument("--state-version", type=int, choices=(2, 3), default=2,
                         help="3 = estado com a fase de pedestres; exige cenários *_ped (ex.: calibrated_ped,original_ped).")
     parser.add_argument("--min-gradient-steps", type=int, default=5_000)
@@ -67,6 +69,8 @@ def main() -> None:
         raise ValueError("As seeds de treino e validação devem ser disjuntas.")
 
     config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
+    if args.pedestrian_reward_weight is not None:
+        config.setdefault("pedestrians", {})["reward_weight"] = float(args.pedestrian_reward_weight)
     settings = EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval, args.gamma)
     scenarios = [item.strip() for item in args.scenarios.split(",") if item.strip()] if args.scenarios else [args.scenario]
     environments = [Environment(config, base_dir, scenario, settings, state_version=args.state_version) for scenario in scenarios]
@@ -87,6 +91,7 @@ def main() -> None:
         "feature_source": "traci_oracle", "oracle_noise": asdict(environment.noise), "decision_interval_s": args.decision_interval,
         "gamma_per_second": args.gamma, "warmup_s": args.warmup_seconds, "control_s": args.control_seconds,
         "validation_seeds": validation_seeds, "double_dqn": args.double_dqn,
+        "pedestrian_reward_weight": config.get("pedestrians", {}).get("reward_weight"),
         "training_scenarios": [scenario or config["sumo"].get("default_scenario") for scenario in scenarios],
     }
     logs: list[dict[str, Any]] = []
