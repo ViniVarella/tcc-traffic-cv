@@ -25,6 +25,8 @@ from experiments.scenario_config import add_scenario_argument
 SUMMARY_KEYS = (
     "mean_waiting_time_seconds", "mean_travel_time_seconds", "arrived_vehicles", "throughput_vehicles_per_hour",
     "mean_queue_length", "mean_pending_vehicles", "final_pending_vehicles", "teleported_vehicles",
+    # Só nos cenários com pedestres (None nos demais).
+    "pedestrians_arrived", "pedestrian_mean_waiting_s", "pedestrian_p95_waiting_s", "pedestrian_max_waiting_s",
 )
 
 

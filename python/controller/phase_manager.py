@@ -57,6 +57,10 @@ class PhaseManager:
         """Retorna há quanto tempo a fase atual está ativa, em tempo simulado."""
         return max(0.0, float(sim_time) - self.current_phase.started_at)
 
+    def index_of(self, name: str) -> int:
+        """Índice SUMO da fase lógica ``name`` no perfil."""
+        return self._phase_index(name)
+
     def has_phase(self, name: str) -> bool:
         """Indica se o perfil mapeia a fase (as de pedestres só existem na rede com pedestres)."""
         try:

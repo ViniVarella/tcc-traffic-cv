@@ -12,6 +12,7 @@ from controller.rewards import RewardWeights
 from experiments.episode_runner import EpisodeSettings, Observer, Policy, RewardModel, incoming_lane_capacity, run_episode
 from sumo import SumoClient
 from sumo.emergency import EmergencySettings, EmergencyTraffic
+from sumo.pedestrian_metrics import PedestrianMetricsCollector
 from sumo.lane_feature_source import TraciLaneFeatureSource, noise_from_config
 from vision import build_state_encoder
 from vision.lane_features import KinematicsParameters, load_lane_geometries
@@ -31,7 +32,8 @@ class EpisodeObserver(Protocol):
 
 
 class Environment:
-    def __init__(self, config: dict[str, Any], base_dir: Path, scenario: str | None, settings: EpisodeSettings) -> None:
+    def __init__(self, config: dict[str, Any], base_dir: Path, scenario: str | None, settings: EpisodeSettings,
+                 state_version: int = 2) -> None:
         self.config = config
         self.base_dir = base_dir
         self.scenario = scenario
@@ -39,7 +41,10 @@ class Environment:
         self.geometries = load_lane_geometries(config)
         self.parameters = KinematicsParameters.from_config(config)
         self.noise = noise_from_config(config)
-        self.encoder = build_state_encoder(config, version=2)
+        # v2: rede com ou sem pedestres (as fases de pedestre contam como all-red);
+        # v3: só na rede com pedestres.
+        self.state_version = int(state_version)
+        self.encoder = build_state_encoder(config, version=self.state_version)
         self.reward_lanes = tuple(sorted({geometry.sumo_lane for geometry in self.geometries.values()}))
         self.reward_weights = RewardWeights.from_config(config)
         self.tls_id = str(config["traffic_light"]["id"])
@@ -77,6 +82,9 @@ class Environment:
         client = SumoClient.from_config(self.config, self.base_dir, seed_override=seed, scenario_override=self.scenario)
         client.start()
         try:
+            pedestrian_phase = client.pedestrian_link_count(self.tls_id) > 0
+            if self.state_version == 3 and not pedestrian_phase:
+                raise ValueError("O estado v3 exige um cenário com pedestres (ex.: calibrated_ped).")
             reward = RewardModel(self.reward_lanes, incoming_lane_capacity([client.get_lane_length(lane) for lane in self.reward_lanes]),
                                  self.reward_weights)
             if observer is None:
@@ -96,9 +104,11 @@ class Environment:
                 return None if preempt is None else preempt.target_green(requests)
 
             outcome = run_episode(
-                client=client, controller=DqnTrafficController(self.tls_id, self.config), observe=observe,
+                client=client, controller=DqnTrafficController(self.tls_id, self.config, pedestrian_phase=pedestrian_phase),
+                observe=observe,
                 encoder=self.encoder, policy=policy, reward=reward, settings=self.settings, learner=learner, on_step=on_step,
                 emergency=None if traffic is None else emergency_step,
+                pedestrians=PedestrianMetricsCollector(warmup_until_s=self.settings.warmup_s) if pedestrian_phase else None,
             )
             if traffic is not None:
                 outcome.metrics["emergency"] = {**traffic.summary(), "detection": emergency_detection}

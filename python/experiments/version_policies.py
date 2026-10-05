@@ -80,10 +80,13 @@ class VersionPolicy:
     description: str
     policy: Policy
     decision_interval_s: float
+    # Versão do estado que o ambiente codifica para a política (3 só com pedestres).
+    state_version: int = 2
 
 
-def build_version_policies(config: Mapping[str, Any], names: Sequence[str], v1_checkpoint: Path, v2_checkpoint: Path) -> list[VersionPolicy]:
-    unknown = [name for name in names if name not in VERSION_ORDER]
+def build_version_policies(config: Mapping[str, Any], names: Sequence[str], v1_checkpoint: Path, v2_checkpoint: Path,
+                           v3_checkpoint: Path | None = None) -> list[VersionPolicy]:
+    unknown = [name for name in names if name not in (*VERSION_ORDER, "v3")]
     if unknown:
         raise ValueError(f"Versões desconhecidas: {unknown}. Disponíveis: {', '.join(VERSION_ORDER)}.")
     margin = int(config.get("traffic_control", {}).get("switch_margin", 1))
@@ -100,6 +103,13 @@ def build_version_policies(config: Mapping[str, Any], names: Sequence[str], v1_c
             if agent.config.state_version != 2:
                 raise ValueError(f"{v2_checkpoint} não é um checkpoint de estado v2.")
             result.append(VersionPolicy(name, "DQN estado v2 (41 entradas)", DqnPolicy(agent), 5.0))
+        elif name == "v3":
+            if v3_checkpoint is None:
+                raise ValueError("A versão v3 exige um checkpoint (--v3-dqn-model).")
+            agent = DqnAgent.load(v3_checkpoint, device="cpu")
+            if agent.config.state_version != 3:
+                raise ValueError(f"{v3_checkpoint} não é um checkpoint de estado v3.")
+            result.append(VersionPolicy(name, "DQN estado v3 (44 entradas, com pedestres)", DqnPolicy(agent), 5.0, state_version=3))
         else:
             result.append(VersionPolicy(name, "max-pressure (referência)", MaxPressurePolicy(), 5.0))
     return result

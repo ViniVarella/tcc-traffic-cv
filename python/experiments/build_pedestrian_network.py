@@ -34,11 +34,29 @@ import xml.etree.ElementTree as ElementTree
 TLS_ID = "clusterJ0_J14_J2_J7"
 PEDESTRIAN_EDGES = ("E0", "E1", "E2", "E3", "E5", "E6")
 LANE_ID = re.compile(r'lane="(E\d+)_(\d+)"')
+# Conversões de duas faixas que se fundem numa só depois de uma faixa de
+# pedestre. O netconvert põe um ponto de espera interno por faixa antes da
+# travessia, e os dois cedem passagem um ao outro (deadlock e teleportes).
+# Com contPos="0" a espera fica na linha de retenção, como na rede sem pedestres.
+MERGING_TURNS = (("E3", "E1"),)
 
 
 def shift_lane_ids(text: str) -> str:
     """Renumera ``lane="E3_0"`` para ``lane="E3_1"`` (a calçada ocupa a faixa 0)."""
     return LANE_ID.sub(lambda match: f'lane="{match.group(1)}_{int(match.group(2)) + 1}"', text)
+
+
+def wait_at_stop_line(connections_xml: str, turns: Sequence[tuple[str, str]]) -> str:
+    """Acrescenta ``contPos="0"`` às conexões das conversões ``turns`` (XML simples do netconvert)."""
+    def patch(match: re.Match[str]) -> str:
+        element = match.group(0)
+        if "contPos=" in element:
+            return element
+        return element[:-2].rstrip() + ' contPos="0"/>'
+
+    for origin, target in turns:
+        connections_xml = re.sub(rf'<connection from="{origin}" to="{target}"[^>]*/>', patch, connections_xml)
+    return connections_xml
 
 
 def pedestrian_program(vehicle_states: Sequence[str], crossing_count: int) -> list[tuple[str, str]]:
@@ -130,9 +148,16 @@ def main() -> None:
 
     source, target = root / "Cruzamento.net.xml", root / "Cruzamento.ped.net.xml"
     with tempfile.TemporaryDirectory() as tmp:
-        raw = Path(tmp) / "ped.net.xml"
+        work = Path(tmp)
+        guessed = work / "guessed.net.xml"
         subprocess.run(["netconvert", "-s", str(source), "--sidewalks.guess", "--crossings.guess", "--walkingareas",
-                        "-o", str(raw)], check=True, capture_output=True)
+                        "-o", str(guessed)], check=True, capture_output=True)
+        subprocess.run(["netconvert", "-s", str(guessed), "--plain-output-prefix", str(work / "plain")],
+                       check=True, capture_output=True)
+        connections = work / "plain.con.xml"
+        connections.write_text(wait_at_stop_line(connections.read_text(encoding="utf-8"), MERGING_TURNS), encoding="utf-8")
+        raw = work / "ped.net.xml"
+        subprocess.run(["netconvert", "-c", str(work / "plain.netccfg"), "-o", str(raw)], check=True, capture_output=True, cwd=work)
         tree = ElementTree.parse(raw)
     original = ElementTree.parse(source).getroot().find(f"tlLogic[@id='{TLS_ID}']")
     tl = tree.getroot().find(f"tlLogic[@id='{TLS_ID}']")

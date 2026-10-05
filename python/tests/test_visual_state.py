@@ -69,7 +69,19 @@ class BuildStateEncoderTests(unittest.TestCase):
     def test_version_1_keeps_legacy_contract(self) -> None:
         self.assertEqual(build_state_encoder(SP_CONFIG, 1).state_size, 13)
         with self.assertRaises(ValueError):
-            build_state_encoder(SP_CONFIG, 3)
+            build_state_encoder(SP_CONFIG, 4)
+
+    def test_version_3_adds_pedestrian_phases_and_greens_until_pedestrian(self) -> None:
+        encoder = build_state_encoder(SP_CONFIG, 3)
+        self.assertEqual(encoder.state_size, 35 + 7 + 1 + 1)
+        self.assertEqual(encoder.feature_names[-3:], ("phase_6", "phase_elapsed", "greens_until_pedestrian"))
+        state = encoder.encode({}, phase_index=5, phase_elapsed_seconds=20.0, greens_until_pedestrian=3)
+        np.testing.assert_allclose(state[35:], [0, 0, 0, 0, 0, 1, 0, 0.5, 1.0])
+        self.assertAlmostEqual(float(encoder.encode({}, 0, 0.0, greens_until_pedestrian=1)[-1]), 1 / 3, places=6)
+        with self.assertRaises(ValueError):
+            encoder.encode({}, 0, 0.0)
+        with self.assertRaises(ValueError):
+            build_state_encoder(SP_CONFIG, 2).encode({}, 0, 0.0, greens_until_pedestrian=1)
 
 
 if __name__ == "__main__":

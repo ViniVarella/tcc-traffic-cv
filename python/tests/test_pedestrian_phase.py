@@ -4,8 +4,17 @@ from __future__ import annotations
 
 import unittest
 
+from pathlib import Path
+
+import yaml
+
 from controller import DqnTrafficController
-from controller.phase_manager import PhaseManager
+from controller.phase_manager import PhaseManager, PhaseState
+from experiments.episode_runner import encode_state
+from vision import build_state_encoder
+
+
+SP_CONFIG = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 
 
 PHASES = {"primary_green": 0, "primary_yellow": 1, "all_red": 2, "secondary_green": 3, "secondary_yellow": 4,
@@ -102,6 +111,18 @@ class PedestrianPhaseTests(unittest.TestCase):
         run_until(controller, time + 1, PhaseManager.SOUTH_GREEN)
         self.assertEqual(controller.greens_until_pedestrian(), 0)
         self.assertIsNone(DqnTrafficController("tls", CONFIG).greens_until_pedestrian())
+
+
+
+class EncodeStateTests(unittest.TestCase):
+    def test_v2_sees_pedestrian_phases_as_all_red_and_v3_sees_them_with_the_cycle(self) -> None:
+        controller = DqnTrafficController("tls", SP_CONFIG, pedestrian_phase=True)
+        pedestrian_green = PhaseState(PhaseManager.PEDESTRIAN_GREEN, 5, 0.0)
+        v2 = encode_state(build_state_encoder(SP_CONFIG, 2), controller, {}, pedestrian_green, 10.0)
+        self.assertEqual(list(v2[35:40]), [0, 0, 1, 0, 0])
+        v3 = encode_state(build_state_encoder(SP_CONFIG, 3), controller, {}, pedestrian_green, 10.0)
+        self.assertEqual(list(v3[35:42]), [0, 0, 0, 0, 0, 1, 0])
+        self.assertAlmostEqual(float(v3[-1]), 1.0)
 
 
 if __name__ == "__main__":

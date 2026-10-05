@@ -141,6 +141,7 @@ def run_episode(
     metrics: ExperimentMetricsCollector | None = None,
     on_step: Callable[[dict[str, Any]], None] | None = None,
     emergency: Callable[[float], str | None] | None = None,
+    pedestrians: Any | None = None,
 ) -> EpisodeOutcome:
     """Executa um episódio já iniciado em ``client``; ``learner`` ativa o aprendizado.
 
@@ -158,6 +159,8 @@ def run_episode(
         lane_metrics = client.get_incoming_lane_metrics(reward.lanes)
         metrics.observe(sim_time, client.get_simulation_events(), client.get_active_vehicle_metrics(),
                         pending_vehicles=int(lane_metrics["pending_vehicles"]), teleports=client.get_teleport_count())
+        if pedestrians is not None:
+            pedestrians.observe(sim_time, client.get_pedestrian_speeds())
         step_reward = reward(lane_metrics)
         lane_features = observe(sim_time)
         preempt_target = None if emergency is None else emergency(sim_time)
@@ -180,7 +183,7 @@ def run_episode(
                 outcome.missing_observations += 1
                 decision = controller.update_without_vision(sim_time)
             else:
-                last_state = encoder.encode(lane_features, phase.phase_index, elapsed)
+                last_state = encode_state(encoder, controller, lane_features, phase, elapsed)
                 if scheduler.is_decision_point(phase, sim_time):
                     _learn(learner, accumulator.close(last_state), outcome)
                     requested = int(policy(last_state, lane_features, phase))
@@ -201,7 +204,25 @@ def run_episode(
     if last_state is not None:
         _learn(learner, accumulator.close(last_state), outcome)
     outcome.metrics = metrics.summary()
+    if pedestrians is not None:
+        outcome.metrics.update(pedestrians.summary())
     return outcome
+
+
+def encode_state(encoder: Any, controller: DqnTrafficController, lane_features: Any, phase: Any, elapsed: float) -> np.ndarray:
+    """Codifica o estado do step para o encoder da política.
+
+    Encoders sem as fases de pedestre (v1/v2) veem o verde e a liberação de
+    pedestres como all-red (transição sem decisão); o v3 recebe também os
+    verdes que faltam até a fase de pedestres.
+    """
+    phase_index = phase.phase_index
+    phase_count = getattr(encoder, "phase_count", None)
+    if phase_count is not None and phase_index >= phase_count:
+        phase_index = controller.phase_manager.index_of(controller.phase_manager.ALL_RED)
+    if getattr(encoder, "pedestrian_cycle_greens", None) is not None:
+        return encoder.encode(lane_features, phase_index, elapsed, greens_until_pedestrian=controller.greens_until_pedestrian())
+    return encoder.encode(lane_features, phase_index, elapsed)
 
 
 def _learn(learner: DqnAgent | None, transition: Any, outcome: EpisodeOutcome) -> None:

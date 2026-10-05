@@ -8,7 +8,7 @@ import unittest
 
 import yaml
 
-from experiments.build_pedestrian_network import flows_xml, pedestrian_flows, pedestrian_program, shift_lane_ids
+from experiments.build_pedestrian_network import flows_xml, pedestrian_flows, pedestrian_program, shift_lane_ids, wait_at_stop_line
 
 
 CONFIG = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs" / "sp.yaml").read_text(encoding="utf-8"))
@@ -20,6 +20,15 @@ class BuilderTests(unittest.TestCase):
         text = '<laneAreaDetector id="e2_4" lane="E3_0" pos="33.67"/><laneAreaDetector id="e2_5" lane="E2_1"/>'
         self.assertEqual(shift_lane_ids(text),
                          '<laneAreaDetector id="e2_4" lane="E3_1" pos="33.67"/><laneAreaDetector id="e2_5" lane="E2_2"/>')
+
+    def test_merging_turn_waits_at_the_stop_line(self) -> None:
+        xml = ('<connection from="E3" to="E1" fromLane="1" toLane="1"/>\n'
+               '<connection from="E3" to="E5" fromLane="3" toLane="1"/>\n'
+               '<connection from="E3" to="E1" fromLane="2" toLane="1" contPos="0"/>')
+        patched = wait_at_stop_line(xml, [("E3", "E1")])
+        self.assertIn('<connection from="E3" to="E1" fromLane="1" toLane="1" contPos="0"/>', patched)
+        self.assertIn('<connection from="E3" to="E5" fromLane="3" toLane="1"/>', patched)
+        self.assertEqual(patched.count("contPos"), 2)
 
     def test_program_keeps_vehicle_links_and_adds_pedestrian_phases(self) -> None:
         program = pedestrian_program(VEHICLE_STATES, crossing_count=4)

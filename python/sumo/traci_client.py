@@ -190,6 +190,11 @@ class SumoClient:
         return sum(1 for links in traci.trafficlight.getControlledLinks(tls_id)
                    if links and str(links[0][0]).startswith(":"))
 
+    def get_pedestrian_speeds(self) -> dict[str, float]:
+        """Velocidade de cada pedestre na rede (vazio na rede sem pedestres)."""
+        self._ensure_started()
+        return {str(person_id): float(traci.person.getSpeed(person_id)) for person_id in traci.person.getIDList()}
+
     def get_lane_vehicle_positions(self, lane_id: str) -> list[tuple[str, float]]:
         """Retorna ``(id, posição da frente na lane em m)`` dos veículos da faixa lógica."""
         self._ensure_started()

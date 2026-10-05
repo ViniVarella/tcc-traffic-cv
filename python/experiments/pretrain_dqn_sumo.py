@@ -46,6 +46,8 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--epsilon-decay-fraction", type=float, default=0.5,
                         help="Fração das decisões estimadas do treino em que ε decai linearmente.")
     parser.add_argument("--double-dqn", action="store_true")
+    parser.add_argument("--state-version", type=int, choices=(2, 3), default=2,
+                        help="3 = estado com a fase de pedestres; exige cenários *_ped (ex.: calibrated_ped,original_ped).")
     parser.add_argument("--min-gradient-steps", type=int, default=5_000)
     parser.add_argument("--device", default="cpu", help="A MLP é pequena; CPU costuma ser mais rápida que MPS.")
     parser.add_argument("--checkpoint-output", type=Path, default=base_dir.parent / "results" / "models" / "dqn-v2-pretrain-last.pt")
@@ -67,21 +69,21 @@ def main() -> None:
     config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
     settings = EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval, args.gamma)
     scenarios = [item.strip() for item in args.scenarios.split(",") if item.strip()] if args.scenarios else [args.scenario]
-    environments = [Environment(config, base_dir, scenario, settings) for scenario in scenarios]
+    environments = [Environment(config, base_dir, scenario, settings, state_version=args.state_version) for scenario in scenarios]
     environment = environments[0]
     dqn = config["dqn"]
     agent = DqnAgent(DqnConfig(
         state_size=environment.encoder.state_size, hidden_size=int(dqn["hidden_size"]), gamma=args.gamma,
         learning_rate=float(dqn["learning_rate"]), batch_size=int(dqn["batch_size"]), replay_capacity=int(dqn["replay_capacity"]),
         min_replay_size=int(dqn["min_replay_size"]), target_update_interval=int(dqn["target_update_interval"]),
-        state_version=2, double_dqn=args.double_dqn,
+        state_version=args.state_version, double_dqn=args.double_dqn,
     ), device=args.device, seed=args.seed_start)
     # ~1 decisão a cada intervalo de verde disponível; a estimativa só dimensiona o decaimento de ε.
     estimated_decisions = int(args.episodes * args.control_seconds / (2 * args.decision_interval))
     policy = DqnPolicy(agent, EpsilonSchedule(args.epsilon_start, args.epsilon_end, int(args.epsilon_decay_fraction * estimated_decisions)))
     selector = CheckpointSelector(SelectionCriteria(min_gradient_steps=args.min_gradient_steps))
     metadata_base = {
-        "state_version": 2, "feature_names": list(environment.encoder.feature_names), "lane_order": [list(key) for key in SP_LANE_ORDER],
+        "state_version": args.state_version, "feature_names": list(environment.encoder.feature_names), "lane_order": [list(key) for key in SP_LANE_ORDER],
         "feature_source": "traci_oracle", "oracle_noise": asdict(environment.noise), "decision_interval_s": args.decision_interval,
         "gamma_per_second": args.gamma, "warmup_s": args.warmup_seconds, "control_s": args.control_seconds,
         "validation_seeds": validation_seeds, "double_dqn": args.double_dqn,
