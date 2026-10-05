@@ -294,6 +294,36 @@ steps, todos com visão; domain gap recalculado a partir do log `-filtro-centro`
 - A ação do DQN com features visuais coincide com a ação com features do
   oráculo em **71,1%** das 605 decisões.
 
+### Versões no ambiente novo — percepção visual (Unity, cenário original)
+
+Rodado em 2026-10-04, com o filtro corrigido e o mesmo protocolo do calibrado
+(seeds 201–203, 300 s + 1800 s, v2 = `dqn-v2-roi60-mix-pretrain-best.pt`,
+sem viaturas). `missing_frames = 0`. Arquivo:
+`results/evaluation/versoes-original-visual.json` (o resultado do ambiente de
+25 m foi preservado em `versoes-original-visual-ambiente-25m.json`).
+
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas | Oráculo: espera / chegadas |
+|---|---:|---:|---:|---:|---:|---:|---|
+| Linha de base (ciclo fixo) | 14,9 s | 37,3 s | 1431 | 37 | 50% | 0 | 14,9 s / 1431 |
+| v1 (heurística) | 4,6 s | 27,2 s | 1472 | 0 | 50% | 129 | 4,7 s / 1473 |
+| v1.1 (DQN estado v1) | 4,6 s | 27,3 s | 1474 | 0 | 50% | 127 | — |
+| v2 (DQN estado v2) | 4,9 s | 27,5 s | 1471 | 0 | 49% | 122 | 4,4 s / 1474 |
+| max-pressure | 6,1 s | 28,6 s | 1470 | 0 | 48% | 98 | 4,6 s / 1474 |
+
+Espera por seed (201/202/203): v2 4,9 / 5,0 / 4,7 s; v1 4,5 / 4,7 / 4,6 s;
+max-pressure 6,2 / 5,7 / 6,3 s.
+
+- Com demanda equilibrada, todas as versões adaptativas reduzem a espera do
+  ciclo fixo em 59–69% e escoam toda a demanda (fila de inserção zero).
+- A v2 com câmera fica 0,3 s atrás da v1 e da v1.1 (4,9 × 4,6 s), com as
+  mesmas chegadas: não piora com demanda equilibrada. Em relação ao oráculo,
+  perde 0,5 s, como no calibrado. A ação com features visuais coincide com a do
+  oráculo em 87,1% das 425 decisões (`domain-gap-roi60-original-v2.json`).
+- O max-pressure é a única versão que piora com a câmera (4,6 → 6,1 s): troca
+  menos (98 × 129 trocas) e deixa verdes mais longos que o necessário.
+- Junto com o calibrado: a v2 é a melhor versão quando a demanda é desigual
+  (−43% de espera, maior vazão) e empata com as demais quando é equilibrada.
+
 ### Correção: filtro da ROI de aproximação pela base da caixa (2026-10-03)
 
 A análise da subcontagem do Leste (log da v2 visual acima) mostrou:

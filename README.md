@@ -135,6 +135,22 @@ do oráculo em 85% das decisões. O max-pressure e a v1 ficam em 10,3–10,6 s,
 com mais veículos presos fora da rede. Detalhes e domain gap em
 [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 
+**Cenário original** (demanda equilibrada do netedit), mesmo protocolo, 0
+frames perdidos:
+
+| Versão | Espera (visual) | Chegadas (visual) | Fila de inserção (visual) | Espera (oráculo) |
+|---|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 14,9 s | 1431 | 37 | 14,9 s |
+| v1 (heurística) | 4,6 s | 1472 | 0 | 4,7 s |
+| v1.1 (DQN estado v1) | 4,6 s | 1474 | 0 | — |
+| v2 (DQN estado v2) | 4,9 s | 1471 | 0 | 4,4 s |
+| max-pressure (referência) | 6,1 s | 1470 | 0 | 4,6 s |
+
+Com demanda equilibrada, alternar rápido já é quase ótimo: as versões
+adaptativas reduzem a espera do ciclo fixo em 59–69% e escoam toda a demanda.
+A v2 fica 0,3 s atrás da v1, com as mesmas chegadas. Ou seja, a v2 é a melhor
+quando a demanda é desigual e empata quando é equilibrada.
+
 As tabelas abaixo são do **ambiente anterior** (câmeras antigas, ROIs de
 ~25 m, YOLO de uma classe) e ficam como registro; não se comparam com a de
 cima.
