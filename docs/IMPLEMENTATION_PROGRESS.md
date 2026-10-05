@@ -98,6 +98,54 @@ calibrado, com o Leste saturado, a fila de inserção cresce. A espera máxima d
 dois ciclos". A v2 (treinada sem pedestres) foi pior que o ciclo fixo num
 teste de 900 s (31 × 25 s de espera), o que motiva o estado v3.
 
+### Versões com pedestres (percepção oráculo, seeds 201–203, 300 s + 1800 s)
+
+v3 = `dqn-v3-ped-pretrain-best.pt` (pré-treino com `calibrated_ped` e
+`original_ped`, Double DQN, 40 episódios; melhor no episódio 39, escore
+−0,451 contra −0,472 do ciclo fixo e −0,541 do max-pressure na validação, e
+ainda subindo). v2 = `dqn-v2-roi60-mix-pretrain-best.pt`, treinada sem
+pedestres. 0 teleportes em todas as rodadas. Arquivos:
+`results/evaluation/versoes-{calibrated,original}_ped-oracle.json`.
+
+**Calibrado com pedestres**
+
+| Versão | Espera veículos | Chegadas | Fila de inserção | Trocas | Espera média ped. | p95 ped. | Máx. ped. |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Ciclo fixo | 25,7 s | 1326 | 290 | 0 | 64,0 s | 170 s | 179 s |
+| v1 | 55,6 s | 964 | 629 | 72 | 16,2 s | 57 s | 60 s |
+| v2 | 26,0 s | 1233 | 367 | 48 | 32,8 s | 96 s | 110 s |
+| v3 | 26,4 s | 1249 | 360 | 30 | 45,3 s | 134 s | 146 s |
+| max-pressure | 55,2 s | 965 | 628 | 72 | 16,7 s | 57 s | 60 s |
+
+**Original com pedestres**
+
+| Versão | Espera veículos | Chegadas | Fila de inserção | Trocas | Espera média ped. | p95 ped. | Máx. ped. |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Ciclo fixo | 32,3 s | 1260 | 224 | 0 | 64,4 s | 172 s | 180 s |
+| v1 | 49,3 s | 1043 | 417 | 69 | 16,8 s | 56 s | 63 s |
+| v2 | 28,6 s | 1301 | 188 | 56 | 27,1 s | 82 s | 93 s |
+| v3 | 27,0 s | 1289 | 193 | 26 | 48,7 s | 133 s | 149 s |
+| max-pressure | 44,1 s | 1123 | 357 | 68 | 19,4 s | 60 s | 66 s |
+
+Leitura:
+
+- **A regra acopla os pedestres à duração dos verdes.** Como a fase de
+  pedestres vem a cada dois ciclos e dura 45 s, quem troca rápido (v1 e
+  max-pressure, verdes no mínimo) chama a fase de pedestres muitas vezes:
+  pedestres esperam ~16 s, mas os veículos perdem tanto tempo que a espera
+  dobra (~55 s) e a fila de inserção passa de 600. Quem segura o verde (ciclo
+  fixo 40/40, v2, v3) faz o contrário: veículos ~26 s e pedestres 33–64 s.
+- **O v3 aprendeu a segurar o verde** (26–30 trocas, contra 48–56 da v2): com
+  a recompensa só dos veículos, espaçar a fase de pedestres é vantajoso. Isso
+  aumenta a espera dos pedestres (45–49 s, máximo ~150 s) sem ganho claro para
+  os veículos no calibrado (26,4 × 25,7 s do ciclo fixo); no original o v3 é o
+  melhor para os veículos (27,0 × 32,3 s).
+- **A v2, mesmo sem conhecer os pedestres, fica perto do v3 para os veículos e
+  bem melhor para os pedestres**, porque troca mais.
+- **Todos ficam saturados:** a fila de inserção final de 188–629 mostra que,
+  com 45 s de fase exclusiva a cada dois ciclos, a capacidade do cruzamento
+  fica abaixo da demanda nos dois cenários.
+
 ## Ambiente com ROIs de 60 m e preempção para emergências
 
 Status: câmeras, ROIs e preempção V2I concluídos (branch `feat/cameras-60m`,
