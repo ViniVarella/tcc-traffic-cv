@@ -146,6 +146,43 @@ Leitura:
   com 45 s de fase exclusiva a cada dois ciclos, a capacidade do cruzamento
   fica abaixo da demanda nos dois cenários.
 
+### v3 com a espera dos pedestres na recompensa
+
+Decisão do usuário (2026-10-05): manter a regra e incluir os pedestres na
+recompensa de treino. Nos cenários com pedestres a recompensa passa a ser
+`(1 − w)·veículos − w·min(1, Σ espera atual dos pedestres parados / ref.)`,
+com `w = 0,3` e ref. = 1200 s (p90 dessa soma com o ciclo fixo; com 600 s o
+termo saturava em 32% do tempo). Bloco `pedestrians:` do `sp.yaml`. A política
+continua sem ver o TraCI.
+
+Pré-treino igual ao anterior (`dqn-v3-pedrw-pretrain-best.pt`, 40 episódios,
+melhor no 39: escore −0,342 contra −0,407 do ciclo fixo e −0,386 do
+max-pressure com a recompensa nova). Avaliação no mesmo protocolo
+(`versoes-*_ped-oracle-v3pedrw.json`):
+
+| Cenário | Versão | Espera veículos | Chegadas | Fila de inserção | Trocas | Espera média ped. | Máx. ped. |
+|---|---|---:|---:|---:|---:|---:|---:|
+| calibrado | ciclo fixo | 25,7 s | 1326 | 290 | 0 | 64,0 s | 179 s |
+| calibrado | v2 | 26,0 s | 1233 | 367 | 48 | 32,8 s | 110 s |
+| calibrado | v3 (só veículos) | 26,4 s | 1249 | 360 | 30 | 45,3 s | 146 s |
+| calibrado | **v3 (veículos + pedestres)** | 27,3 s | 1230 | 381 | 34 | 39,9 s | 129 s |
+| original | ciclo fixo | 32,3 s | 1260 | 224 | 0 | 64,4 s | 180 s |
+| original | v2 | 28,6 s | 1301 | 188 | 56 | 27,1 s | 93 s |
+| original | v3 (só veículos) | 27,0 s | 1289 | 193 | 26 | 48,7 s | 149 s |
+| original | **v3 (veículos + pedestres)** | **25,6 s** | **1315** | **159** | 34 | 38,0 s | 122 s |
+
+- O termo de pedestres funcionou na direção esperada: o v3 troca mais (34 ×
+  26–30) e reduz a espera dos pedestres em 5–11 s, com espera máxima ~20 s
+  menor.
+- No **original**, o v3 com pedestres é o melhor para os veículos de todas as
+  versões (25,6 s, mais chegadas, menor fila) e domina o v3 anterior nos dois
+  critérios. A v2 ainda deixa os pedestres esperando menos (27 × 38 s).
+- No **calibrado**, a v2 é melhor que os dois v3 nos dois critérios (26,0 s e
+  32,8 s). O v3 não supera o ciclo fixo para os veículos neste cenário.
+- Nenhuma versão é a melhor nos dois critérios ao mesmo tempo: o custo de 45 s
+  exclusivos a cada dois ciclos domina o resultado, e todas terminam com fila
+  de inserção. O pré-treino ainda melhorava no fim (40 episódios).
+
 ## Ambiente com ROIs de 60 m e preempção para emergências
 
 Status: câmeras, ROIs e preempção V2I concluídos (branch `feat/cameras-60m`,
