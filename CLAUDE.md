@@ -143,6 +143,31 @@ usa chegadas Poisson (`period="exp(...)"`) e inserção realista
 - Alterar `sp.yaml` pode invalidar calibrações de câmera, o state encoder e
   checkpoints.
 
+## Pedestres (cenários `calibrated_ped` e `original_ped`)
+
+- Rede `sumo/sp/Cruzamento.ped.net.xml`, gerada por
+  `experiments.build_pedestrian_network` a partir da rede sem pedestres (que
+  não muda): calçadas, 4 faixas de pedestre (links 10–13 do semáforo; os de
+  veículos continuam 0–9), `personFlow` Poisson entre as calçadas (300/h) e
+  `.ped.add.xml`/`.ped.sumocfg`. Não edite a rede à mão: rode o gerador.
+- A calçada vira a faixa 0 de cada via e as de veículos ganham +1. O perfil e
+  as ROIs continuam numerando só faixas de veículos (`E3_0`);
+  `SumoClient.vehicle_lane_id` traduz para o ID real em qualquer rede.
+- A conversão Sul → Leste funde duas faixas numa só depois da faixa de
+  pedestre; o gerador põe `contPos="0"` nessas conexões, senão os dois pontos
+  de espera internos cedem um ao outro (deadlock e teleportes).
+- Fase exclusiva de pedestres (fases 5 e 6 do programa; bloco `pedestrians:`
+  do `sp.yaml`): todos os veículos no vermelho, a cada `every_cycles` = 2
+  ciclos (L/O → Sul → L/O → Sul → pedestres), verde de 41 s (maior "L" da
+  rede, 48,05 m, a 1,2 m/s) + 3 s de liberação. É obrigatória como o
+  amarelo: a política não a encerra, e a preempção espera o fim dela (uma
+  fase de pedestres ainda não iniciada é adiada pela viatura).
+- `Environment` detecta a rede com pedestres pelo semáforo
+  (`pedestrian_link_count`) e liga a fase e as métricas de pedestre
+  (`sumo/pedestrian_metrics.py`).
+- Escopo atual: só SUMO. A Unity ainda não renderiza pedestres nem sinais de
+  pedestre.
+
 ## Contrato do DQN
 
 Há duas versões de estado (`DqnConfig.state_version`; checkpoints sem o campo
@@ -153,7 +178,11 @@ carregam como v1):
   `run_visual_controller.py` (decide a cada step). Os scripts v2 são
   `pretrain_dqn_sumo`, `evaluate_policies_sumo`, `run_visual_policy` e
   `finetune_dqn_visual`, todos sobre `sumo_environment.Environment`.
-- **v2 (atual, 41 entradas):** por faixa, `LaneFeatures` = contagem, parados,
+- **v3 (44 entradas, só cenários com pedestres):** o estado v2 com o one-hot
+  das 7 fases (inclui verde e liberação de pedestres) + "verdes até a fase
+  de pedestres" (÷ 3). v1/v2 rodam na rede com pedestres vendo essas fases
+  como all-red (`episode_runner.encode_state`).
+- **v2 (41 entradas):** por faixa, `LaneFeatures` = contagem, parados,
   ocupação, velocidade média e espera, normalizados pela capacidade da ROI
   (comprimento / 7,5 m), + fase one-hot + tempo (`LaneFeatureStateEncoder`,
   `build_state_encoder(config, versão)`).
@@ -305,6 +334,16 @@ Todos a partir de `python/`:
 
 # Ajuste fino visual a partir do pré-treino (Unity em Play Mode; horas)
 ../.venv/bin/python -m experiments.finetune_dqn_visual --init-checkpoint ../results/models/dqn-v2-pretrain-best.pt
+
+# Rede com pedestres (regenera os arquivos .ped do cenário SP)
+../.venv/bin/python -m experiments.build_pedestrian_network
+
+# Pré-treino do DQN v3 (com pedestres)
+../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated_ped,original_ped --state-version 3 \
+  --checkpoint-output ../results/models/dqn-v3-ped-pretrain-last.pt --best-checkpoint-output ../results/models/dqn-v3-ped-pretrain-best.pt
+
+# Versões com pedestres (oráculo); v3 só entra se pedido
+../.venv/bin/python -m experiments.compare_versions --scenario calibrated_ped --perception oracle --versions baseline,v1,v2,v3,max_pressure
 
 # Preempção para emergências (mesma agenda de viaturas; só SUMO)
 ../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated

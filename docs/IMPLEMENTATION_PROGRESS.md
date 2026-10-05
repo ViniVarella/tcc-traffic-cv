@@ -30,9 +30,73 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Câmeras reposicionadas, ROIs de 60 m e preempção para veículos de
   emergência por aviso V2I: concluídos em 2026-09-30 — seção **Ambiente com
   ROIs de 60 m e preempção** abaixo.
-- Pendentes: dataset e YOLO com a classe ambulância (ângulos novos das
-  câmeras), detecção visual das viaturas e avaliações visuais no ambiente
-  novo.
+- YOLO de duas classes, detecção visual das viaturas, correção do filtro da
+  ROI e avaliações visuais do ambiente de 60 m: concluídos em 2026-10-04.
+- Pedestres no SUMO (rede, fase exclusiva a cada dois ciclos, estado v3,
+  métricas): em andamento desde 2026-10-05 — seção **Pedestres** abaixo.
+  Unity e câmeras com pedestres ficam para a etapa seguinte.
+
+## Pedestres (fase exclusiva a cada dois ciclos)
+
+Status: rede, fase de pedestres, estado v3 e métricas implementados em
+2026-10-05 (branch `feat/pedestres`); só SUMO. Decisões do usuário: fase
+exclusiva (todos os veículos no vermelho, todas as faixas verdes) a cada dois
+ciclos; verde que cubra a travessia em "L" a 1,2 m/s; nova versão de estado.
+
+### Rede
+
+`experiments.build_pedestrian_network` gera, a partir da rede atual (que não
+muda), `Cruzamento.ped.net.xml` (`netconvert --sidewalks.guess
+--crossings.guess`), os detectores E2 nas faixas renumeradas, os fluxos de
+pedestres e os `.sumocfg` dos cenários `calibrated_ped` e `original_ped`.
+
+- A geometria das faixas de veículos e os links 0–9 do semáforo são os mesmos;
+  as travessias são os links 10–13: Leste 13,0 m, Sul 12,8 m, Oeste 11,2 m,
+  Norte 12,0 m.
+- A calçada vira a faixa 0 de cada via (`E3_0` → `E3_1`).
+  `SumoClient.vehicle_lane_id` traduz o ID lógico do perfil, então ROIs,
+  recompensa e oráculo funcionam nas duas redes.
+- Demanda sintética (o drone não mediu pedestres): 300 pedestres/h, chegadas
+  Poisson divididas igualmente entre os 30 pares de calçadas.
+- **Deadlock corrigido:** as duas faixas de conversão Sul → Leste se fundem
+  numa só depois da faixa de pedestre Leste. O netconvert criou um ponto de
+  espera interno por faixa antes da travessia, e os dois cediam passagem um ao
+  outro: 6–12 teleportes por episódio de 1800 s. Com `contPos="0"` nessas
+  conexões a espera fica na linha de retenção, como na rede sem pedestres:
+  0 teleportes. Geometria, links e travessias não mudam.
+
+### Fase de pedestres
+
+| Esquina | Travessia + esquina + travessia | Verde a 1,2 m/s |
+|---|---|---:|
+| Nordeste (Leste + Norte) | 13,0 + 20,3 + 12,0 = 45,3 m | 38 s |
+| Sudeste (Leste + Sul) | 13,0 + 9,9 + 12,8 = 35,7 m | 30 s |
+| **Sudoeste (Sul + Oeste)** | **12,8 + 24,0 + 11,2 = 48,05 m** | **41 s** |
+| Noroeste (Oeste + Norte) | 11,2 + 12,0 + 12,0 = 35,2 m | 30 s |
+
+- Sequência: L/O → Sul → L/O → Sul → all-red (1 s) → verde de pedestres
+  (41 s, o maior "L") → liberação em vermelho total (3 s) → L/O.
+- Obrigatória como o amarelo: a política não a encerra nem a pula. A
+  preempção não a interrompe; uma viatura que chega quando ela ainda não
+  começou passa à frente, e a fase vem na próxima oportunidade.
+- Estado v3 (44 entradas): v2 + one-hot das 7 fases + verdes até a fase de
+  pedestres. v1/v2 continuam rodando na rede com pedestres, vendo as fases de
+  pedestre como all-red.
+- Métricas novas: espera média, p95 e máxima dos pedestres (steps parados até
+  sair da rede), pedestres atendidos e na rede ao fim.
+
+### Primeiras medições (ciclo fixo, só SUMO, seeds 201–203, 300 s + 1800 s)
+
+| Cenário calibrado | Espera dos veículos | Chegadas | Fila de inserção final | Espera média dos pedestres | Espera máx. dos pedestres |
+|---|---:|---:|---:|---:|---:|
+| sem pedestres | 16,1 s | 1503 | 97 | — | — |
+| com pedestres | 25,4–26,3 s | 1281–1364 | 265–309 | 61–66 s | ~180 s |
+
+A fase de pedestres tira ~45 s de cada dois ciclos dos veículos; no cenário
+calibrado, com o Leste saturado, a fila de inserção cresce. A espera máxima de
+~180 s corresponde a quase dois ciclos inteiros: é o custo da regra "a cada
+dois ciclos". A v2 (treinada sem pedestres) foi pior que o ciclo fixo num
+teste de 900 s (31 × 25 s de espera), o que motiva o estado v3.
 
 ## Ambiente com ROIs de 60 m e preempção para emergências
 
