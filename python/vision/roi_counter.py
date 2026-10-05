@@ -14,20 +14,33 @@ def _bbox_center(bbox: list[float]) -> tuple[float, float]:
     return ((x1 + x2) / 2.0, (y1 + y2) / 2.0)
 
 
+def _bbox_bottom_center(bbox: list[float]) -> tuple[float, float]:
+    """Centro da base da bbox xyxy (mesmo ponto de ``lane_geometry.bbox_ground_point``)."""
+    x1, _, x2, y2 = bbox
+    return ((x1 + x2) / 2.0, float(y2))
+
+
 def filter_detections_to_roi(
     detections: list[dict[str, Any]],
     roi: list[list[int | float]],
+    anchor: str = "center",
 ) -> list[dict[str, Any]]:
-    """Mantém somente detecções cujo centro está na ROI principal.
+    """Mantém somente detecções cujo ponto-âncora está na ROI principal.
 
-    Corresponde à etapa ``filter_detections_to_polygon(..., CENTER)`` do
-    SimJamCV e deve ocorrer antes de entregar detecções ao ByteTrack.
+    ``center`` corresponde à etapa ``filter_detections_to_polygon(..., CENTER)``
+    do SimJamCV. ``bottom_center`` usa o mesmo ponto de solo da homografia das
+    faixas: num veículo distante visto de lado, o centro da caixa cai fora do
+    polígono embora a base esteja na faixa, e o filtro por centro apagava os
+    últimos ~10 m das ROIs. Deve ocorrer antes de entregar detecções ao ByteTrack.
     """
+    if anchor not in ("center", "bottom_center"):
+        raise ValueError("anchor deve ser 'center' ou 'bottom_center'.")
+    point = _bbox_center if anchor == "center" else _bbox_bottom_center
     polygon = np.asarray(roi, dtype=np.int32)
     return [
         detection
         for detection in detections
-        if cv2.pointPolygonTest(polygon, _bbox_center(detection["bbox"]), measureDist=False) >= 0
+        if cv2.pointPolygonTest(polygon, point(detection["bbox"]), measureDist=False) >= 0
     ]
 
 

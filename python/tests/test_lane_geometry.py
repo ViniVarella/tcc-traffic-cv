@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 import yaml
 
-from experiments.check_lane_geometry import image_point_to_ground, measure_lane_rois
+from experiments.check_lane_geometry import ground_to_image_point, image_point_to_ground, measure_lane_rois
 from vision.camera_calibration import load_camera_calibration
 from vision.lane_geometry import LaneHomography, bbox_ground_point, order_lane_quad
 
@@ -92,6 +92,12 @@ class CalibratedLaneExtentTests(unittest.TestCase):
         np.testing.assert_allclose(image_point_to_ground(pose, 16 / 9, 0.5, 0.5), (3.0, -4.0), atol=1e-9)
         # Topo da imagem aponta para +z da Unity (= +y do SUMO) quando a câmera olha para baixo.
         self.assertGreater(image_point_to_ground(pose, 16 / 9, 0.5, 0.0)[1], -4.0)
+
+    def test_ground_to_image_inverts_image_to_ground(self) -> None:
+        pose = {"fieldOfView": 26.0, "position": {"x": -1.63, "y": 8.0, "z": -6.08}, "rotationEulerDegrees": {"x": 17.08, "y": 176.74, "z": 0.0}}
+        for u, v in ((0.5, 0.5), (0.1, 0.9), (0.8, 0.2)):
+            x, y = image_point_to_ground(pose, 16 / 9, u, v)
+            np.testing.assert_allclose(ground_to_image_point(pose, 16 / 9, x, y), (u, v), atol=1e-9)
 
     def test_sp_yaml_lane_geometry_matches_unity_calibration(self) -> None:
         config = yaml.safe_load((REPO_DIR / "python" / "configs" / "sp.yaml").read_text(encoding="utf-8"))

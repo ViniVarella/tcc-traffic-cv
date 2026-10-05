@@ -17,9 +17,11 @@ from time import sleep
 from typing import Any
 
 from bridge import FrameBundleCollector
+from controller.preemption import EmergencyRequest
 from sumo import SumoStateExtractor
 from sumo.lane_feature_source import TraciLaneFeatureSource
 from vision.lane_features import LaneFeatures, LaneObservation
+from vision.visual_emergency import VisualEmergencyDetector, VisualEmergencySettings, emergency_sightings
 from vision.visual_lane_features import VisualLaneFeatureSource
 from vision.visual_pipeline import VisualPipeline
 
@@ -46,6 +48,7 @@ class UnityVisualObserver:
         send_interval_s: float,
         active_from_s: float = 0.0,
         shadow_factory: Callable[[int], TraciLaneFeatureSource] | None = None,
+        emergency_detector: VisualEmergencyDetector | None = None,
     ) -> None:
         self.bridge = bridge
         self.pipeline = pipeline
@@ -54,6 +57,8 @@ class UnityVisualObserver:
         self.send_interval_s = float(send_interval_s)
         self.active_from_s = float(active_from_s)
         self.shadow_factory = shadow_factory
+        self.emergency_detector = emergency_detector
+        self._emergency: tuple[float, list[EmergencyRequest]] | None = None
         self.state_extractor = SumoStateExtractor()
         # step_id cresce entre episódios para que frames atrasados de um episódio
         # anterior nunca sejam associados a um step novo.
@@ -65,6 +70,9 @@ class UnityVisualObserver:
     def begin_episode(self, client: Any, seed: int) -> Callable[[float], dict[tuple[str, str], LaneFeatures] | None]:
         self.pipeline.reset()
         self.visual_source.reset()
+        if self.emergency_detector is not None:
+            self.emergency_detector.reset()
+        self._emergency = None
         shadow = None if self.shadow_factory is None else self.shadow_factory(seed)
         collector = FrameBundleCollector(set(self.pipeline.camera_ids))
         self.last_record = None
@@ -94,28 +102,44 @@ class UnityVisualObserver:
                           flush=True)
                 features = None
                 visual_observations: dict[str, list[LaneObservation]] = {}
+                sightings = None
             else:
                 self.missing_streak = 0
-                features = self.visual_source.observe(self.pipeline.process_bundle(bundle), sim_time)
+                results = self.pipeline.process_bundle(bundle)
+                features = self.visual_source.observe(results, sim_time)
                 visual_observations = self.visual_source.last_observations
+                sightings = emergency_sightings(results, self.visual_source, self.visual_source.geometries)
+            emergency: list[EmergencyRequest] = []
+            if self.emergency_detector is not None:
+                emergency = self.emergency_detector.update(sightings, sim_time)
+                self._emergency = (sim_time, emergency)
             self.last_record = {
                 "step_id": step_id, "sim_time": sim_time, "seed": seed,
                 "visual": features_record(features), "oracle": features_record(oracle),
                 "visual_observations": observations_record(visual_observations),
                 "oracle_observations": None if shadow is None else observations_record(shadow.last_observations),
+                "emergency_sightings": sightings, "emergency_requests": [asdict(request) for request in emergency],
             }
             return features
 
         return observe
 
+    def emergency_requests(self, sim_time: float) -> list[EmergencyRequest]:
+        """Pedidos visuais de preempção do step atual (vazio antes da visão ligar)."""
+        if self._emergency is None or self._emergency[0] != sim_time:
+            return []
+        return self._emergency[1]
+
 
 def add_vision_arguments(parser: Any) -> None:
     """Argumentos de câmera/YOLO/ByteTrack compartilhados pelos scripts visuais v2."""
     parser.add_argument("--camera-ids", default="south,east,west")
-    parser.add_argument("--model", default="../runs/results/models/yolov8n-unity-run-002-mask/weights/best.pt")
-    parser.add_argument("--classes", default="0", help="O detector ajustado tem uma classe; use 2,3,5,7 só para pesos COCO.")
+    parser.add_argument("--model", default="../runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt")
+    parser.add_argument("--classes", default="0,1",
+                        help="Detector ajustado: 0 vehicle, 1 emergency (as duas entram nas contagens). "
+                             "Pesos de uma classe (run-002): 0; pesos COCO: 2,3,5,7.")
     parser.add_argument("--confidence", type=float, default=0.15)
-    parser.add_argument("--image-size", type=int, default=1280)
+    parser.add_argument("--image-size", type=int, default=960, help="Mesmo tamanho do treino do detector de duas classes.")
     parser.add_argument("--frame-rate", type=float, default=1.0)
     parser.add_argument("--track-match-threshold", type=float, default=0.6)
     parser.add_argument("--send-interval", type=float, default=0.1)
@@ -142,6 +166,7 @@ def build_unity_observer(config: dict[str, Any], base_dir: Any, args: Any, envir
         bridge=bridge, pipeline=pipeline, visual_source=visual_source, tls_id=environment.tls_id,
         send_interval_s=args.send_interval, active_from_s=max(0.0, environment.settings.warmup_s - args.prime_seconds),
         shadow_factory=None if args.no_oracle_shadow else environment.oracle_source,
+        emergency_detector=VisualEmergencyDetector(sorted(calibrations), VisualEmergencySettings.from_config(config)),
     )
 
 

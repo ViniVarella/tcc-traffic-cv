@@ -27,7 +27,379 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   comparação no mesmo ambiente e o registro histórico estão na seção seguinte.
 - DQN v2 (features por faixa, pré-treino só SUMO e avaliação visual):
   concluído em 2026-09-29 — seção **DQN v2** abaixo.
-- Pendente (opcional): um ajuste fino visual mais robusto.
+- Câmeras reposicionadas, ROIs de 60 m e preempção para veículos de
+  emergência por aviso V2I: concluídos em 2026-09-30 — seção **Ambiente com
+  ROIs de 60 m e preempção** abaixo.
+- Pendentes: dataset e YOLO com a classe ambulância (ângulos novos das
+  câmeras), detecção visual das viaturas e avaliações visuais no ambiente
+  novo.
+
+## Ambiente com ROIs de 60 m e preempção para emergências
+
+Status: câmeras, ROIs e preempção V2I concluídos (branch `feat/cameras-60m`,
+2026-09-30). **Muda o ambiente:** os resultados da seção DQN v2 abaixo foram
+obtidos com as ROIs de ~25 m e não se comparam com os desta seção.
+
+### Câmeras e ROIs
+
+- As câmeras antigas ficavam a ~5 m de altura, na mesma altura das caixas dos
+  semáforos, que cobriam parte das faixas, e viam só ~25 m de cada uma.
+- As poses novas (menus *Traffic Vision > Cameras > Create SP … Camera*)
+  foram calculadas a partir da geometria das lanes e dos postes. Cada câmera
+  fica 15–30 m depois da linha de retenção, a 6–9 m de altura, mirando no
+  meio do trecho de 60 m. A oclusão pelos postes foi medida por área na
+  imagem, com folga para a carroceria: 0%.
+- As ROIs de faixa foram desenhadas na linha de retenção e estendidas por
+  cálculo até **60,0 m** em todas as faixas (`experiments.extend_lane_rois`,
+  importadas na cena pelo menu *Import SP Calibration JSON*). A borda
+  distante fica a ~8% do topo da imagem; um carro a 60 m tem ~31–53 px de
+  altura. A capacidade de cada ROI passou de ~3,4 para 8 veículos parados.
+- O YOLO atual foi treinado com os ângulos antigos e precisa ser retreinado.
+
+### Detecção visual de viaturas (segunda fonte de preempção)
+
+Status: implementada e avaliada em malha fechada em 2026-10-02 (resultados no
+fim desta seção).
+
+- **Regra** (`vision/visual_emergency.py`): por aproximação, não por
+  `track_id`. A 1 fps uma viatura a ~14 m/s cruza os 60 m da ROI em ~4 frames,
+  e o ByteTrack não mantém a identidade dela com segurança. Há viatura quando
+  algum objeto da classe `emergency` cai numa ROI de faixa em
+  `confirm_frames = 2` frames seguidos. A distância até a linha é a posição
+  na ROI (mesma homografia das features) + `roi_start_m`. O tempo até a linha
+  usa a velocidade medida entre frames, com piso na metade da velocidade
+  livre, a mesma regra do V2I. Sem ver a viatura (saiu da ROI rumo à linha,
+  ficou oculta ou faltou frame), o pedido continua por esse tempo +
+  `hold_margin_s = 3 s` e então se encerra. O pedido entra na mesma
+  `EmergencyPreemption` do V2I.
+- **Fontes comparadas:** `v2i`, `vision` e `both` (união). Na mesma agenda,
+  política e percepção das features, muda só a fonte do pedido.
+- **Métricas novas** por viatura e por episódio: antecedência do V2I e da
+  visão até a linha, viaturas detectadas pela visão, eventos visuais e
+  alarmes falsos (evento sem viatura na aproximação). Em
+  `sem_preempcao` com a Unity, a visão também é medida, sem agir.
+- **Teste offline** nos frames capturados do run-304 (sem preempção, YOLO +
+  ByteTrack sobre os JPEGs): as 10 passagens de viatura pelas ROIs foram
+  detectadas, sem evento falso. A distância visual fica ~1 m acima da real.
+  A primeira detecção ocorre a ≤ 55 m, e o pedido confirmado sai a ~40 m da
+  linha: ~3–4 s em velocidade livre, menos que amarelo + all-red (4 s). Por
+  isso se espera que a visão sozinha reduza o atraso das viaturas, mas não o
+  elimine como o V2I (que avisa ~15 s antes de a viatura entrar na rede).
+  Viaturas paradas na fila dentro da ROI são vistas e pedem passagem.
+- **Limitações:** uma viatura por aproximação de cada vez; a visão não vê
+  viaturas antes da ROI.
+
+```bash
+# Unity em Play Mode (SPImport); ~45 min por seed, política e modo
+../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated --perception visual \
+  --versions v2 --seeds 201,202,203
+```
+
+#### Resultado em malha fechada (percepção visual)
+
+Mesmo ambiente para os quatro modos: cenário calibrado, política v2
+(`dqn-v2-roi60-mix-pretrain-best.pt`, pré-treinado nas ROIs de 60 m com os dois cenários),
+percepção visual (YOLO de duas classes + ByteTrack,
+1 fps), seeds 201–203, aquecimento 300 s + 1800 s, a mesma agenda de 30
+viaturas. Muda só a fonte do pedido. `missing_frames = 0`. Arquivo:
+`results/evaluation/preempcao-calibrated-visual.json`.
+
+Rodado de novo em 2026-10-03, depois da correção do filtro da ROI de
+aproximação (seção "Correção" abaixo).
+
+| Modo | Perda média da viatura | Perda máx. | Sem parar | Espera do tráfego | Chegadas | Fila de inserção |
+|---|---|---|---|---|---|---|
+| sem preempção | 13,2 s | 26,2 s | 37% | 9,4 s | 1608 | 8 |
+| V2I | 1,4 s | 5,6 s | 100% | 10,5 s | 1606 | 11 |
+| visão | 4,2 s | 19,5 s | 80% | 9,9 s | 1605 | 11 |
+| V2I + visão | 1,2 s | 4,0 s | 100% | 11,3 s | 1609 | 6 |
+
+Perda média da viatura por seed (201/202/203): sem 12,0 / 13,0 / 14,6 s;
+V2I 1,8 / 1,2 / 1,2 s; visão 6,2 / 2,5 / 3,7 s; ambos 1,3 / 1,0 / 1,3 s.
+
+- **Detecção visual:** 30/30 viaturas detectadas e 0 alarmes falsos em 30
+  eventos, em todos os modos.
+- **Visão sozinha** reduz a perda média em 68% (13,2 → 4,2 s), e 80% das
+  viaturas cruzam sem parar (37% sem preempção). Não zera o atraso: a
+  antecedência média até a linha é de 6,7 s, contra ~30 s do V2I, e uma viatura
+  que chega no vermelho ainda espera amarelo + all-red (4 s) e a fila à frente.
+  Custa +0,5 s na espera média do tráfego.
+- **V2I** é a melhor fonte isolada (1,4 s, 100% sem parar); custa +1,1 s.
+- **V2I + visão** é o melhor modo (1,2 s, perda máxima 4,0 s, 100% sem parar),
+  igual ao V2I dentro da variação entre seeds. A visão serve de redundância
+  quando o aviso V2I falha.
+- A antecedência da visão depende do modo: sem preempção (16,1 s) as viaturas
+  ficam paradas na fila dentro da ROI e são vistas por mais tempo.
+
+#### Antes da correção do filtro (2026-10-02, registro)
+
+Arquivo: `results/evaluation/preempcao-calibrated-visual-filtro-centro.json`.
+
+| Modo | Perda média da viatura | Perda máx. | Sem parar | Espera do tráfego | Chegadas |
+|---|---|---|---|---|---|
+| sem preempção | 15,8 s | 52,6 s | 37% | 10,3 s | 1580 |
+| V2I | 1,2 s | 3,8 s | 97% | 11,7 s | 1592 |
+| visão | 7,2 s | 25,8 s | 53% | 10,7 s | 1572 |
+| V2I + visão | 1,4 s | 6,9 s | 100% | 11,7 s | 1592 |
+
+- **Detecção visual:** 30/30 viaturas detectadas e 0 alarmes falsos em 30
+  eventos, em todos os modos.
+- **Visão sozinha** reduz a perda média em ~55% (15,8 → 7,2 s), mas não a zera:
+  o pedido sai a ~40 m da linha, e a antecedência média até a linha foi 6,9 s,
+  contra ~30 s do V2I. Quando a viatura chega no vermelho, amarelo + all-red
+  (4 s) e a fila à frente ainda a atrasam. Custa pouco ao tráfego (+0,4 s na
+  espera média).
+- **V2I** continua sendo a melhor fonte (1,2 s); custa +1,4 s na espera média.
+- **V2I + visão** fica igual ao V2I (diferenças dentro da variação entre
+  seeds) e foi o único modo em que 100% das viaturas cruzaram sem parar. A
+  visão serve de redundância quando o aviso V2I falha.
+- A antecedência da visão depende do modo. Sem preempção (14,2 s)
+  as viaturas ficam paradas na fila dentro da ROI e são vistas por mais tempo.
+  A fila de inserção no fim do episódio varia muito entre seeds (0–87) e não
+  serve para comparar os modos.
+
+### Versões no ambiente novo (percepção oráculo, seeds 201–203, 1800 s)
+
+A v2 foi pré-treinada de novo para as ROIs de 60 m
+(`dqn-v2-roi60-pretrain-best.pt`: episódio 34, escore −0,058 contra −0,314 do
+ciclo fixo e −0,300 do max-pressure).
+
+| Versão | Calibrado: espera | Chegadas | Fila de inserção | Original: espera | Chegadas |
+|---|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 16,1 s | 1503 | 97 | 14,9 s | 1431 |
+| v1 (heurística) | 10,3 s | 1486 | 117 | 4,7 s | 1473 |
+| v1.1 (DQN estado v1) | 12,9 s | 1312 | 289 | 4,6 s | 1474 |
+| v2 (DQN estado v2) | 10,1 s | 1602 | 0 | 8,3 s | 1469 |
+| max-pressure | 10,8 s | 1492 | 108 | 4,6 s | 1474 |
+
+- Com ROIs maiores, a v1 e o max-pressure passam a enxergar filas longas e
+  melhoram no calibrado; a v2 continua a única que zera a fila de inserção.
+- **No cenário original, essa v2 piorou** (8,3 s, contra 4,6 s das demais):
+  dava 64% do verde ao Leste mesmo com demanda equilibrada, porque treinou só
+  no cenário calibrado.
+
+**v2 pré-treinada com os dois cenários** (`--scenarios calibrated,original`,
+episódios alternados, validação nos dois; `dqn-v2-roi60-mix-pretrain-best.pt`,
+episódio 34). É a v2 de referência do ambiente novo:
+
+| Versão | Calibrado: espera | Chegadas | Fila de inserção | Original: espera | Chegadas |
+|---|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 16,1 s | 1503 | 97 | 14,9 s | 1431 |
+| v1 (heurística) | 10,3 s | 1486 | 117 | 4,7 s | 1473 |
+| v2 treinada só no calibrado | 10,1 s | 1602 | 0 | 8,3 s | 1469 |
+| **v2 treinada nos dois cenários** | **8,6 s** | **1603** | **4** | **4,4 s** | **1474** |
+| max-pressure | 10,8 s | 1492 | 108 | 4,6 s | 1474 |
+
+Treinar com os dois cenários melhorou a v2 nos dois: no calibrado, reduz a
+espera em 1,5 s mantendo as chegadas; no original, passa de pior a melhor.
+
+### Versões no ambiente novo — percepção visual (Unity, cenário calibrado)
+
+Rodado em 2026-10-03, depois da correção do filtro da ROI de aproximação
+(próxima seção): `compare_versions --scenario calibrated --perception visual`,
+seeds 201–203, 300 s + 1800 s, YOLO de duas classes, v2 =
+`dqn-v2-roi60-mix-pretrain-best.pt`, sem viaturas. `missing_frames = 0`.
+Arquivo: `results/evaluation/versoes-calibrated-visual.json`.
+
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas | Oráculo: espera / chegadas / fila |
+|---|---:|---:|---:|---:|---:|---:|---|
+| Linha de base (ciclo fixo) | 16,1 s | 36,2 s | 1503 | 97 | 50% | 0 | 16,1 s / 1503 / 97 |
+| v1 (heurística) | 10,3 s | 33,9 s | 1488 | 112 | 59% | 112 | 10,3 s / 1486 / 117 |
+| v1.1 (DQN estado v1) | 12,9 s | 38,0 s | 1312 | 289 | 50% | 129 | 12,9 s / 1312 / 289 |
+| **v2 (DQN estado v2)** | **9,1 s** | **30,3 s** | **1596** | **11** | 61% | 80 | 8,6 s / 1603 / 4 |
+| max-pressure | 10,6 s | 33,7 s | 1542 | 59 | 61% | 103 | 10,8 s / 1492 / 108 |
+
+Espera por seed (201/202/203): v2 9,4 / 9,1 / 9,0 s; max-pressure 10,7 / 10,6 /
+10,4 s; v1 10,6 / 10,0 / 10,3 s.
+
+- **Ciclo fixo × v2 com câmera:** espera −43% (16,1 → 9,1 s), viagem −16%,
+  +93 chegadas, fila de inserção 97 → 11.
+- **v2 × max-pressure e v1:** a v2 vence nas três seeds, com 1,5 s a menos de
+  espera que o max-pressure e +54 chegadas.
+- **Custo da percepção na v2:** caiu de +2,0 s para **+0,5 s** de espera em
+  relação ao oráculo (−7 chegadas, +7 na fila). A v1 com câmera agora iguala a
+  v1 com oráculo.
+- **Verdes da v2:** Leste/Oeste com média de 23,6 s (2% terminam no mínimo, 5%
+  chegam aos 40 s); Sul com média de 15,1 s (35% no mínimo).
+
+**Domain gap** (log da v2, 5.433 steps;
+`results/evaluation/domain-gap-roi60-calibrated-v2.json`):
+
+| Faixa | Contagem (MAE / viés) | Veículos perdidos | Velocidade (viés) | Espera (viés) |
+|---|---|---:|---:|---:|
+| east/lane_0 | 0,26 / +0,18 | 7% | −1,44 m/s | +7,3 s |
+| east/lane_1 | 0,30 / −0,18 | 20% | −0,87 m/s | +0,4 s |
+| south/lane_0–3 | 0,08–0,23 / +0,06 a +0,19 | 1% | −0,3 a −1,0 m/s | +1,4 a +5,2 s |
+| west/lane_0 | 0,03 / +0,03 | 0,2% | −0,16 m/s | +0,4 s |
+
+- A ação do DQN com features visuais coincide com a do oráculo em **84,8%**
+  das 640 decisões (era 71,1% antes da correção).
+- O que sobra no Leste é a oclusão da faixa 1 pela faixa 0 (ângulo lateral da
+  câmera). A velocidade continua subestimada e a espera superestimada, sem
+  impedir a v2 de ficar a 0,5 s do oráculo.
+- Com esse resultado, o ajuste fino visual não é necessário para a conclusão
+  principal.
+
+#### Antes da correção do filtro (2026-10-02, registro)
+
+
+Rodado em 2026-10-02: `compare_versions --scenario calibrated --perception visual`,
+seeds 201–203, 300 s + 1800 s, YOLO de duas classes (`--classes 0,1`, 960 px),
+v2 = `dqn-v2-roi60-mix-pretrain-best.pt`, sem viaturas de emergência.
+`missing_frames = 0`. Arquivo: `results/evaluation/versoes-calibrated-visual-filtro-centro.json`;
+logs por step em `results/logs/versoes-calibrated-visual-<versão>-filtro-centro.jsonl`.
+
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas | Oráculo: espera / chegadas / fila |
+|---|---:|---:|---:|---:|---:|---:|---|
+| Linha de base (ciclo fixo) | 16,1 s | 36,2 s | 1503 | 97 | 50% | 0 | 16,1 s / 1503 / 97 |
+| v1 (heurística) | 11,1 s | 35,2 s | 1423 | 179 | 55% | 118 | 10,3 s / 1486 / 117 |
+| v1.1 (DQN estado v1) | 12,9 s | 38,0 s | 1311 | 290 | 50% | 129 | 12,9 s / 1312 / 289 |
+| **v2 (DQN estado v2)** | **10,6 s** | **32,8 s** | **1556** | **45** | 59% | 88 | 8,6 s / 1603 / 4 |
+| max-pressure | 10,5 s | 33,7 s | 1528 | 74 | 60% | 106 | 10,8 s / 1492 / 108 |
+
+A coluna do oráculo é a mesma configuração com percepção perfeita (tabelas
+acima). Leitura:
+
+- **Ciclo fixo × adaptativos:** com câmera, a v2 reduz a espera em 34%
+  (16,1 → 10,6 s), a viagem em 9% e a fila de inserção de 97 para 45, com mais
+  chegadas (+53). A v1 e a v1.1 esperam menos que o ciclo fixo, mas deixam mais
+  veículos fora da rede (179 e 290): escoam menos.
+- **v2 × max-pressure:** espera praticamente igual (10,6 × 10,5 s), mas a v2
+  tem mais chegadas (+28), viagem 0,9 s menor e fila de inserção menor (45 × 74).
+- **Custo da percepção na v2:** +2,0 s de espera, −47 chegadas e +41 na fila em
+  relação ao oráculo. É a maior perda entre as versões; a v1.1 não muda (alterna
+  no ciclo mínimo, independente do estado) e o max-pressure fica igual ao
+  oráculo, dentro da variação.
+- A v1 e a v1.1 usam checkpoints e regras das câmeras antigas (~25 m); aqui
+  entram sem retreino.
+
+**Domain gap visão × oráculo** (`evaluate_lane_features` no log da v2, 5.433
+steps, todos com visão; domain gap recalculado a partir do log `-filtro-centro`):
+
+| Faixa | Contagem (viés) | Parados (viés) | Espera (viés) | Velocidade (viés) |
+|---|---:|---:|---:|---:|
+| east/lane_0 | −0,68 | −0,02 | +6,0 s | −1,31 m/s |
+| east/lane_1 | −1,12 | −0,53 | −3,1 s | −0,61 m/s |
+| south/lane_0–3 | +0,03 a +0,15 | +0,06 a +0,30 | +0,8 a +4,9 s | −0,4 a −1,2 m/s |
+| west/lane_0 | −0,02 | +0,04 | +0,5 s | −0,30 m/s |
+
+- O erro está concentrado no **Leste**, a aproximação saturada que mais pesa:
+  a câmera conta ~0,7–1,1 veículo a menos por faixa. Com isso a v2 visual dá
+  59% do verde ao Leste/Oeste, contra 63% com o oráculo, e acumula fila.
+- A velocidade visual é subestimada em todas as faixas, e a espera do sul é
+  superestimada.
+- O ponto de solo da visão fica ~0,7–0,8 m a montante do oráculo (mediana:
+  −0,81 m no leste, −0,76 m no sul, −0,69 m no oeste);
+  `lane_state.visual_ground_offset_m` continua 0.
+- A ação do DQN com features visuais coincide com a ação com features do
+  oráculo em **71,1%** das 605 decisões.
+
+### Versões no ambiente novo — percepção visual (Unity, cenário original)
+
+Rodado em 2026-10-04, com o filtro corrigido e o mesmo protocolo do calibrado
+(seeds 201–203, 300 s + 1800 s, v2 = `dqn-v2-roi60-mix-pretrain-best.pt`,
+sem viaturas). `missing_frames = 0`. Arquivo:
+`results/evaluation/versoes-original-visual.json` (o resultado do ambiente de
+25 m foi preservado em `versoes-original-visual-ambiente-25m.json`).
+
+| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas | Oráculo: espera / chegadas |
+|---|---:|---:|---:|---:|---:|---:|---|
+| Linha de base (ciclo fixo) | 14,9 s | 37,3 s | 1431 | 37 | 50% | 0 | 14,9 s / 1431 |
+| v1 (heurística) | 4,6 s | 27,2 s | 1472 | 0 | 50% | 129 | 4,7 s / 1473 |
+| v1.1 (DQN estado v1) | 4,6 s | 27,3 s | 1474 | 0 | 50% | 127 | — |
+| v2 (DQN estado v2) | 4,9 s | 27,5 s | 1471 | 0 | 49% | 122 | 4,4 s / 1474 |
+| max-pressure | 6,1 s | 28,6 s | 1470 | 0 | 48% | 98 | 4,6 s / 1474 |
+
+Espera por seed (201/202/203): v2 4,9 / 5,0 / 4,7 s; v1 4,5 / 4,7 / 4,6 s;
+max-pressure 6,2 / 5,7 / 6,3 s.
+
+- Com demanda equilibrada, todas as versões adaptativas reduzem a espera do
+  ciclo fixo em 59–69% e escoam toda a demanda (fila de inserção zero).
+- A v2 com câmera fica 0,3 s atrás da v1 e da v1.1 (4,9 × 4,6 s), com as
+  mesmas chegadas: não piora com demanda equilibrada. Em relação ao oráculo,
+  perde 0,5 s, como no calibrado. A ação com features visuais coincide com a do
+  oráculo em 87,1% das 425 decisões (`domain-gap-roi60-original-v2.json`).
+- O max-pressure é a única versão que piora com a câmera (4,6 → 6,1 s): troca
+  menos (98 × 129 trocas) e deixa verdes mais longos que o necessário.
+- Junto com o calibrado: a v2 é a melhor versão quando a demanda é desigual
+  (−43% de espera, maior vazão) e empata com as demais quando é equilibrada.
+
+### Correção: filtro da ROI de aproximação pela base da caixa (2026-10-03)
+
+A análise da subcontagem do Leste (log da v2 visual acima) mostrou:
+
+- **Leste, 50–60 m: ~100% dos veículos perdidos nas duas faixas**, mesmo
+  isolados (sem veículo à frente). Não era oclusão: o YOLO detecta esses
+  veículos (98,6% no teste), mas `filter_detections_to_roi` descartava a
+  detecção porque usava o **centro** da caixa. Num carro distante, visto de
+  lado, o centro cai fora do polígono de aproximação, embora a base (o ponto de
+  solo usado pela homografia das faixas) esteja dentro da faixa.
+- O mesmo acontecia nas outras câmeras. No replay offline do run-304 (250
+  frames por câmera), objetos projetados a 50–60 m, com centro → com base:
+  Leste 2 → 195, Sul 46 → 192, Oeste 3 → 30. Abaixo de 50 m não muda.
+- A geometria está correta: com o veículo detectado, a distância visual fica
+  +0,8 m da do oráculo em todas as faixas e distâncias.
+- A faixa 1 do Leste também perde 17–40% a 10–50 m, mais com fila parada (35%)
+  que em movimento (26%). Aí as detecções brutas já faltam: é oclusão pela
+  faixa 0 no ângulo lateral da câmera Leste, e não se corrige no filtro.
+
+Correção: `filter_detections_to_roi(..., anchor="bottom_center")` no
+`VisualPipeline`, com o mesmo ponto de solo das features por faixa (o padrão
+`center` continua para o legado `test_unity_vision`). Na detecção de viaturas,
+o pedido passa a sair a ~55–60 m da linha, em vez de ~40 m.
+
+**Consequência:** os resultados com percepção visual de 2026-10-02 (versões e
+preempção) foram obtidos com o filtro pelo centro. Cada tabela continua
+internamente comparável (todas as linhas tinham o mesmo filtro), mas precisa
+ser refeita com a correção para valer como resultado do ambiente atual.
+
+### Preempção por aviso V2I (percepção oráculo, seeds 201–203, 1800 s)
+
+- Viaturas de emergência entram a cada ~3 min (10 por seed, 30 por política),
+  sorteadas entre Sul, Leste e Oeste, obedecendo ao semáforo.
+- O aviso V2I chega 15 s antes de a viatura entrar na rede. A preempção
+  assume quando ela está a ≤ 20 s da linha de retenção: mantém o verde dela
+  (além do verde máximo, se preciso) ou encerra o outro verde sem esperar o
+  mínimo. Amarelo e all-red nunca são pulados.
+- Métrica da viatura: perda de tempo até cruzar a linha de retenção
+  (`getTimeLoss`).
+
+| Cenário | Política | Perda média da viatura | Perda máxima | Viaturas sem parar | Espera do tráfego | Chegadas |
+|---|---|---:|---:|---:|---:|---:|
+| calibrado | ciclo fixo | 19,6 → **1,1 s** | 50,4 → 4,3 s | 44% → 100% | 16,1 → 17,1 s | 1511 → 1576 |
+| calibrado | v2 | 14,1 → **1,1 s** | 41,4 → 3,8 s | 30% → 100% | 10,1 → 11,5 s | 1612 → 1609 |
+| calibrado | max-pressure | 15,9 → **1,3 s** | 42,7 → 4,4 s | 31% → 100% | 11,0 → 14,9 s | 1493 → 1556 |
+| original | ciclo fixo | 17,0 → **1,0 s** | 47,5 → 3,8 s | 40% → 100% | 14,9 → 18,4 s | 1438 → 1425 |
+| original | v2 | 8,9 → **1,1 s** | 37,9 → 3,5 s | 50% → 100% | 8,5 → 11,7 s | 1481 → 1474 |
+| original | max-pressure | 9,8 → **1,3 s** | 20,3 → 3,7 s | 37% → 100% | 4,6 → 7,2 s | 1484 → 1481 |
+
+(Cada célula mostra sem → com preempção.)
+
+- Com preempção, todas as viaturas cruzam sem parar, com ~1 s de perda média
+  e no máximo ~4 s, independentemente da política.
+- O custo é de +1 a +4 s na espera média do restante do tráfego. No ciclo
+  fixo e no max-pressure calibrados, as chegadas até aumentam, porque as
+  preempções quebram ciclos mal repartidos para o Leste saturado.
+- Com a v2 treinada nos dois cenários, o resultado se mantém: perda média
+  9,5 → 1,1 s (calibrado) e 10,1 → 1,3 s (original), 100% sem parar, com a
+  espera do tráfego passando de 8,7 → 10,3 s e 4,5 → 7,1 s.
+- Arquivos: `results/evaluation/preempcao-{calibrated,original}-oracle.json`,
+  `preempcao-mix-{calibrated,original}-oracle.json`,
+  `versoes-roi60-{calibrated,original}-oracle.json` e
+  `versoes-roi60-mix-{calibrated,original}-oracle.json`.
+
+### Comandos
+
+```bash
+../.venv/bin/python -m experiments.extend_lane_rois --length 60     # ROIs a partir da borda próxima
+../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated,original \
+  --checkpoint-output ../results/models/dqn-v2-roi60-mix-pretrain-last.pt \
+  --best-checkpoint-output ../results/models/dqn-v2-roi60-mix-pretrain-best.pt
+../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception oracle \
+  --v2-dqn-model ../results/models/dqn-v2-roi60-mix-pretrain-best.pt
+../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated \
+  --v2-dqn-model ../results/models/dqn-v2-roi60-mix-pretrain-best.pt
+```
 
 ## DQN v2 — estado por faixa, pré-treino SUMO e avaliação visual
 
@@ -468,6 +840,63 @@ Importante: quando esta comparação foi feita, os E2 cobriam 20 m de cada
 faixa perto do cruzamento, e a diferença de área observada entra no erro. A
 medida no mesmo trecho físico da ROI é a do domain gap do DQN v2
 (`experiments.evaluate_lane_features`).
+
+### Segundo fine-tuning: duas classes (veículo e emergência), câmeras de 60 m
+
+Status: concluído em 2026-10-01. Substitui o detector `run-002` no pipeline v2.
+
+**Captura.** 8 execuções (seeds 301–308, alternando os cenários calibrado e
+original), 250 steps cada, com as 3 câmeras operacionais nas poses novas e 6
+câmeras de dataset em poses variantes (`south_ds_left/right`,
+`east_ds_near/far`, `west_ds_near/far`). Viaturas entram a cada
+`--emergency-interval` para haver exemplos da classe `emergency`. As caixas vêm
+das máscaras de instância; a classe vem do tipo SUMO do veículo
+(`vision/dataset_classes.py`: `0 vehicle`, `1 emergency`).
+
+**Dataset.** A partição é por execução inteira (`runs.json`): treino 301–303 e
+306–308, validação 305 (calibrado), teste 304 (original), para que frames
+vizinhos não vazem entre partições. A versão completa
+(`unity-cam60-2cls`) tem 18.000 imagens e 148.907 caixas (6.297 de emergência).
+O treino usou `--frame-stride 3` (`unity-cam60-2cls-s3`): 4.536 imagens de
+treino, 756 de validação e 756 de teste, com 49.869 caixas (2.104 de emergência).
+
+**Treino.** A partir do `run-002`, 15 épocas, `imgsz=960`, `batch=4`, MPS
+(Apple M5), 13,2 h. Checkpoint:
+`runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`. Na
+validação: `mAP50 = 0,995`, `mAP50-95 = 0,983` (veículo 0,981; emergência 0,985).
+
+**Teste por classe e distância** (`experiments.evaluate_yolo_classes`, run-304,
+confiança 0,15 como em operação, IoU 0,5, casamento sem olhar a classe). A
+distância de cada rótulo é o centro da base da caixa projetado pela homografia
+da ROI de faixa, a mesma regra da visão em operação; por isso só as câmeras
+operacionais têm faixas de distância.
+
+| Classe | Faixa da ROI | Rótulos | Recall | Confundido com a outra classe |
+|---|---|---|---|---|
+| veículo | 0–20 m | 756 | 100% | 0 |
+| veículo | 20–40 m | 382 | 99,5% | 0 |
+| veículo | 40–60 m | 287 | 97,2% | 0 |
+| veículo | todas as 9 câmeras | 5.924 | 99,3% | 0,1% |
+| emergência | 0–20 m | 44 | 100% | 0 |
+| emergência | 20–40 m | 36 | 100% | 0 |
+| emergência | 40–60 m | 7 | 100% | 0 |
+| emergência | todas as 9 câmeras | 317 | 99,7% | 1 caso (fora da ROI) |
+
+Há 90 falsos positivos (todos `vehicle`) em 756 imagens, espalhados entre as
+câmeras. Limitações: treino e teste vêm da mesma Unity, e a faixa de 40–60 m
+tem só 7 viaturas no teste, o que é pouca base estatística. O teste que importa
+é a malha fechada (YOLO + ByteTrack a 1 fps), feito nas avaliações visuais.
+
+**Uso.** Os scripts v2 (`add_vision_arguments` em
+`experiments/visual_observer.py`) passam a usar este modelo com
+`--classes 0,1` e `--image-size 960` por padrão. As duas classes entram nas
+contagens por faixa (uma viatura também ocupa a via); `--classes 0` com este
+modelo apagaria as viaturas do estado. Os scripts legados da v1
+(`run_visual_controller`, `train_visual_dqn`) mantêm seus padrões.
+
+```bash
+../.venv/bin/python -m experiments.evaluate_yolo_classes   # sem SUMO/Unity, ~10 min
+```
 
 ## Marco 1 — Estrutura inicial do repositório
 

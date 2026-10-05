@@ -68,19 +68,20 @@ vision_evaluation:
 # em metros desde o início da lane (roi_end fica na linha de retenção). Medida por
 # `python -m experiments.check_lane_geometry` a partir da pose/FOV exportados; um
 # teste falha se a calibração mudar sem atualizar estes valores. As ROIs cobrem
-# ~23-26 m, bem menos que os E2 (42,6-45,8 m): as features por faixa usam este
-# intervalo nas duas fontes (visão e TraCI), nunca o intervalo do E2.
+# 60 m em todas as faixas (gerado por experiments.extend_lane_rois), mais que os
+# E2 (42,6-45,8 m): as features por faixa usam este intervalo nas duas fontes
+# (visão e TraCI), nunca o intervalo do E2.
 lane_geometry:
   south:
-    lane_0: {sumo_lane: "E3_0", roi_start_m: 52.8, roi_end_m: 77.9, width_m: 3.2}
-    lane_1: {sumo_lane: "E3_1", roi_start_m: 52.4, roi_end_m: 78.0, width_m: 3.2}
-    lane_2: {sumo_lane: "E3_2", roi_start_m: 52.0, roi_end_m: 78.0, width_m: 3.2}
-    lane_3: {sumo_lane: "E3_3", roi_start_m: 51.8, roi_end_m: 78.0, width_m: 3.2}
+    lane_0: {sumo_lane: "E3_0", roi_start_m: 17.9, roi_end_m: 77.9, width_m: 3.2}
+    lane_1: {sumo_lane: "E3_1", roi_start_m: 17.9, roi_end_m: 77.9, width_m: 3.2}
+    lane_2: {sumo_lane: "E3_2", roi_start_m: 17.9, roi_end_m: 77.9, width_m: 3.2}
+    lane_3: {sumo_lane: "E3_3", roi_start_m: 17.9, roi_end_m: 77.9, width_m: 3.2}
   east:
-    lane_0: {sumo_lane: "E2_0", roi_start_m: 43.0, roi_end_m: 68.5, width_m: 4.0}
-    lane_1: {sumo_lane: "E2_1", roi_start_m: 43.4, roi_end_m: 68.5, width_m: 4.0}
+    lane_0: {sumo_lane: "E2_0", roi_start_m: 8.4, roi_end_m: 68.4, width_m: 4.0}
+    lane_1: {sumo_lane: "E2_1", roi_start_m: 8.4, roi_end_m: 68.4, width_m: 4.0}
   west:
-    lane_0: {sumo_lane: "E6_0", roi_start_m: 50.8, roi_end_m: 74.0, width_m: 3.2}
+    lane_0: {sumo_lane: "E6_0", roi_start_m: 14.5, roi_end_m: 74.5, width_m: 3.2}
 
 # Parâmetros das features por faixa (vision/lane_features.py). "Parado" segue os
 # padrões do E2 do SUMO (1,39 m/s por 1 s). oracle_noise degrada a fonte TraCI do
@@ -98,6 +99,32 @@ lane_state:
     position_std_m: 0.0
     drop_probability: 0.0
     untracked_probability: 0.0
+
+# Veículos de emergência (sumo/emergency.py): inseridos por TraCI numa agenda
+# reproduzível pela seed, depois do aquecimento, obedecendo ao semáforo (sem o
+# dispositivo bluelight). O aviso V2I anuncia cada viatura announce_before_s
+# antes de ela entrar na rede. A preempção assume o semáforo quando o tempo
+# estimado até a linha de retenção fica abaixo de activation_eta_s; pode
+# encurtar o verde mínimo, mas nunca pula amarelo nem all-red.
+emergency:
+  interval_s: 180
+  jitter_s: 60
+  first_after_s: 30
+  announce_before_s: 15
+  speed_factor: 1.0
+  routes:
+    south: [["E3", "E1"], ["E3", "E0"], ["E3", "E5"]]
+    east: [["E2", "E0"], ["E2", "E5"]]
+    west: [["E6", "E1"]]
+  preemption:
+    activation_eta_s: 20
+  # Detecção visual (vision/visual_emergency.py): classe emergency dentro de uma
+  # ROI em confirm_frames frames seguidos; sem vê-la, o pedido segue pelo tempo
+  # estimado até a linha + hold_margin_s. A velocidade mínima da estimativa é a
+  # mesma do V2I (metade da velocidade livre).
+  visual_detection:
+    confirm_frames: 2
+    hold_margin_s: 3.0
 
 dqn:
   model_path: "../results/models/visual-dqn-sp.pt"

@@ -187,6 +187,45 @@ class SumoClient:
         self._ensure_started()
         return int(traci.simulation.getStartingTeleportNumber())
 
+    def ensure_vehicle_type(self, type_id: str, vehicle_class: str, speed_factor: float, color: tuple[int, int, int]) -> None:
+        """Cria (uma vez) um tipo derivado do padrão do SUMO, sem editar os arquivos de rota."""
+        self._ensure_started()
+        if type_id in traci.vehicletype.getIDList():
+            return
+        traci.vehicletype.copy("DEFAULT_VEHTYPE", type_id)
+        traci.vehicletype.setVehicleClass(type_id, vehicle_class)
+        traci.vehicletype.setShapeClass(type_id, vehicle_class)
+        traci.vehicletype.setSpeedFactor(type_id, float(speed_factor))
+        traci.vehicletype.setColor(type_id, (*color, 255))
+
+    def add_vehicle(self, vehicle_id: str, from_edge: str, to_edge: str, type_id: str) -> None:
+        """Insere um veículo agora, de uma aproximação direto a uma saída do cruzamento.
+
+        A rota é só ``[entrada, saída]``: no cenário SP elas se ligam pelo próprio
+        cruzamento. (``simulation.findRoute`` do traci 1.26 é incompatível com o
+        SUMO 1.22 e por isso não é usado.)
+        """
+        self._ensure_started()
+        route_id = f"route_{vehicle_id}"
+        traci.route.add(route_id, [from_edge, to_edge])
+        traci.vehicle.add(vehicle_id, route_id, typeID=type_id, depart="now", departLane="best", departSpeed="max")
+
+    def get_vehicle_road_state(self, vehicle_id: str) -> dict[str, float | str] | None:
+        """Posição de um veículo na rede, ou ``None`` se ele não está (mais) nela."""
+        self._ensure_started()
+        if vehicle_id not in traci.vehicle.getIDList():
+            return None
+        lane_id = str(traci.vehicle.getLaneID(vehicle_id))
+        return {
+            "road_id": str(traci.vehicle.getRoadID(vehicle_id)),
+            "lane_id": lane_id,
+            "lane_position": float(traci.vehicle.getLanePosition(vehicle_id)),
+            "lane_length": float(traci.lane.getLength(lane_id)) if lane_id and not lane_id.startswith(":") else 0.0,
+            "speed": float(traci.vehicle.getSpeed(vehicle_id)),
+            "time_loss": float(traci.vehicle.getTimeLoss(vehicle_id)),
+            "waiting_time": float(traci.vehicle.getAccumulatedWaitingTime(vehicle_id)),
+        }
+
     def set_traffic_light_phase(self, tls_id: str, phase: int) -> None:
         """Define a fase corrente de um semaforo no SUMO."""
         self._ensure_started()

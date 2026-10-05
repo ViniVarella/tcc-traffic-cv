@@ -114,7 +114,48 @@ contavam os veículos pelo centro da bbox com média móvel. Aqui elas recebem a
 mesma contagem por faixa usada pela v2. Também decidem a cada 1 s, como
 faziam originalmente.
 
-### Percepção oráculo (só SUMO)
+### Ambiente atual (câmeras e ROIs de 60 m), cenário calibrado
+
+Câmeras reposicionadas, ROIs de 60 m por faixa, YOLO de duas classes e a v2
+pré-treinada nos dois cenários (`dqn-v2-roi60-mix-pretrain-best.pt`). Seeds
+201–203, 0 frames perdidos na percepção visual.
+
+| Versão | Espera (visual) | Chegadas (visual) | Fila de inserção (visual) | Espera (oráculo) | Chegadas (oráculo) |
+|---|---:|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 16,1 s | 1503 | 97 | 16,1 s | 1503 |
+| v1 (heurística) | 10,3 s | 1488 | 112 | 10,3 s | 1486 |
+| v1.1 (DQN estado v1) | 12,9 s | 1312 | 289 | 12,9 s | 1312 |
+| **v2 (DQN estado v2)** | **9,1 s** | **1596** | **11** | **8,6 s** | **1603** |
+| max-pressure (referência) | 10,6 s | 1542 | 59 | 10,8 s | 1492 |
+
+Pela câmera, a v2 reduz a espera do ciclo fixo em 43% (16,1 → 9,1 s), é a
+versão que mais escoa veículos e quase zera a fila de inserção. Fica a 0,5 s
+do limite com percepção perfeita, e a ação com features visuais coincide com a
+do oráculo em 85% das decisões. O max-pressure e a v1 ficam em 10,3–10,6 s,
+com mais veículos presos fora da rede. Detalhes e domain gap em
+[`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
+
+**Cenário original** (demanda equilibrada do netedit), mesmo protocolo, 0
+frames perdidos:
+
+| Versão | Espera (visual) | Chegadas (visual) | Fila de inserção (visual) | Espera (oráculo) |
+|---|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 14,9 s | 1431 | 37 | 14,9 s |
+| v1 (heurística) | 4,6 s | 1472 | 0 | 4,7 s |
+| v1.1 (DQN estado v1) | 4,6 s | 1474 | 0 | — |
+| v2 (DQN estado v2) | 4,9 s | 1471 | 0 | 4,4 s |
+| max-pressure (referência) | 6,1 s | 1470 | 0 | 4,6 s |
+
+Com demanda equilibrada, alternar rápido já é quase ótimo: as versões
+adaptativas reduzem a espera do ciclo fixo em 59–69% e escoam toda a demanda.
+A v2 fica 0,3 s atrás da v1, com as mesmas chegadas. Ou seja, a v2 é a melhor
+quando a demanda é desigual e empata quando é equilibrada.
+
+As tabelas abaixo são do **ambiente anterior** (câmeras antigas, ROIs de
+~25 m, YOLO de uma classe) e ficam como registro; não se comparam com a de
+cima.
+
+### Percepção oráculo (só SUMO) — ambiente anterior
 
 **Cenário calibrado** (Leste saturado — onde a adaptação importa):
 
@@ -146,7 +187,7 @@ Com demanda equilibrada, alternar rápido já é quase ótimo, e todas as versõ
 adaptativas empatam. A v2, que não treinou nesse cenário, fica 0,4–0,5 s
 atrás.
 
-### Percepção visual (Unity)
+### Percepção visual (Unity) — ambiente anterior
 
 Cenário calibrado (Leste saturado), mesmo protocolo, 0 frames perdidos:
 
@@ -181,8 +222,9 @@ espera média, com as mesmas chegadas e sem fila de inserção.
 
 ### Limitações
 
-- As ROIs das câmeras cobrem só 23–26 m por faixa, e filas longas do Leste
-  saturam o estado.
+- No ambiente anterior, as ROIs cobriam só 23–26 m por faixa, e filas
+  longas do Leste saturavam o estado. No atual, a faixa 1 do Leste
+  perde ~20% dos veículos por oclusão pela faixa 0 (ângulo lateral da câmera).
 - A velocidade visual é subestimada.
 - Há oclusão na faixa sul mais distante.
 - A recompensa de treino vem do TraCI; só a política é exclusivamente visual.
@@ -193,6 +235,38 @@ Os resultados originais da v1 e da v1.1, obtidos em protocolos diferentes
 histórico em
 [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md). Eles não
 devem ser comparados com a v2.
+
+## Prioridade para veículos de emergência
+
+Viaturas de emergência avisam sua aproximação por V2I (como no despacho por
+GPS dos sistemas reais), e o semáforo abre para o sentido de onde elas vêm:
+
+- se o verde já é delas, é mantido, até além do verde máximo;
+- se não é, o outro verde termina na hora, sem esperar o mínimo;
+- amarelo e all-red nunca são pulados.
+
+No mesmo ambiente (ROIs de 60 m, percepção oráculo, seeds 201–203, 30
+viaturas por política), a perda de tempo média das viaturas até a linha de
+retenção cai de 14–20 s para ~1 s, e todas cruzam sem parar. O custo é de +1
+a +4 s na espera média do restante do tráfego. A câmera também detecta as
+viaturas (classe `emergency` do YOLO dentro das ROIs) e serve como segunda
+fonte. Em malha fechada com percepção visual (v2, cenário calibrado, seeds
+201–203, 30 viaturas):
+
+| Fonte do pedido | Perda média da viatura | Sem parar | Espera do tráfego |
+|---|---|---|---|
+| nenhuma | 13,2 s | 37% | 9,4 s |
+| V2I | 1,4 s | 100% | 10,5 s |
+| visão | 4,2 s | 80% | 9,9 s |
+| V2I + visão | 1,2 s | 100% | 11,3 s |
+
+A visão detectou as 30 viaturas, sem alarme falso, mas só as vê nos últimos
+60 m. Sozinha, reduz o atraso em 68%; junto do V2I, serve de redundância. Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
+
+**Mudança de ambiente em 2026-09-30:** as câmeras foram reposicionadas e as
+ROIs passaram a cobrir 60 m por faixa. As tabelas de comparação acima são do
+ambiente anterior (ROIs de ~25 m), salvo a do ambiente atual em "Comparação
+no mesmo ambiente".
 
 ## Como reproduzir
 
@@ -228,8 +302,29 @@ Play Mode (reinicie o Play Mode antes de cada comando):
   --dqn-model ../results/models/dqn-v2-pretrain-best.pt
 ```
 
-O detector ajustado (`runs/results/models/yolov8n-unity-run-002-mask/weights/best.pt`)
-tem uma única classe, e os scripts v2 já usam `--classes 0` por padrão.
+O detector ajustado (`runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`)
+tem duas classes, `0 vehicle` e `1 emergency`; os scripts v2 já usam esse modelo
+com `--classes 0,1` e `--image-size 960` por padrão. O detector anterior
+(`yolov8n-unity-run-002-mask`, uma classe, `--classes 0`) continua nos scripts
+legados da v1. Recall no teste: veículos 100% / 99,5% / 97,2% em 0–20 / 20–40 /
+40–60 m da ROI ([detalhes](docs/IMPLEMENTATION_PROGRESS.md)).
+
+## Modelo da ambulância
+
+O modelo 3D da ambulância usado na Unity vem do RigModels.com, com licença
+apenas para uso pessoal/estudante, e por isso **não é versionado**. Para
+reproduzir:
+
+1. Baixe o modelo "Ambulance" em https://rigmodels.com e copie a pasta, com
+   `ambulance.fbx` e as texturas, para
+   `unity/TrafficVisionUnity/Assets/Art/TrafficModels/Models/Cars/Ambulance/`.
+2. Na Unity, com `SPImport` aberta, rode *Traffic Vision > Vehicles > Create
+   SP Emergency Prefab* e salve a cena.
+3. Para conferir, entre em Play Mode e rode
+   `python -m experiments.test_sumo_to_unity --config configs/sp.yaml --steps 120 --send-interval 0.1 --emergency-interval 20`.
+   Se a ambulância andar de ré, rode *Flip SP Emergency Prefab*.
+
+Sem o modelo, as viaturas de emergência aparecem como blocos vermelhos.
 
 ## Principais módulos
 

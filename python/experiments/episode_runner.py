@@ -96,6 +96,7 @@ class EpisodeOutcome:
     controlled_steps: int = 0
     decisions: int = 0
     switches: int = 0
+    preemption_steps: int = 0
     transitions: int = 0
     missing_observations: int = 0
     losses: list[float] = field(default_factory=list)
@@ -118,6 +119,7 @@ class EpisodeOutcome:
             "decisions": self.decisions,
             "switches": self.switches,
             "switch_rate": self.switch_rate,
+            "preemption_steps": self.preemption_steps,
             "transitions": self.transitions,
             "missing_observations": self.missing_observations,
             "mean_loss": None if not self.losses else float(np.mean(self.losses)),
@@ -138,8 +140,13 @@ def run_episode(
     learner: DqnAgent | None = None,
     metrics: ExperimentMetricsCollector | None = None,
     on_step: Callable[[dict[str, Any]], None] | None = None,
+    emergency: Callable[[float], str | None] | None = None,
 ) -> EpisodeOutcome:
-    """Executa um episódio já iniciado em ``client``; ``learner`` ativa o aprendizado."""
+    """Executa um episódio já iniciado em ``client``; ``learner`` ativa o aprendizado.
+
+    ``emergency`` devolve, a cada step, o verde-alvo de uma preempção ativa (ou
+    ``None``); enquanto houver preempção, a política não é consultada.
+    """
     scheduler = DecisionScheduler(controller.min_green_seconds, controller.max_green_seconds, settings.decision_interval_s)
     accumulator = SmdpAccumulator(settings.gamma)
     metrics = metrics or ExperimentMetricsCollector(warmup_until_s=settings.warmup_s)
@@ -153,6 +160,7 @@ def run_episode(
                         pending_vehicles=int(lane_metrics["pending_vehicles"]), teleports=client.get_teleport_count())
         step_reward = reward(lane_metrics)
         lane_features = observe(sim_time)
+        preempt_target = None if emergency is None else emergency(sim_time)
         phase = controller.phase_manager.get_current_phase()
         elapsed = controller.phase_manager.elapsed(sim_time)
         requested: int | None = None
@@ -163,7 +171,12 @@ def run_episode(
             outcome.total_reward += step_reward
             outcome.phase_seconds[phase.name] += 1
             accumulator.add(step_reward)
-            if lane_features is None:
+            if preempt_target is not None:
+                # A decisão aberta não controlou este trecho: não vira transição.
+                accumulator.reset()
+                outcome.preemption_steps += 1
+                decision = controller.update_preemption(sim_time, preempt_target)
+            elif lane_features is None:
                 outcome.missing_observations += 1
                 decision = controller.update_without_vision(sim_time)
             else:
@@ -181,6 +194,7 @@ def run_episode(
         controller.apply(client, decision)
         if on_step is not None:
             on_step({"sim_time": sim_time, "reward": step_reward, "phase": phase.name, "phase_index": phase.phase_index,
+                     "preempt_target": preempt_target,
                      "phase_elapsed": elapsed, "decision": decision,
                      "requested_action": requested, "lane_features": lane_features, "lane_metrics": lane_metrics})
     # Episódio truncado pelo tempo: a última transição faz bootstrap (done=False).

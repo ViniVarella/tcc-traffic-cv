@@ -111,7 +111,8 @@ class VisualPipeline:
         height, width = frame.shape[:2]
         rois = calibration.pixel_rois(width, height)
         lane_rois = calibration.lane_pixel_rois(width, height)
-        detections = filter_detections_to_roi(self.detector.detect(frame), rois["approach"])
+        # Mesmo ponto de solo das features por faixa (ver filter_detections_to_roi).
+        detections = filter_detections_to_roi(self.detector.detect(frame), rois["approach"], anchor="bottom_center")
         tracks = self._trackers[camera_id].update(detections)
         objects, count_source = select_counting_objects(detections, tracks)
         raw_counts = ROICounter(lane_rois).count(objects)
