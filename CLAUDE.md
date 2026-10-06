@@ -165,6 +165,9 @@ usa chegadas Poisson (`period="exp(...)"`) e inserção realista
 - `Environment` detecta a rede com pedestres pelo semáforo
   (`pedestrian_link_count`) e liga a fase e as métricas de pedestre
   (`sumo/pedestrian_metrics.py`).
+- Recompensa nos cenários com pedestres: `(1 − w)·veículos − w·pedestres`
+  (`pedestrians.reward_weight` = 0,3, referência 1200 s). Sem o termo, o v3
+  aprendeu a segurar o verde para espaçar a fase de pedestres.
 - Escopo atual: só SUMO. A Unity ainda não renderiza pedestres nem sinais de
   pedestre.
 
@@ -338,9 +341,10 @@ Todos a partir de `python/`:
 # Rede com pedestres (regenera os arquivos .ped do cenário SP)
 ../.venv/bin/python -m experiments.build_pedestrian_network
 
-# Pré-treino do DQN v3 (com pedestres)
+# Pré-treino do DQN v3 (com pedestres; referência: w = 0,3, 100 episódios, seeds 51–150)
 ../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated_ped,original_ped --state-version 3 \
-  --checkpoint-output ../results/models/dqn-v3-ped-pretrain-last.pt --best-checkpoint-output ../results/models/dqn-v3-ped-pretrain-best.pt
+  --episodes 100 --seed-start 51 --pedestrian-reward-weight 0.3 \
+  --checkpoint-output ../results/models/dqn-v3-ped-w03-e100-last.pt --best-checkpoint-output ../results/models/dqn-v3-ped-w03-e100-best.pt
 
 # Versões com pedestres (oráculo); v3 só entra se pedido
 ../.venv/bin/python -m experiments.compare_versions --scenario calibrated_ped --perception oracle --versions baseline,v1,v2,v3,max_pressure

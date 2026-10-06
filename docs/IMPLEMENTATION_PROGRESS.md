@@ -183,6 +183,46 @@ max-pressure com a recompensa nova). Avaliação no mesmo protocolo
   exclusivos a cada dois ciclos domina o resultado, e todas terminam com fila
   de inserção. O pré-treino ainda melhorava no fim (40 episódios).
 
+### Peso dos pedestres e treino mais longo (100 episódios)
+
+Pré-treinos do v3 com 100 episódios (seeds 51–150, disjuntas das de ajuste
+fino, validação e teste) e peso dos pedestres na recompensa `w` = 0,2, 0,3 e
+0,5 (`--pedestrian-reward-weight`). Mesmo protocolo de avaliação (oráculo,
+seeds 201–203). Arquivos: `results/models/dqn-v3-ped-w0X-e100-best.pt`,
+`results/evaluation/versoes-*_ped-oracle-v3-w0X-e100.json`.
+
+| Versão | Calibrado: espera veículos | Chegadas | Fila | Espera ped. (p95) | Original: espera veículos | Chegadas | Fila | Espera ped. (p95) |
+|---|---:|---:|---:|---|---:|---:|---:|---|
+| Ciclo fixo | 25,7 s | 1326 | 290 | 64,0 s (170) | 32,3 s | 1260 | 224 | 64,4 s (172) |
+| v2 (sem pedestres no treino) | 26,0 s | 1233 | 367 | 32,8 s (96) | 28,6 s | 1301 | 188 | 27,1 s (82) |
+| v3 só veículos, 40 ep. | 26,4 s | 1249 | 360 | 45,3 s (134) | 27,0 s | 1289 | 193 | 48,7 s (133) |
+| v3 w = 0,3, 40 ep. | 27,3 s | 1230 | 381 | 39,9 s (114) | 25,6 s | 1315 | 159 | 38,0 s (110) |
+| v3 w = 0,2, 100 ep. | 27,2 s | 1177 | 429 | 30,5 s (87) | 26,8 s | 1286 | 191 | 31,8 s (88) |
+| **v3 w = 0,3, 100 ep.** | **26,7 s** | 1175 | 429 | **30,2 s (88)** | **26,9 s** | 1290 | 185 | **29,8 s (85)** |
+| v3 w = 0,5, 100 ep. | 33,4 s | 1006 | 608 | 23,5 s (68) | 31,8 s | 1202 | 284 | 25,3 s (72) |
+| v1 / max-pressure | ~55 s | ~965 | ~628 | ~16 s (57) | 44–49 s | 1043–1123 | 357–417 | 17–19 s (56–60) |
+
+Espera por seed (veículos / pedestres), v3 w = 0,3, 100 ep.: calibrado
+26,1/29,1, 27,3/29,4, 26,7/32,2 s; original 26,9/27,2, 26,9/28,5, 27,0/33,5 s.
+
+- **Treinar mais ajudou:** com w = 0,3, 100 episódios reduziram a espera dos
+  pedestres de ~39 para ~30 s nos dois cenários, com espera máxima ~100 s
+  (era ~125 s), e melhoraram os veículos no calibrado (27,3 → 26,7 s).
+- **O peso controla o equilíbrio:** w = 0,5 leva os pedestres a ~24 s, mas os
+  veículos pioram para 32–33 s, quase como o ciclo fixo e com fila de
+  inserção bem maior; w = 0,2 e 0,3 ficam praticamente iguais.
+- **v3 (w = 0,3, 100 ep.) × v2:** nenhum domina o outro. No calibrado, a v2
+  escoa mais veículos (1233 × 1175; espera 26,0 × 26,7 s) e o v3 faz os
+  pedestres esperarem menos (30,2 × 32,8 s). No original, o v3 é melhor para os
+  veículos (26,9 × 28,6 s) e a v2 para os pedestres (27,1 × 29,8 s).
+- **Referência do ambiente com pedestres:** v3 com w = 0,3 e 100 episódios
+  (`dqn-v3-ped-w03-e100-best.pt`), padrão de `compare_versions --versions ...,v3`.
+  É o único que, nos dois cenários, fica a ≤ 1 s do melhor para os veículos
+  e a ≤ 3 s do melhor para os pedestres sem sacrificar o outro lado.
+- O estado v3 sozinho não trouxe ganho claro sobre a v2; o que mais pesa é a
+  recompensa (o termo de pedestres) e a regra da fase exclusiva, que mantém
+  todos os controladores com fila de inserção.
+
 ## Ambiente com ROIs de 60 m e preempção para emergências
 
 Status: câmeras, ROIs e preempção V2I concluídos (branch `feat/cameras-60m`,
