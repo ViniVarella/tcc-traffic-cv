@@ -223,6 +223,45 @@ Espera por seed (veículos / pedestres), v3 w = 0,3, 100 ep.: calibrado
   recompensa (o termo de pedestres) e a regra da fase exclusiva, que mantém
   todos os controladores com fila de inserção.
 
+### Preempção com pedestres (V2I, percepção oráculo)
+
+`evaluate_preemption` nos cenários com pedestres, mesma agenda de 30 viaturas
+(10 por seed, seeds 201–203), v3 = `dqn-v3-ped-w03-e100-best.pt`. Arquivos:
+`results/evaluation/preempcao-{calibrated,original}_ped-oracle.json`.
+
+| Cenário | Versão | Modo | Perda média viatura | Perda máx. | Sem parar | Espera veículos | Espera ped. | Máx. ped. |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| calibrado | ciclo fixo | sem | 37,6 s | 96 s | 46% | 25,7 s | 64,0 s | 179 s |
+| calibrado | ciclo fixo | V2I | 5,0 s | 30 s | 80% | 23,2 s | 99,5 s | 339 s |
+| calibrado | v2 | sem | 23,6 s | 106 s | 27% | 26,4 s | 33,8 s | 112 s |
+| calibrado | v2 | V2I | 6,7 s | 49 s | 77% | 22,5 s | 82,0 s | 367 s |
+| calibrado | v3 | sem | 28,9 s | 97 s | 35% | 26,5 s | 30,9 s | 100 s |
+| calibrado | v3 | V2I | 5,2 s | 36 s | 80% | 21,5 s | 71,2 s | 320 s |
+| calibrado | max-pressure | sem | 62,1 s | 149 s | 5% | 55,4 s | 16,9 s | 60 s |
+| calibrado | max-pressure | V2I | 7,4 s | 94 s | 83% | 25,1 s | 71,8 s | 324 s |
+| original | ciclo fixo | sem | 30,2 s | 89 s | 43% | 32,0 s | 64,0 s | 179 s |
+| original | ciclo fixo | V2I | 13,4 s | 102 s | 70% | 30,4 s | 110,3 s | 432 s |
+| original | v2 | sem | 34,7 s | 105 s | 11% | 29,6 s | 28,0 s | 96 s |
+| original | v2 | V2I | 18,8 s | 182 s | 63% | 27,1 s | 93,3 s | 431 s |
+| original | v3 | sem | 35,7 s | 87 s | 10% | 27,2 s | 29,3 s | 93 s |
+| original | v3 | V2I | 11,4 s | 126 s | 67% | 26,7 s | 72,1 s | 357 s |
+| original | max-pressure | sem | 42,6 s | 91 s | 14% | 44,8 s | 19,0 s | 70 s |
+| original | max-pressure | V2I | 13,3 s | 152 s | 70% | 35,8 s | 73,7 s | 403 s |
+
+- **Viaturas:** a preempção continua reduzindo bastante a perda (−65 a −88%),
+  mas fica longe do ~1 s do ambiente sem pedestres: uma viatura que chega
+  durante a fase de pedestres espera até o fim dela (45 s), e a perda máxima
+  vai a 30–180 s. 20–37% das viaturas ainda param.
+- **Problema encontrado — pedestres:** com preempção, a espera média dos
+  pedestres sobe de 31–64 s para 71–110 s e a máxima para **320–432 s**. Pela
+  regra atual, uma viatura adia a fase de pedestres que ainda não começou, e a
+  fase só volta depois do próximo verde Sul completo. Com uma viatura a cada
+  ~3 min, a fase de pedestres é adiada repetidamente e alguns pedestres
+  esperam mais de 7 minutos. A regra precisa ser revista antes de valer como
+  resultado.
+- A espera dos veículos cai com a preempção no calibrado (21–25 s) justamente
+  porque as fases de pedestres adiadas devolvem tempo aos veículos.
+
 ## Ambiente com ROIs de 60 m e preempção para emergências
 
 Status: câmeras, ROIs e preempção V2I concluídos (branch `feat/cameras-60m`,
