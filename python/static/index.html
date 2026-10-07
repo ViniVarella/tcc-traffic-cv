@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic CV — Controle Semafórico Inteligente</title>
+    <meta name="description" content="Sistema de controle semafórico adaptativo com visão computacional, YOLO, ByteTrack e Deep Q-Network.">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polygon points="10 8 16 12 10 16 10 8"/>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <span class="brand-name">TrafficCV</span>
+                <span class="brand-tag">v2.0</span>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-label">Navegação</span>
+            <a href="#home" class="nav-link active" data-page="home">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span>Início</span>
+            </a>
+            <a href="#simulation" class="nav-link" data-page="simulation">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                <span>Simulação</span>
+            </a>
+            <a href="#dashboard" class="nav-link" data-page="dashboard">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                <span>Dashboard</span>
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-label">Sistema</span>
+            <div class="system-status">
+                <div class="status-row">
+                    <span class="status-label">API Server</span>
+                    <span class="status-badge" id="api-status">
+                        <span class="status-dot offline" id="api-dot"></span>
+                        Offline
+                    </span>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">Unity Bridge</span>
+                    <span class="status-badge" id="unity-status">
+                        <span class="status-dot offline" id="unity-dot"></span>
+                        Aguardando
+                    </span>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">SUMO</span>
+                    <span class="status-badge" id="sumo-status">
+                        <span class="status-dot offline" id="sumo-dot"></span>
+                        Parado
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <span class="footer-text">TCC — FIAP 2026</span>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content" id="main-content">
+
+        <!-- ===== PAGE: HOME ===== -->
+        <div class="page active" id="page-home">
+            <!-- Hero -->
+            <section class="hero">
+                <div class="hero-content">
+                    <div class="hero-badge">Trabalho de Conclusão de Curso</div>
+                    <h1 class="hero-title">
+                        Controle Semafórico<br>
+                        <span class="highlight">Inteligente</span> com<br>
+                        Visão Computacional
+                    </h1>
+                    <p class="hero-subtitle">
+                        Um sistema que observa o trânsito por câmeras de vídeo, identifica veículos
+                        em tempo real com inteligência artificial e decide automaticamente quando
+                        trocar o sinal — reduzindo filas e tempo de espera.
+                    </p>
+                    <div class="hero-actions">
+                        <a href="#simulation" class="btn btn-primary btn-lg">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            Ver Simulação
+                        </a>
+                        <a href="#dashboard" class="btn btn-outline btn-lg">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                            Ver Dashboard
+                        </a>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="architecture-diagram">
+                        <div class="arch-node node-sumo">
+                            <div class="node-icon">🚗</div>
+                            <div class="node-label">SUMO</div>
+                            <div class="node-desc">Simulador de tráfego</div>
+                        </div>
+                        <div class="arch-arrow arrow-h">
+                            <span>TraCI</span>
+                        </div>
+                        <div class="arch-node node-python">
+                            <div class="node-icon">🧠</div>
+                            <div class="node-label">Python</div>
+                            <div class="node-desc">DQN + YOLO + ByteTrack</div>
+                        </div>
+                        <div class="arch-arrow arrow-h">
+                            <span>UDP/TCP</span>
+                        </div>
+                        <div class="arch-node node-unity">
+                            <div class="node-icon">🎮</div>
+                            <div class="node-label">Unity</div>
+                            <div class="node-desc">Renderização 3D</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Como funciona -->
+            <section class="section">
+                <div class="section-header">
+                    <h2>Como Funciona</h2>
+                    <p class="section-subtitle">O pipeline completo, do trânsito simulado à decisão inteligente</p>
+                </div>
+                <div class="steps-grid">
+                    <div class="step-card">
+                        <div class="step-number">01</div>
+                        <div class="step-icon">🚦</div>
+                        <h3>Simulação SUMO</h3>
+                        <p>O SUMO (Simulation of Urban Mobility) gera tráfego realista baseado em dados reais de um cruzamento de São Paulo. Cada veículo tem rotas, velocidades e comportamentos individuais.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">02</div>
+                        <div class="step-icon">📹</div>
+                        <h3>Câmeras Unity</h3>
+                        <p>A Unity renderiza a cena 3D com três câmeras posicionadas estrategicamente: Sul, Leste e Oeste. Cada câmera captura a aproximação do cruzamento em alta resolução.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">03</div>
+                        <div class="step-icon">🔍</div>
+                        <h3>YOLO + ByteTrack</h3>
+                        <p>Os frames são processados pelo YOLOv8 para detectar veículos e pelo ByteTrack para rastreá-los entre frames. Cada faixa é analisada individualmente através de ROIs calibradas.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">04</div>
+                        <div class="step-icon">🧠</div>
+                        <h3>DQN Decide</h3>
+                        <p>A Deep Q-Network recebe 41 features por step — contagem, parados, ocupação, velocidade e espera por faixa — e decide: manter o verde atual ou trocar para a fase oposta.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tecnologias -->
+            <section class="section">
+                <div class="section-header">
+                    <h2>Tecnologias</h2>
+                    <p class="section-subtitle">Stack do projeto</p>
+                </div>
+                <div class="tech-grid">
+                    <div class="tech-card">
+                        <div class="tech-name">YOLOv8</div>
+                        <div class="tech-role">Detecção de Veículos</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-name">ByteTrack</div>
+                        <div class="tech-role">Rastreamento Multi-Objeto</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-name">DQN</div>
+                        <div class="tech-role">Aprendizado por Reforço</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-name">SUMO</div>
+                        <div class="tech-role">Simulação de Tráfego</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-name">Unity 6</div>
+                        <div class="tech-role">Renderização 3D</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-name">PyTorch</div>
+                        <div class="tech-role">Deep Learning</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-name">OpenCV</div>
+                        <div class="tech-role">Processamento de Imagem</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-name">FastAPI</div>
+                        <div class="tech-role">Backend & Streaming</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Evolução -->
+            <section class="section">
+                <div class="section-header">
+                    <h2>Evolução do Projeto</h2>
+                    <p class="section-subtitle">Da heurística simples ao aprendizado por reforço profundo</p>
+                </div>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-tag">Referência</div>
+                            <h4>Ciclo Fixo (40s/40s)</h4>
+                            <p>Baseline sem inteligência: o semáforo alterna as fases em intervalos fixos, independente do tráfego real.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-tag">v1 — Set 2026</div>
+                            <h4>Heurística por Fila Visual</h4>
+                            <p>Primeiro controle em malha fechada: contagem visual de veículos por câmera decide quando trocar o verde.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-tag">v1.1 — Set 2026</div>
+                            <h4>DQN Visual (Estado v1)</h4>
+                            <p>DQN com 13 entradas substitui a heurística. Problema: a política colapsou para "trocar sempre".</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item active">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-tag current">v2 — Atual</div>
+                            <h4>DQN por Faixa (Estado v2)</h4>
+                            <p>41 features cinemáticas, pré-treino no SUMO, decisões condicionais. Única versão que prioriza corretamente o Leste saturado, zerando a fila de entrada.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ===== PAGE: SIMULATION ===== -->
+        <div class="page" id="page-simulation">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Simulação ao Vivo</h1>
+                    <p class="page-subtitle">Câmeras com detecção YOLO e controle do semáforo em tempo real</p>
+                </div>
+                <div class="sim-time-display">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span id="sim-clock">00:00:00</span>
+                </div>
+            </div>
+
+            <div class="sim-layout">
+                <!-- Control Strip -->
+                <div class="control-strip">
+                    <button id="btn-start" class="btn btn-start">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Iniciar
+                    </button>
+                    <button id="btn-stop" class="btn btn-stop" disabled>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                        Parar
+                    </button>
+                    <div class="control-divider"></div>
+                    <button id="btn-emergency" class="btn btn-emergency" disabled>
+                        🚨 Injetar Viatura
+                    </button>
+                    <div class="control-divider"></div>
+                    <div class="policy-display">
+                        <span class="policy-label">Política:</span>
+                        <span class="policy-value" id="policy-name">—</span>
+                    </div>
+                    <div class="phase-display">
+                        <span class="phase-label">Fase:</span>
+                        <span class="phase-value" id="phase-name">—</span>
+                    </div>
+                </div>
+
+                <!-- Camera Grid -->
+                <div class="cameras-section">
+                    <div class="camera-main">
+                        <div class="camera-card featured">
+                            <div class="camera-header">
+                                <span class="camera-tag">CÂMERA PRINCIPAL</span>
+                                <span class="camera-name">Sul (South)</span>
+                                <span class="camera-rec" id="rec-south">● REC</span>
+                            </div>
+                            <div class="camera-viewport">
+                                <img src="/api/video/south" alt="Câmera Sul" id="cam-south">
+                                <div class="camera-overlay" id="overlay-south">
+                                    <span>Aguardando frames...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="camera-secondary">
+                        <div class="camera-card">
+                            <div class="camera-header">
+                                <span class="camera-name">Leste (East)</span>
+                                <span class="camera-rec" id="rec-east">● REC</span>
+                            </div>
+                            <div class="camera-viewport">
+                                <img src="/api/video/east" alt="Câmera Leste" id="cam-east">
+                                <div class="camera-overlay" id="overlay-east">
+                                    <span>Aguardando frames...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="camera-card">
+                            <div class="camera-header">
+                                <span class="camera-name">Oeste (West)</span>
+                                <span class="camera-rec" id="rec-west">● REC</span>
+                            </div>
+                            <div class="camera-viewport">
+                                <img src="/api/video/west" alt="Câmera Oeste" id="cam-west">
+                                <div class="camera-overlay" id="overlay-west">
+                                    <span>Aguardando frames...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Metrics Strip -->
+                <div class="metrics-strip">
+                    <div class="metric-tile">
+                        <div class="metric-icon south"></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Fila Sul</span>
+                            <span class="metric-number" id="val-south">—</span>
+                        </div>
+                    </div>
+                    <div class="metric-tile">
+                        <div class="metric-icon east"></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Fila Leste</span>
+                            <span class="metric-number" id="val-east">—</span>
+                        </div>
+                    </div>
+                    <div class="metric-tile">
+                        <div class="metric-icon west"></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Fila Oeste</span>
+                            <span class="metric-number" id="val-west">—</span>
+                        </div>
+                    </div>
+                    <div class="metric-tile highlight-metric">
+                        <div class="metric-icon wait"></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Espera Média</span>
+                            <span class="metric-number" id="val-wait">— s</span>
+                        </div>
+                    </div>
+                    <div class="metric-tile">
+                        <div class="metric-icon reward"></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Recompensa</span>
+                            <span class="metric-number" id="val-reward">—</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== PAGE: DASHBOARD ===== -->
+        <div class="page" id="page-dashboard">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Dashboard de Performance</h1>
+                    <p class="page-subtitle">Métricas acumuladas e gráficos de eficiência da simulação</p>
+                </div>
+                <div class="dash-controls">
+                    <button class="btn btn-sm btn-outline" id="btn-reset-charts">Limpar Gráficos</button>
+                </div>
+            </div>
+
+            <!-- KPIs -->
+            <div class="kpi-row">
+                <div class="kpi-card">
+                    <div class="kpi-value" id="kpi-total-steps">0</div>
+                    <div class="kpi-label">Steps Controlados</div>
+                    <div class="kpi-trend up" id="kpi-trend-steps">—</div>
+                </div>
+                <div class="kpi-card accent-green">
+                    <div class="kpi-value" id="kpi-avg-reward">0.000</div>
+                    <div class="kpi-label">Recompensa Média</div>
+                    <div class="kpi-trend" id="kpi-trend-reward">—</div>
+                </div>
+                <div class="kpi-card accent-amber">
+                    <div class="kpi-value" id="kpi-avg-wait">0.0s</div>
+                    <div class="kpi-label">Espera Média</div>
+                    <div class="kpi-trend" id="kpi-trend-wait">—</div>
+                </div>
+                <div class="kpi-card accent-blue">
+                    <div class="kpi-value" id="kpi-halting">0</div>
+                    <div class="kpi-label">Veículos Parados</div>
+                    <div class="kpi-trend" id="kpi-trend-halting">—</div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="charts-row">
+                <div class="chart-card wide">
+                    <div class="chart-header">
+                        <h3>Tempo de Espera ao Longo do Tempo</h3>
+                        <span class="chart-badge live">LIVE</span>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="chart-waiting" width="800" height="260"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>Recompensa por Step</h3>
+                        <span class="chart-badge live">LIVE</span>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="chart-reward" width="400" height="260"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>Veículos Parados</h3>
+                        <span class="chart-badge live">LIVE</span>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="chart-halting" width="400" height="240"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card wide">
+                    <div class="chart-header">
+                        <h3>Distribuição de Fases</h3>
+                    </div>
+                    <div class="chart-body">
+                        <div class="phase-bars" id="phase-distribution">
+                            <div class="phase-bar-container">
+                                <div class="phase-bar-label">South (Verde Sul)</div>
+                                <div class="phase-bar-track">
+                                    <div class="phase-bar-fill south-fill" id="phase-bar-south" style="width: 50%"></div>
+                                </div>
+                                <span class="phase-bar-pct" id="phase-pct-south">50%</span>
+                            </div>
+                            <div class="phase-bar-container">
+                                <div class="phase-bar-label">East+West (Verde Leste)</div>
+                                <div class="phase-bar-track">
+                                    <div class="phase-bar-fill east-fill" id="phase-bar-east" style="width: 50%"></div>
+                                </div>
+                                <span class="phase-bar-pct" id="phase-pct-east">50%</span>
+                            </div>
+                            <div class="phase-bar-container">
+                                <div class="phase-bar-label">Transição (Amarelo / All-Red)</div>
+                                <div class="phase-bar-track">
+                                    <div class="phase-bar-fill transition-fill" id="phase-bar-trans" style="width: 0%"></div>
+                                </div>
+                                <span class="phase-bar-pct" id="phase-pct-trans">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

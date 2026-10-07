@@ -76,6 +76,7 @@ class UnityVisualObserver:
         shadow = None if self.shadow_factory is None else self.shadow_factory(seed)
         collector = FrameBundleCollector(set(self.pipeline.camera_ids))
         self.last_record = None
+        self.last_results = None
 
         def observe(sim_time: float) -> dict[tuple[str, str], LaneFeatures] | None:
             if sim_time < self.active_from_s:
@@ -106,6 +107,7 @@ class UnityVisualObserver:
             else:
                 self.missing_streak = 0
                 results = self.pipeline.process_bundle(bundle)
+                self.last_results = results
                 features = self.visual_source.observe(results, sim_time)
                 visual_observations = self.visual_source.last_observations
                 sightings = emergency_sightings(results, self.visual_source, self.visual_source.geometries)
