@@ -38,7 +38,8 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Demanda calibrada sem motos: 2026-10-07 — seção **Demanda calibrada sem
   motos** abaixo. Todos os resultados anteriores do cenário `calibrated`
   (inclusive os de pedestres) usam a demanda antiga e viram registro
-  histórico; v2 e v3 estão sendo retreinados.
+  histórico; v2 e v3 foram retreinados (checkpoints `*-sem-motos-best.pt`).
+  As avaliações visuais (Unity) ainda são da demanda antiga.
 
 ## Demanda calibrada sem motos (2026-10-07)
 
@@ -82,6 +83,58 @@ Sem motos, nenhuma versão satura sem pedestres; o ciclo fixo fica na mesma
 ordem dos atrasos medidos pelo drone. A fase exclusiva de pedestres ainda
 custa ~10 s de espera aos veículos, mas não cria mais fila de inserção (exceto
 no max-pressure).
+
+### Retreino e avaliação com a demanda sem motos (oráculo, seeds 201–203, 300 s + 1800 s)
+
+Checkpoints novos, padrão dos scripts: v2 = `dqn-v2-sem-motos-best.pt`
+(`--scenarios calibrated,original`, 40 episódios, melhor no 39; ~5 min, pois
+cada episódio leva ~5 s sem saturação) e v3 = `dqn-v3-sem-motos-best.pt`
+(`calibrated_ped,original_ped`, w = 0,3, 100 episódios, seeds 51–150, melhor
+no 89). v1/v1.1 continuam com o checkpoint legado. Arquivos:
+`results/evaluation/versoes-*-oracle.json` e `preempcao-*-oracle.json`; os da
+demanda antiga ganharam o sufixo `-motos`. Log: `results/logs/avaliacao-sem-motos.log`.
+
+**Versões**
+
+| Cenário | Ciclo fixo | v1 | v1.1 | v2 | v3 | max-pressure |
+|---|---:|---:|---:|---:|---:|---:|
+| calibrado | 13,0 s | 4,4 s | 5,7 s | **4,1 s** | — | 4,7 s |
+| original | 14,9 s (fila 37) | 4,7 s | 4,6 s | **4,5 s** | — | 4,6 s |
+| calibrado + pedestres | 24,5 s | 30,2 s (fila 15) | — | **21,3 s** | **21,3 s** | 34,2 s (fila 77) |
+| original + pedestres | 32,3 s (fila 224) | 49,3 s (fila 417) | — | 30,9 s (fila 183) | **27,1 s** (fila 192) | 44,1 s (fila 357) |
+
+Pedestres (mediana / p90): calibrado — ciclo fixo 48 / 163 s, v2 10 / 70 s,
+v3 12 / 74 s, max-pressure 7 / 53 s; original — ciclo fixo 49 / 163 s, v2
+14 / 74 s, v3 14 / 86 s.
+
+- No calibrado, as políticas adaptativas reduzem a espera de 13,0 s para
+  4,1–5,7 s (v2: −68%) e ficam próximas entre si: com v/c 0,58 no Leste, há
+  menos a ganhar entre elas do que com o Leste saturado.
+- Com pedestres, v2 e v3 empatam nos veículos no calibrado (21,3 s); a v2
+  fica um pouco melhor para os pedestres. A v1 (decide a cada passo, sem a
+  fase de pedestres no estado) e o max-pressure pioram os veículos.
+- O cenário `original_ped` (demanda sintética do netedit, Sul com 1.630
+  veíc/h) ainda satura com a fase exclusiva; ele não vem do drone.
+
+**Preempção (V2I, viaturas a cada ~5 min, 18 viaturas)**, perda total
+(espera de entrada + perda na rede), sem → com preempção:
+
+| Cenário | Ciclo fixo | v2 | v3 | max-pressure |
+|---|---:|---:|---:|---:|
+| calibrado | 16,6 → **1,4 s** | 8,0 → **1,5 s** | — | 7,9 → 1,5 s |
+| original | 31,3 → 13,6 s | 12,2 → 3,1 s | — | 13,0 → 3,3 s |
+| calibrado + pedestres | 32,9 → 5,8 s | 26,7 → **5,2 s** | 23,2 → 7,7 s | 90,1 → 19,9 s |
+| original + pedestres | 118,5 → 69,9 s | 96,8 → 74,9 s | 97,6 → 81,4 s | 106,4 → 101,1 s |
+
+- Calibrado sem pedestres: 100% das viaturas cruzam sem parar, espera de
+  entrada ~1 s.
+- **Calibrado com pedestres: o problema da investigação anterior sumiu.** A
+  espera de entrada fica em 3–4 s, a perda total cai para 5–8 s (máx. 39 s,
+  quem chega durante a fase de pedestres) e os pedestres praticamente não
+  pioram com a preempção (v2: mediana 15 → 13 s, p90 72 → 74 s; v3: 12 → 16 s,
+  74 → 76 s).
+- No `original_ped`, ainda saturado, a viatura continua presa na fila de
+  inserção (~60–75 s) e os pedestres pioram com a preempção, como antes.
 
 ## Pedestres (fase exclusiva a cada dois ciclos)
 

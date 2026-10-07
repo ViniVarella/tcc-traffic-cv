@@ -116,6 +116,12 @@ faziam originalmente.
 
 ### Ambiente atual (câmeras e ROIs de 60 m), cenário calibrado
 
+> **Demanda antiga.** As tabelas abaixo usam a calibração que contava motos
+> como carros (hoje `calibrated_motos`, registro histórico). A demanda
+> calibrada atual exclui as motos; os resultados com ela (percepção oráculo)
+> estão em `docs/IMPLEMENTATION_PROGRESS.md`, seção *Demanda calibrada sem
+> motos*. As avaliações visuais serão refeitas.
+
 Câmeras reposicionadas, ROIs de 60 m por faixa, YOLO de duas classes e a v2
 pré-treinada nos dois cenários (`dqn-v2-roi60-mix-pretrain-best.pt`). Seeds
 201–203, 0 frames perdidos na percepção visual.

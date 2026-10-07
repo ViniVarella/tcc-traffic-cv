@@ -336,8 +336,13 @@ Todos a partir de `python/`:
   --baseline <a.json> --visual-adaptive <b.json> --output <saida.json>
 
 # Pré-treino do DQN v2 só com SUMO. Use os dois cenários: treinada só no
-# calibrado, a v2 especializa e piora com demanda equilibrada.
-../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated,original
+# calibrado, a v2 especializa e piora com demanda equilibrada. Referência
+# (demanda sem motos): dqn-v2-sem-motos-best.pt, padrão dos scripts v2.
+../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated,original \
+  --checkpoint-output ../results/models/dqn-v2-sem-motos-last.pt --best-checkpoint-output ../results/models/dqn-v2-sem-motos-best.pt
+
+# Gerar a demanda calibrada (sem motos) a partir dos dados do drone
+../.venv/bin/python -m experiments.build_calibrated_demand
 
 # Avaliar ciclo fixo, max-pressure e checkpoints v2 com percepção oráculo (só SUMO)
 ../.venv/bin/python -m experiments.evaluate_policies_sumo --scenario calibrated \
@@ -360,7 +365,7 @@ Todos a partir de `python/`:
 # Pré-treino do DQN v3 (com pedestres; referência: w = 0,3, 100 episódios, seeds 51–150)
 ../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated_ped,original_ped --state-version 3 \
   --episodes 100 --seed-start 51 --pedestrian-reward-weight 0.3 \
-  --checkpoint-output ../results/models/dqn-v3-ped-w03-e100-last.pt --best-checkpoint-output ../results/models/dqn-v3-ped-w03-e100-best.pt
+  --checkpoint-output ../results/models/dqn-v3-sem-motos-last.pt --best-checkpoint-output ../results/models/dqn-v3-sem-motos-best.pt
 
 # Versões com pedestres (oráculo); v3 só entra se pedido
 ../.venv/bin/python -m experiments.compare_versions --scenario calibrated_ped --perception oracle --versions baseline,v1,v2,v3,max_pressure
