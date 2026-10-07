@@ -79,15 +79,24 @@ docs/                   guias de implementação e integração Sumo2Unity
 
 `optimization/SP/Cruzamento.{net,rou,add}.xml` são cópias de `sumo/sp/`; se
 alterar um, verifique o outro. Exceção deliberada: `sumo/sp/Cruzamento.calibrated.rou.xml`
-usa chegadas Poisson (`period="exp(...)"`) e inserção realista
-(`departLane="best" departSpeed="max"`), ao contrário da cópia em `optimization/SP`.
+usa chegadas Poisson (`period="exp(...)"`), inserção realista
+(`departLane="best" departSpeed="max"`) e a demanda sem motos, ao contrário da
+cópia em `optimization/SP` (que segue com a calibração antiga).
 
 ## Cenário SP (`python/configs/sp.yaml`)
 
 - SUMO: step 1 s, porta TraCI 8873. Cenários em `sumo.scenarios` (escolha com
   `--scenario`; padrão `sumo.default_scenario`):
-  - `calibrated` (padrão): demanda medida nos vídeos de drone — Leste
-    saturado (v/c≈1,0), Sul 0,39, Oeste 0,20. É o cenário principal.
+  - `calibrated` (padrão): demanda medida nos vídeos de drone **sem motos**
+    (andam no corredor e não formam fila; "triciclos" são motos mal
+    classificadas; rótulos de pedestre do SimJamCV não são confiáveis).
+    Pesados entram como carros. Leste 976 veíc/h (v/c≈0,58), Sul 727 (0,22),
+    Oeste 139 (0,17). Gerada por `experiments.build_calibrated_demand`; não
+    edite a rota à mão. É o cenário principal.
+  - `calibrated_motos`: **registro histórico** — a calibração anterior, que
+    contava motos como carros e saturava o Leste (v/c≈1,0, contra 6,6 s de
+    atraso, nível A, medidos pelo drone). Resultados com ela (até 2026-10-07)
+    não entram em tabelas novas.
   - `original`: demanda equilibrada do netedit (v/c≈0,5); o tempo de verde
     quase não muda o resultado. Mantido para comparar com resultados antigos.
 - Unity: estado UDP `127.0.0.1:5004`, frames TCP `127.0.0.1:5005`.

@@ -3,11 +3,16 @@ experiment:
   seed: 42
 
 sumo:
-  # calibrated: demanda medida nos vídeos de drone (Leste saturado, v/c ~1,0).
+  # calibrated: demanda medida nos vídeos de drone sem motos (andam no corredor),
+  # gerada por experiments.build_calibrated_demand: Leste v/c ~0,58, Sul 0,22,
+  # Oeste 0,17 com o plano fixo.
   # original: demanda do netedit, equilibrada entre as fases (v/c ~0,5).
+  # calibrated_motos: REGISTRO HISTÓRICO — a calibração anterior, que contava
+  # motos como carros e saturava o Leste (v/c ~1,0). Não use em resultados novos.
   scenarios:
     calibrated: "../sumo/sp/Cruzamento.calibrated.sumocfg"
     original: "../sumo/sp/Cruzamento.sumocfg"
+    calibrated_motos: "../sumo/sp/Cruzamento.calibrated-motos.sumocfg"
     # Mesmas demandas de veículos + pedestres (rede Cruzamento.ped.net.xml com
     # calçadas e faixas de pedestre; gerada por experiments.build_pedestrian_network).
     calibrated_ped: "../sumo/sp/Cruzamento.calibrated.ped.sumocfg"
