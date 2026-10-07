@@ -35,6 +35,53 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Pedestres no SUMO (rede, fase exclusiva a cada dois ciclos, estado v3,
   métricas): em andamento desde 2026-10-05 — seção **Pedestres** abaixo.
   Unity e câmeras com pedestres ficam para a etapa seguinte.
+- Demanda calibrada sem motos: 2026-10-07 — seção **Demanda calibrada sem
+  motos** abaixo. Todos os resultados anteriores do cenário `calibrated`
+  (inclusive os de pedestres) usam a demanda antiga e viram registro
+  histórico; v2 e v3 estão sendo retreinados.
+
+## Demanda calibrada sem motos (2026-10-07)
+
+Status: implementada na branch `feat/demanda-sem-motos`
+(`experiments.build_calibrated_demand`, `tests/test_calibrated_demand.py`).
+
+**Por que mudou.** A calibração anterior multiplicava o `throughput_per_hour`
+do SimJamCV pela fração de veículos do `vehicles.csv`, tirando só os rótulos de
+pedestre. As motos ficavam e viravam carros de 5 m no SUMO. Nos vídeos, motos
+e "triciclos" (motos mal classificadas) são ~42% do Leste e ~43% do Sul. Com
+isso o Leste do modelo ficou saturado (v/c 1,00), mas o próprio drone mediu
+atraso de **6,6 s no Leste (nível A)**, 12,9 s no Sul e 17 s no Oeste. Decisão
+do usuário: motos andam no corredor e não formam fila, então saem da demanda;
+carros, vans, caminhões e ônibus entram (pesados como carros). Os rótulos de
+pedestre do SimJamCV não são confiáveis.
+
+| Aproximação | Antes (motos como carros) | Sem motos | v/c antes | v/c sem motos |
+|---|---:|---:|---:|---:|
+| Leste (E2) | 1.675 veíc/h | 976 | 1,00 | 0,58 |
+| Sul (E3) | 1.279 | 727 | 0,39 | 0,22 |
+| Oeste (E6) | 169 | 139 | 0,20 | 0,17 |
+
+As conversões de cada aproximação mantêm as proporções anteriores. A rota
+antiga ficou como cenário `calibrated_motos` (`Cruzamento.calibrated-motos.*`),
+só como registro histórico.
+
+Checagem (oráculo, seeds 201–203, 300 s + 1800 s; v2 = checkpoint antigo,
+treinado com a demanda anterior, só indicativo). Arquivos:
+`results/evaluation/versoes-{calibrated,calibrated_ped}-oracle-sem-motos-checagem.json`.
+
+| Cenário | Versão | Espera veíc. | Chegadas | Fila de inserção | Ped. mediana | Ped. p90 |
+|---|---|---:|---:|---:|---:|---:|
+| calibrado | ciclo fixo | 13,0 s | 918 | 0 | — | — |
+| calibrado | v2 (antigo) | 4,3 s | 918 | 0 | — | — |
+| calibrado | max-pressure | 4,7 s | 917 | 0 | — | — |
+| calibrado + pedestres | ciclo fixo | 24,5 s | 906 | 0 | 48 s | 163 s |
+| calibrado + pedestres | v2 (antigo) | 21,1 s | 907 | 0 | 13 s | 69 s |
+| calibrado + pedestres | max-pressure | 34,2 s | 828 | 77 | 7 s | 53 s |
+
+Sem motos, nenhuma versão satura sem pedestres; o ciclo fixo fica na mesma
+ordem dos atrasos medidos pelo drone. A fase exclusiva de pedestres ainda
+custa ~10 s de espera aos veículos, mas não cria mais fila de inserção (exceto
+no max-pressure).
 
 ## Pedestres (fase exclusiva a cada dois ciclos)
 
@@ -261,6 +308,35 @@ Espera por seed (veículos / pedestres), v3 w = 0,3, 100 ep.: calibrado
   resultado.
 - A espera dos veículos cai com a preempção no calibrado (21–25 s) justamente
   porque as fases de pedestres adiadas devolvem tempo aos veículos.
+
+### Investigação da preempção com pedestres (demanda antiga, 2026-10-07)
+
+Registro histórico: tudo nesta seção usa a demanda com motos
+(`calibrated_motos`), que saturava o Leste.
+
+- **Regra de adiamento corrigida** (`fix:` 7483050): a fase de pedestres
+  adiada por uma viatura vem no all-red seguinte, logo depois do verde dela,
+  e o ciclo retoma pelo verde que viria. Quase não mudou os números (v3
+  calibrado: máx. de pedestres 320 → 312 s), então não era a causa principal.
+- **Causa real:** com a fase exclusiva, o Leste (já com v/c 1,0) ficava com
+  fila de inserção de 190–430 veículos. A viatura do Leste entrava no fim dessa
+  fila, fora da rede, e o aviso V2I segurava o verde L/O por até ~220 s,
+  travando o Sul e a fase de pedestres.
+- **Métrica corrigida:** a perda da viatura só contava depois da entrada na
+  rede (uma viatura com ~220 s de espera aparecia com 2,3 s). Agora o resumo
+  traz `mean_insertion_delay_s` e `mean_total_loss_at_crossing_s` (inserção +
+  perda na rede), e os pedestres ganharam mediana e p90.
+- **Viaturas a cada 5 min** (`interval_s` 180 → 300; resultados de 3 min com
+  sufixo `-viaturas-3min`). v3 calibrado com pedestres, V2I: perda na rede
+  3,8 s, mas espera de entrada de 71,7 s e perda total de 75,5 s (sem
+  preempção, 109,6 s). Pedestres: mediana 18 → 38 s, p90 83 → 216 s. Sem
+  pedestres, a v2 fica com perda total de 4,5 s (calibrado) e 3,2 s (original).
+- **Fase a cada 3 ciclos** (ciclo fixo, v2 e max-pressure; arquivos
+  `versoes-*_ped-oracle-ped-cada{2,3}.json`): no calibrado, a v2 vai de
+  26,0 para 21,4 s de espera e de 367 para 263 veículos na fila de inserção,
+  mas a mediana dos pedestres sobe de 14 para 32 s. Não resolvia a saturação.
+- Ao olhar a fila no `sumo-gui`, o usuário notou que o cruzamento real não
+  tinha tanto carro, o que levou à recalibração sem motos (seção acima).
 
 ## Ambiente com ROIs de 60 m e preempção para emergências
 
