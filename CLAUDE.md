@@ -137,6 +137,11 @@ usa chegadas Poisson (`period="exp(...)"`) e inserção realista
   frames): classe `emergency` dentro de uma ROI em `confirm_frames` frames
   seguidos; sem vê-la, o pedido segue pelo tempo estimado até a linha +
   `hold_margin_s`. Uma viatura por aproximação de cada vez.
+- Agenda: uma viatura a cada ~5 min (`interval_s` = 300; até 2026-10 era
+  180 s, resultados antigos têm o sufixo `-viaturas-3min`). A perda dentro da
+  rede (`mean_time_loss_at_crossing_s`) não vê a espera na fila de inserção,
+  que no Leste saturado chega a minutos: use `mean_total_loss_at_crossing_s`
+  (inserção + perda na rede).
 - Parâmetros em `emergency:` no `sp.yaml`; avaliação em
   `experiments.evaluate_preemption` (mesma agenda para todas as políticas;
   `--perception visual` com Unity compara `v2i`, `vision` e `both`).
