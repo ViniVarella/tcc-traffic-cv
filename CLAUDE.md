@@ -161,7 +161,9 @@ usa chegadas Poisson (`period="exp(...)"`) e inserção realista
   ciclos (L/O → Sul → L/O → Sul → pedestres), verde de 41 s (maior "L" da
   rede, 48,05 m, a 1,2 m/s) + 3 s de liberação. É obrigatória como o
   amarelo: a política não a encerra, e a preempção espera o fim dela (uma
-  fase de pedestres ainda não iniciada é adiada pela viatura).
+  fase de pedestres ainda não iniciada é adiada pela viatura e vem no
+  all-red seguinte, logo depois do verde dela; o ciclo retoma pelo verde que
+  viria). Esperar mais um verde Sul deixava pedestres até 7 min parados.
 - `Environment` detecta a rede com pedestres pelo semáforo
   (`pedestrian_link_count`) e liga a fase e as métricas de pedestre
   (`sumo/pedestrian_metrics.py`).

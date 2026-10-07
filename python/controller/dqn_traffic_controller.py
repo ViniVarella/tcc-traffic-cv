@@ -19,7 +19,9 @@ class DqnTrafficController:
         Ela entra depois de cada ``pedestrians.every_cycles``-ésimo verde Sul:
         all-red → verde de pedestres → liberação (vermelho total) → verde L/O. É
         obrigatória como o amarelo: a política não a encerra nem a pula, e a
-        preempção espera o fim dela.
+        preempção espera o fim dela. Uma viatura passa à frente de uma fase de
+        pedestres ainda não iniciada; a fase adiada vem no all-red seguinte
+        (depois do verde da viatura), e o ciclo retoma pelo verde que viria.
         """
         control = config.get("traffic_control", {})
         self.tls_id = tls_id
@@ -41,6 +43,9 @@ class DqnTrafficController:
             raise ValueError("A fase de pedestres exige traffic_light.phases.pedestrian_* e o bloco pedestrians do perfil.")
         # Verdes Sul concluídos desde a última fase de pedestres.
         self.south_greens_since_pedestrian = 0
+        # Fase de pedestres devida que uma viatura adiou, e o verde que vem depois dela.
+        self.pedestrian_deferred = False
+        self.green_after_pedestrian = PhaseManager.EAST_WEST_GREEN
         self.history: list[str] = []
 
     def greens_until_pedestrian(self) -> int | None:
@@ -53,10 +58,15 @@ class DqnTrafficController:
         every, done = self.pedestrian_every_cycles, self.south_greens_since_pedestrian
         name = self.phase_manager.get_current_phase().name
         upcoming = self.phase_manager.pending_green if name == PhaseManager.ALL_RED else None
+        if name in {PhaseManager.PEDESTRIAN_GREEN, PhaseManager.PEDESTRIAN_CLEARANCE} or upcoming == PhaseManager.PEDESTRIAN_GREEN:
+            # O próximo verde é o que retoma o ciclo depois da fase de pedestres.
+            return 2 * every - 1 if self.green_after_pedestrian == PhaseManager.EAST_WEST_GREEN else 2 * every - 2
+        if self.pedestrian_deferred:
+            # A fase adiada vem logo depois do verde atual (ou do próximo, num amarelo ou all-red).
+            return 0
         if name in {PhaseManager.SOUTH_GREEN, PhaseManager.EAST_WEST_YELLOW} or upcoming == PhaseManager.SOUTH_GREEN:
             return max(0, 2 * (every - done - 1))
-        pedestrian_next = name == PhaseManager.SOUTH_YELLOW and done >= every
-        if pedestrian_next or upcoming == PhaseManager.PEDESTRIAN_GREEN or name in {PhaseManager.PEDESTRIAN_GREEN, PhaseManager.PEDESTRIAN_CLEARANCE}:
+        if name == PhaseManager.SOUTH_YELLOW and done >= every:
             return 2 * every - 1
         return max(0, 2 * (every - done) - 1)
 
@@ -99,29 +109,32 @@ class DqnTrafficController:
         if name == PhaseManager.EAST_WEST_YELLOW:
             if elapsed < self.yellow_seconds:
                 return None, "east_west_yellow_in_progress"
-            self.phase_manager.pending_green = PhaseManager.SOUTH_GREEN
+            self.phase_manager.pending_green = self._pedestrian_or(PhaseManager.SOUTH_GREEN) if self.pedestrian_deferred else PhaseManager.SOUTH_GREEN
             return PhaseManager.ALL_RED, "east_west_yellow_complete"
         if name == PhaseManager.SOUTH_YELLOW:
             if elapsed < self.yellow_seconds:
                 return None, "south_yellow_in_progress"
             due = self.pedestrian_phase and self.south_greens_since_pedestrian >= self.pedestrian_every_cycles
-            self.phase_manager.pending_green = PhaseManager.PEDESTRIAN_GREEN if due else PhaseManager.EAST_WEST_GREEN
+            self.phase_manager.pending_green = self._pedestrian_or(PhaseManager.EAST_WEST_GREEN) if due else PhaseManager.EAST_WEST_GREEN
             return PhaseManager.ALL_RED, "south_yellow_complete"
         if name == PhaseManager.PEDESTRIAN_GREEN:
             if elapsed < self.pedestrian_green_seconds:
                 return None, "pedestrian_green_in_progress"
             self.south_greens_since_pedestrian = 0
+            self.pedestrian_deferred = False
             return PhaseManager.PEDESTRIAN_CLEARANCE, "pedestrian_green_complete"
         if name == PhaseManager.PEDESTRIAN_CLEARANCE:
             if elapsed < self.pedestrian_clearance_seconds:
                 return None, "pedestrian_clearance_in_progress"
-            return preempt_target or PhaseManager.EAST_WEST_GREEN, "pedestrian_clearance_complete"
+            return preempt_target or self.green_after_pedestrian, "pedestrian_clearance_complete"
         if name == PhaseManager.ALL_RED:
             if elapsed < self.all_red_seconds:
                 return None, "all_red_in_progress"
             if preempt_target is not None:
                 # A viatura passa à frente de uma fase de pedestres ainda não iniciada;
-                # o contador não zera, então ela vem na próxima oportunidade.
+                # ela fica adiada e vem no próximo all-red, depois do verde da viatura.
+                if self.phase_manager.pending_green == PhaseManager.PEDESTRIAN_GREEN:
+                    self.pedestrian_deferred = True
                 self.phase_manager.pending_green = preempt_target
             next_green = self.phase_manager.pending_green
             if next_green is None:
@@ -140,6 +153,11 @@ class DqnTrafficController:
                 return None, "vision_unavailable"
             return self._end_green(name, yellow, "dqn_switch") if action == self.SWITCH else (None, "dqn_keep")
         raise RuntimeError(f"Fase lógica desconhecida: {name!r}")
+
+    def _pedestrian_or(self, resume_green: str) -> str:
+        """Agenda a fase de pedestres no all-red; depois dela o ciclo retoma por ``resume_green``."""
+        self.green_after_pedestrian = resume_green
+        return PhaseManager.PEDESTRIAN_GREEN
 
     def _end_green(self, name: str, yellow: str, reason: str) -> tuple[str, str]:
         if name == PhaseManager.SOUTH_GREEN:

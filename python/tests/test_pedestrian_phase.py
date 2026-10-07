@@ -85,9 +85,33 @@ class PedestrianPhaseTests(unittest.TestCase):
         all_red = run_until(controller, yellow + 1, PhaseManager.ALL_RED)
         decision = controller.update_preemption(all_red + 1, PhaseManager.EAST_WEST_GREEN)
         self.assertEqual(decision["phase_name"], PhaseManager.EAST_WEST_GREEN)
-        # Sem viatura, a fase de pedestres adiada vem logo depois do próximo verde Sul.
-        time = run_until(controller, all_red + 2, PhaseManager.SOUTH_GREEN)
+        self.assertEqual(controller.greens_until_pedestrian(), 0)
+        preempted_at = len(controller.history)
+        # A viatura cruzou: a fase adiada vem no próximo all-red, sem esperar um verde Sul,
+        # e depois o ciclo retoma pelo verde que viria (Sul).
+        green = run_until(controller, all_red + 2, PhaseManager.PEDESTRIAN_GREEN)
+        self.assertEqual(controller.history[preempted_at:], [PhaseManager.EAST_WEST_YELLOW, PhaseManager.ALL_RED,
+                                                             PhaseManager.PEDESTRIAN_GREEN])
+        self.assertEqual(controller.greens_until_pedestrian(), 2)  # Sul, L/O, Sul
+        self.assertEqual(run_until(controller, green + 1, PhaseManager.SOUTH_GREEN) - green, 44)
+        time = run_until(controller, green + 45, PhaseManager.SOUTH_GREEN)
         self.assertEqual(run_until(controller, time + 1, PhaseManager.PEDESTRIAN_GREEN) > time, True)
+
+    def test_a_new_emergency_at_the_all_red_defers_the_pedestrian_phase_again(self) -> None:
+        controller = DqnTrafficController("tls", CONFIG, pedestrian_phase=True)
+        time = run_until(controller, 1, PhaseManager.SOUTH_GREEN)
+        time = run_until(controller, time + 1, PhaseManager.SOUTH_GREEN)
+        all_red = run_until(controller, run_until(controller, time + 1, PhaseManager.SOUTH_YELLOW) + 1, PhaseManager.ALL_RED)
+        controller.update_preemption(all_red + 1, PhaseManager.EAST_WEST_GREEN)
+        # Segunda viatura no Sul: o verde L/O acaba, e no all-red ela passa à frente de novo.
+        time = all_red + 2
+        while controller.phase_manager.get_current_phase().name != PhaseManager.SOUTH_GREEN:
+            controller.update_preemption(time, PhaseManager.SOUTH_GREEN)
+            time += 1
+        self.assertEqual(controller.greens_until_pedestrian(), 0)
+        # Ela cruzou: o amarelo Sul leva à fase de pedestres, que volta para L/O.
+        green = run_until(controller, time, PhaseManager.PEDESTRIAN_GREEN)
+        self.assertEqual(run_until(controller, green + 1, PhaseManager.EAST_WEST_GREEN) - green, 44)
 
     def test_without_pedestrian_phase_the_cycle_is_unchanged(self) -> None:
         controller = DqnTrafficController("tls", CONFIG)
