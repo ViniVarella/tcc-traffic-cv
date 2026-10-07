@@ -133,7 +133,7 @@ lane_state:
 # estimado até a linha de retenção fica abaixo de activation_eta_s; pode
 # encurtar o verde mínimo, mas nunca pula amarelo nem all-red.
 emergency:
-  interval_s: 180
+  interval_s: 300
   jitter_s: 60
   first_after_s: 30
   announce_before_s: 15

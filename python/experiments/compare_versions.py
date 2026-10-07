@@ -86,7 +86,8 @@ def main() -> None:
                   f"wait={mean['mean_waiting_time_seconds']:.1f}s travel={mean['mean_travel_time_seconds']:.1f}s "
                   f"arrived={mean['arrived_vehicles']:.0f} pending_end={mean['final_pending_vehicles']:.1f} "
                   f"ew_green_share={mean['east_west_green_share']:.2f} switches={mean['switches']:.0f}"
-                  + (f" ped_wait={mean['pedestrian_mean_waiting_s']:.1f}s ped_max={mean['pedestrian_max_waiting_s']:.0f}s"
+                  + (f" ped_wait={mean['pedestrian_mean_waiting_s']:.1f}s ped_median={mean['pedestrian_median_waiting_s']:.0f}s"
+                     f" ped_p90={mean['pedestrian_p90_waiting_s']:.0f}s ped_max={mean['pedestrian_max_waiting_s']:.0f}s"
                      if "pedestrian_mean_waiting_s" in mean else ""))
     finally:
         if bridge is not None:

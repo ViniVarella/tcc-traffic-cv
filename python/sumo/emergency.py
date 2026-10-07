@@ -29,7 +29,7 @@ class EmergencyClient(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class EmergencySettings:
-    interval_s: float = 180.0
+    interval_s: float = 300.0
     jitter_s: float = 60.0
     first_after_s: float = 30.0
     announce_before_s: float = 15.0
@@ -85,6 +85,8 @@ def build_schedule(settings: EmergencySettings, seed: int, start_s: float, end_s
 class _Tracked:
     plan: ScheduledEmergency
     inserted: bool = False
+    inserted_s: float | None = None
+    entered_s: float | None = None
     seen: bool = False
     arrived_s: float | None = None
     passed_stop_line_s: float | None = None
@@ -121,6 +123,7 @@ class EmergencyTraffic:
                 if sim_time >= plan.depart_s:
                     client.add_vehicle(plan.vehicle_id, plan.from_edge, plan.to_edge, EMERGENCY_TYPE)
                     vehicle.inserted = True
+                    vehicle.inserted_s = sim_time
                 elif sim_time >= plan.depart_s - self.settings.announce_before_s:
                     # Anunciada pelo despacho, ainda antes de entrar na rede.
                     requests.append(EmergencyRequest(plan.vehicle_id, plan.approach, plan.depart_s - sim_time + self._full_approach_s()))
@@ -134,6 +137,8 @@ class EmergencyTraffic:
                     # Inserção adiada (entrada bloqueada pela fila): continua pedindo passagem.
                     requests.append(EmergencyRequest(plan.vehicle_id, plan.approach, self._full_approach_s()))
                 continue
+            if not vehicle.seen:
+                vehicle.entered_s = sim_time
             vehicle.seen = True
             self._observe(vehicle, state, sim_time)
             vehicle.on_approach = state["road_id"] == self.approach_edges[plan.approach]
@@ -165,6 +170,12 @@ class EmergencyTraffic:
                 if vehicle.on_approach and vehicle.plan.approach == request.approach and vehicle.first_visual_s is None:
                     vehicle.first_visual_s = sim_time
 
+    @staticmethod
+    def _insertion_delay(vehicle: _Tracked) -> float:
+        if vehicle.entered_s is None or vehicle.inserted_s is None:
+            return 0.0
+        return vehicle.entered_s - vehicle.inserted_s
+
     def _full_approach_s(self) -> float:
         return 75.0 / self.settings.free_speed_mps
 
@@ -180,12 +191,18 @@ class EmergencyTraffic:
     def summary(self) -> dict[str, Any]:
         done = [vehicle for vehicle in self._vehicles if vehicle.passed_stop_line_s is not None]
         mean = lambda values: None if not values else float(fmean(values))
+        total = [self._insertion_delay(vehicle) + vehicle.approach_time_loss for vehicle in done]
         return {
             "scheduled": len(self._vehicles),
             "crossed_stop_line": len(done),
             # Perda de tempo até cruzar a linha de retenção: o atraso causado pelo semáforo.
             "mean_time_loss_at_crossing_s": mean([vehicle.approach_time_loss for vehicle in done]),
             "max_time_loss_at_crossing_s": max((vehicle.approach_time_loss for vehicle in done), default=None),
+            # Espera fora da rede: com a entrada bloqueada pela fila, o SUMO adia a
+            # inserção e a perda acima não a vê. Inclui a latência de 1 step da inserção.
+            "mean_insertion_delay_s": mean([self._insertion_delay(vehicle) for vehicle in done]),
+            "mean_total_loss_at_crossing_s": mean(total),
+            "max_total_loss_at_crossing_s": max(total, default=None),
             "mean_stops": mean([vehicle.approach_stops for vehicle in done]),
             "share_without_stops": mean([float(vehicle.approach_stops == 0) for vehicle in done]),
             "mean_waiting_s": mean([vehicle.waiting for vehicle in done]),
@@ -204,6 +221,7 @@ class EmergencyTraffic:
             "vehicles": [
                 {"id": vehicle.plan.vehicle_id, "approach": vehicle.plan.approach, "depart_s": vehicle.plan.depart_s,
                  "crossed_s": vehicle.passed_stop_line_s, "time_loss_at_crossing_s": vehicle.approach_time_loss,
+                 "insertion_delay_s": None if vehicle.entered_s is None else self._insertion_delay(vehicle),
                  "stops_before_crossing": vehicle.approach_stops, "waiting_s": vehicle.waiting,
                  "first_visual_s": vehicle.first_visual_s}
                 for vehicle in self._vehicles

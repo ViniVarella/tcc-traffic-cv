@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from statistics import fmean
+from statistics import fmean, median
 
 
 # Mesmo limiar de parada da espera dos veículos no SUMO.
@@ -45,6 +45,8 @@ class PedestrianMetricsCollector:
         return {
             "pedestrians_arrived": len(waiting),
             "pedestrian_mean_waiting_s": None if not waiting else float(fmean(waiting)),
+            "pedestrian_median_waiting_s": None if not waiting else float(median(waiting)),
+            "pedestrian_p90_waiting_s": None if not waiting else float(waiting[min(len(waiting) - 1, int(0.90 * len(waiting)))]),
             "pedestrian_p95_waiting_s": None if not waiting else float(waiting[min(len(waiting) - 1, int(0.95 * len(waiting)))]),
             "pedestrian_max_waiting_s": None if not waiting else float(waiting[-1]),
             "pedestrian_mean_trip_s": None if not self.completed_trip else float(fmean(self.completed_trip)),

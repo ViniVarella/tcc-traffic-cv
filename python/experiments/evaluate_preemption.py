@@ -107,7 +107,8 @@ def main() -> None:
                         runs.append({"seed": seed, "preemption_steps": outcome.preemption_steps,
                                      "missing_observations": outcome.missing_observations, **{key: metrics.get(key) for key in (
                                          "mean_waiting_time_seconds", "mean_travel_time_seconds", "arrived_vehicles",
-                                         "final_pending_vehicles", "pedestrian_mean_waiting_s", "pedestrian_max_waiting_s")},
+                                         "final_pending_vehicles", "pedestrian_mean_waiting_s", "pedestrian_median_waiting_s",
+                                         "pedestrian_p90_waiting_s", "pedestrian_max_waiting_s")},
                                      "emergency": vehicles})
                 finally:
                     if handle is not None:
@@ -116,6 +117,9 @@ def main() -> None:
                 summary = {
                     "emergency_mean_time_loss_s": _mean([run["emergency"]["mean_time_loss_at_crossing_s"] for run in runs]),
                     "emergency_max_time_loss_s": max((run["emergency"]["max_time_loss_at_crossing_s"] or 0.0) for run in runs),
+                    "emergency_mean_insertion_delay_s": _mean([run["emergency"]["mean_insertion_delay_s"] for run in runs]),
+                    "emergency_mean_total_loss_s": _mean([run["emergency"]["mean_total_loss_at_crossing_s"] for run in runs]),
+                    "emergency_max_total_loss_s": max((run["emergency"]["max_total_loss_at_crossing_s"] or 0.0) for run in runs),
                     "emergency_share_without_stops": _mean([run["emergency"]["share_without_stops"] for run in runs]),
                     "emergency_crossed": sum(run["emergency"]["crossed_stop_line"] for run in runs),
                     "emergency_scheduled": sum(run["emergency"]["scheduled"] for run in runs),
@@ -126,12 +130,16 @@ def main() -> None:
                     "visual_false_events": sum(item["false_events"] for item in visual),
                     **{key: _mean([run[key] for run in runs]) for key in (
                         "mean_waiting_time_seconds", "mean_travel_time_seconds", "arrived_vehicles", "final_pending_vehicles",
-                        "pedestrian_mean_waiting_s", "pedestrian_max_waiting_s")},
+                        "pedestrian_mean_waiting_s", "pedestrian_median_waiting_s", "pedestrian_p90_waiting_s",
+                        "pedestrian_max_waiting_s")},
                 }
                 report["results"][f"{version.name}/{label}"] = {"summary": summary, "runs": runs}
                 lead = summary["visual_mean_lead_s"]
                 print(f"preemption_evaluated version={version.name} mode={label} perception={args.perception} "
                       f"viatura_perda_media={summary['emergency_mean_time_loss_s']:.1f}s viatura_perda_max={summary['emergency_max_time_loss_s']:.1f}s "
+                      f"viatura_espera_entrada={summary['emergency_mean_insertion_delay_s']:.1f}s "
+                      f"viatura_perda_total_media={summary['emergency_mean_total_loss_s']:.1f}s "
+                      f"viatura_perda_total_max={summary['emergency_max_total_loss_s']:.1f}s "
                       f"viaturas_sem_parar={summary['emergency_share_without_stops']:.0%} "
                       f"cruzaram={summary['emergency_crossed']}/{summary['emergency_scheduled']} "
                       f"visao_detectou={summary['visual_detected']} visao_antecedencia={'n/a' if lead is None else f'{lead:.1f}s'} "
@@ -139,7 +147,8 @@ def main() -> None:
                       f"trafego_espera={summary['mean_waiting_time_seconds']:.1f}s chegadas={summary['arrived_vehicles']:.0f} "
                       f"fila_insercao={summary['final_pending_vehicles']:.1f}"
                       + ("" if summary["pedestrian_mean_waiting_s"] is None else
-                         f" pedestres_espera={summary['pedestrian_mean_waiting_s']:.1f}s pedestres_max={summary['pedestrian_max_waiting_s']:.0f}s"),
+                         f" pedestres_espera={summary['pedestrian_mean_waiting_s']:.1f}s pedestres_mediana={summary['pedestrian_median_waiting_s']:.0f}s"
+                         f" pedestres_p90={summary['pedestrian_p90_waiting_s']:.0f}s pedestres_max={summary['pedestrian_max_waiting_s']:.0f}s"),
                       flush=True)
     finally:
         if bridge is not None:
