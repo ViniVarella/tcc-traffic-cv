@@ -381,3 +381,7 @@ os fluxos `perHour` são equiespaçados e a seed quase não muda a demanda; no
 - Commits em português no estilo Conventional Commits (`feat:`, `docs:`, `fix:`).
   Não reescreva histórico já publicado; trabalhe em branch nova para mudanças
   de contrato.
+- Ao criar uma branch, ajuste o upstream para a branch de mesmo nome no
+  remoto (`git push -u origin <branch>`), nunca para `origin/main`
+  (`git checkout -b x origin/main` faz a branch rastrear a `main`). Confira com
+  `git rev-parse --abbrev-ref <branch>@{upstream}`.
