@@ -12,7 +12,7 @@ import yaml
 from vision.dataset_classes import class_for_vehicle_type
 
 from .protocol import FramePacket, SimulationState
-from .serialization import serialize_state
+from .serialization import serialize_state_datagrams
 
 
 FRAME_SERVER_BACKLOG = 64
@@ -63,9 +63,9 @@ class UnityBridge:
         )
 
     def send_state(self, state: SimulationState | dict[str, Any]) -> int:
-        """Envia para a Unity o estado serializado do step atual do SUMO."""
-        payload = serialize_state(state)
-        return self._state_socket.sendto(payload, (self.state_host, self.state_port))
+        """Envia para a Unity o estado do step atual do SUMO (em partes, se grande)."""
+        address = (self.state_host, self.state_port)
+        return sum(self._state_socket.sendto(datagram, address) for datagram in serialize_state_datagrams(state))
 
     def start_frame_server(self) -> None:
         """Abre o listener TCP que recebe um frame por conexao da Unity."""
