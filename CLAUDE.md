@@ -191,8 +191,10 @@ cópia em `optimization/SP` (que segue com a calibração antiga).
   prefabs). Faixas zebradas e cantos de espera vêm de
   `Cruzamento.ped.net.xml` (menu *Build SP Crosswalks and Corners*, raiz
   `SP Pedestrian Infrastructure`; rode depois de *Configure SP Visuals*,
-  pois os cantos se juntam às calçadas geradas). Ainda faltam os sinais de
-  pedestre, e o YOLO não foi avaliado com pedestres na imagem.
+  pois os cantos se juntam às calçadas geradas). O mesmo menu cria os 8
+  sinais de pedestre (`PedestrianSignalHead`, link 10–13 da faixa, verde só
+  com `G`/`g`), atualizados pelo `TrafficLightVisualController`. O YOLO ainda
+  não foi avaliado com pedestres na imagem.
 
 ## Contrato do DQN
 
