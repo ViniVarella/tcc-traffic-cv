@@ -20,6 +20,18 @@ class VehicleState:
 
 
 @dataclass(slots=True)
+class PedestrianState:
+    """Pedestre do SUMO (``traci.person``) no protocolo Python -> Unity."""
+
+    id: str
+    x: float
+    y: float
+    z: float
+    angle: float
+    speed: float
+
+
+@dataclass(slots=True)
 class TrafficLightState:
     """Representa um semaforo serializavel no protocolo Python -> Unity."""
 
@@ -40,6 +52,8 @@ class SimulationState:
     sim_time: float
     vehicles: list[VehicleState | dict[str, Any]] = field(default_factory=list)
     traffic_lights: list[TrafficLightState | dict[str, Any]] = field(default_factory=list)
+    # Vazio na rede sem pedestres; a Unity trata a ausência do campo como vazio.
+    pedestrians: list[PedestrianState | dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(slots=True)

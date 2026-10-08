@@ -48,6 +48,9 @@ class FakeClient:
     def get_vehicle_state(self) -> list:
         return []
 
+    def get_pedestrian_state(self) -> list:
+        return []
+
     def get_traffic_light_state(self, tls_id: str) -> dict:
         return {"id": tls_id, "phase": 0, "state": "GGGrrrrrrG"}
 

@@ -29,6 +29,7 @@ def serialize_state(state: SimulationState | dict[str, Any]) -> bytes:
             "sim_time": state.sim_time,
             "vehicles": _normalize_message(state.vehicles),
             "traffic_lights": _normalize_message(state.traffic_lights),
+            "pedestrians": _normalize_message(state.pedestrians),
         }
     else:
         payload = _normalize_message(state)

@@ -227,12 +227,14 @@ def main() -> None:
                 sim_time=sim_time,
                 vehicles=vehicles,
                 traffic_light_state=traffic_light_state,
+                pedestrians=sumo_client.get_pedestrian_state(),
             )
             unity_bridge.send_state(state)
             print(
                 f"state_sent step={state.step} "
                 f"sim_time={state.sim_time:.2f} "
                 f"vehicles={len(state.vehicles)} "
+                f"pedestrians={len(state.pedestrians)} "
                 f"traffic_lights={len(state.traffic_lights)}"
             )
             if args.receive_frames:

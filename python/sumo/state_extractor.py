@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from bridge import SimulationState, TrafficLightState, VehicleState
+from bridge import PedestrianState, SimulationState, TrafficLightState, VehicleState
 
 
 class SumoStateExtractor:
@@ -83,8 +83,12 @@ class SumoStateExtractor:
         sim_time: float,
         vehicles: list[dict[str, Any]],
         traffic_light_state: dict[str, Any] | list[dict[str, Any]],
+        pedestrians: list[dict[str, Any]] | None = None,
     ) -> SimulationState:
-        """Monta um `SimulationState` pronto para serializacao e envio."""
+        """Monta um `SimulationState` pronto para serializacao e envio.
+
+        Pedestres usam a mesma conversao de coordenadas dos veiculos.
+        """
         if isinstance(traffic_light_state, dict):
             traffic_lights = [traffic_light_state]
         else:
@@ -100,5 +104,9 @@ class SumoStateExtractor:
             traffic_lights=[
                 TrafficLightState(**self.convert_traffic_light_state(light))
                 for light in traffic_lights
+            ],
+            pedestrians=[
+                PedestrianState(**self.convert_vehicle_coordinates(pedestrian))
+                for pedestrian in pedestrians or []
             ],
         )

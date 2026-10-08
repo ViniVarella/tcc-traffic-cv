@@ -85,6 +85,7 @@ class UnityVisualObserver:
             self.bridge.send_state(self.state_extractor.build_simulation_state(
                 step=step_id, sim_time=sim_time, vehicles=client.get_vehicle_state(),
                 traffic_light_state=client.get_traffic_light_state(self.tls_id),
+                pedestrians=client.get_pedestrian_state(),
             ))
             try:
                 bundle = collector.collect_for_step(step_id, self.bridge.receive_frame)
