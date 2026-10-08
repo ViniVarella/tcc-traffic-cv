@@ -6894,6 +6894,7 @@ GameObject:
   - component: {fileID: 855105837}
   - component: {fileID: 855105836}
   - component: {fileID: 855105839}
+  - component: {fileID: 855105840}
   m_Layer: 0
   m_Name: SP Dynamic Synchronization
   m_TagString: Untagged
@@ -6917,6 +6918,7 @@ MonoBehaviour:
   listenPort: 5004
   vehicleManager: {fileID: 855105837}
   trafficLightVisualController: {fileID: 723324535}
+  pedestrianManager: {fileID: 855105840}
 --- !u!114 &855105837
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6957,6 +6959,7 @@ Transform:
   m_Children:
   - {fileID: 854012251}
   - {fileID: 723324536}
+  - {fileID: 1732266566}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &855105839
@@ -6984,6 +6987,32 @@ MonoBehaviour:
   sendInstanceMasks: 1
   connectionTimeoutMilliseconds: 2000
   logSuccessfulFrames: 1
+--- !u!114 &855105840
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 855105835}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4351f8c0b8d2b4be1b8224fdf985070b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pedestriansRoot: {fileID: 1732266566}
+  pedestrianPrefabs:
+  - {fileID: 3066575241862468233, guid: 05ee53b01088f43e49fe7aa7e7a8278a, type: 3}
+  - {fileID: 2568946674905361920, guid: 570bba681cd6042d3813637a7b7c8c37, type: 3}
+  - {fileID: 1121422709883854793, guid: e48147540f99d4bdda19b564146694cf, type: 3}
+  - {fileID: 1586143188876941010, guid: 6af0d74823c9f4b3a9f72136b476c5de, type: 3}
+  - {fileID: 3703645130892398188, guid: 3482523c7d14245279855f70f02a3bb9, type: 3}
+  - {fileID: 906712975619017223, guid: cc2e006818350463a823516c25d9045c, type: 3}
+  - {fileID: 1452741349443512698, guid: 3d78a999ccc964aa79f6feff2de3822e, type: 3}
+  - {fileID: 4828880803862391094, guid: 160fdb728f672446f8b5a2cb51b3b16a, type: 3}
+  prefabYawOffset: 0
+  verticalOffset: 0
+  walkingSpeedThreshold: 0.1
+  clipWalkingSpeed: 1.3
 --- !u!1001 &866681305
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -14688,6 +14717,37 @@ MonoBehaviour:
     m_MipBias: 0
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
+--- !u!1 &1732266565
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1732266566}
+  m_Layer: 0
+  m_Name: SP Pedestrians
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1732266566
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1732266565}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 855105838}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1733368136
 PrefabInstance:
   m_ObjectHideFlags: 0

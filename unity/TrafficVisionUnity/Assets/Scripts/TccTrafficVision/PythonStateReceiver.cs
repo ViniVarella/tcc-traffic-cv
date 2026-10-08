@@ -20,6 +20,17 @@ namespace TccTrafficVision
     }
 
     [Serializable]
+    public class PedestrianStateMessage
+    {
+        public string id;
+        public float x;
+        public float y;
+        public float z;
+        public float angle;
+        public float speed;
+    }
+
+    [Serializable]
     public class TrafficLightStateMessage
     {
         public string id;
@@ -35,6 +46,8 @@ namespace TccTrafficVision
         public float sim_time;
         public VehicleStateMessage[] vehicles;
         public TrafficLightStateMessage[] traffic_lights;
+        // Empty (or absent, from older senders) on the network without pedestrians.
+        public PedestrianStateMessage[] pedestrians;
     }
 
     public class PythonStateReceiver : MonoBehaviour
@@ -43,6 +56,7 @@ namespace TccTrafficVision
         [SerializeField] private int listenPort = 5004;
         [SerializeField] private VehicleManager vehicleManager;
         [SerializeField] private TrafficLightVisualController trafficLightVisualController;
+        [SerializeField] private PedestrianManager pedestrianManager;
 
         private UdpClient udpClient;
         private Thread receiveThread;
@@ -68,6 +82,11 @@ namespace TccTrafficVision
             if (trafficLightVisualController == null)
             {
                 trafficLightVisualController = FindFirstObjectByType<TrafficLightVisualController>();
+            }
+
+            if (pedestrianManager == null)
+            {
+                pedestrianManager = FindFirstObjectByType<PedestrianManager>();
             }
 
             udpClient = new UdpClient(listenPort);
@@ -97,11 +116,13 @@ namespace TccTrafficVision
             lastAppliedStep = stateToApply.step_id;
             Debug.Log(
                 $"Unity received state: step={stateToApply.step} step_id={stateToApply.step_id} " +
-                $"sim_time={stateToApply.sim_time:F2} vehicles={(stateToApply.vehicles == null ? 0 : stateToApply.vehicles.Length)}"
+                $"sim_time={stateToApply.sim_time:F2} vehicles={(stateToApply.vehicles == null ? 0 : stateToApply.vehicles.Length)} " +
+                $"pedestrians={(stateToApply.pedestrians == null ? 0 : stateToApply.pedestrians.Length)}"
             );
 
             vehicleManager?.ApplyState(stateToApply.vehicles);
             trafficLightVisualController?.ApplyState(stateToApply.traffic_lights);
+            pedestrianManager?.ApplyState(stateToApply.pedestrians);
             StateApplied?.Invoke(stateToApply);
         }
 
