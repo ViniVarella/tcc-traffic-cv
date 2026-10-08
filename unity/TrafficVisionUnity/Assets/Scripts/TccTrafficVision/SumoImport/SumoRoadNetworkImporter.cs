@@ -499,7 +499,9 @@ namespace TccTrafficVision.SumoImport
                 : Vector2.zero;
         }
 
-        private static List<Vector3> ParseShape(string rawShape, Vector2 origin)
+        // Public for the pedestrian infrastructure builder, which reads the
+        // pedestrian network with the same conventions.
+        public static List<Vector3> ParseShape(string rawShape, Vector2 origin)
         {
             List<Vector3> points = new List<Vector3>();
             if (string.IsNullOrWhiteSpace(rawShape))
@@ -600,7 +602,7 @@ namespace TccTrafficVision.SumoImport
             return result;
         }
 
-        private static Mesh CreatePolygonMesh(IReadOnlyList<Vector3> points, string meshName)
+        public static Mesh CreatePolygonMesh(IReadOnlyList<Vector3> points, string meshName)
         {
             if (points.Count < 3)
             {
@@ -753,7 +755,9 @@ namespace TccTrafficVision.SumoImport
                 }
 
                 Vector3 outward = new Vector3(-delta.z, 0f, delta.x).normalized * side;
-                Vector3 lift = Vector3.up * -0.01f;
+                // Same height as the pedestrian corners built by
+                // SpPedestrianInfrastructureSetup, above the road (y = 0).
+                Vector3 lift = Vector3.up * 0.01f;
                 Vector3 fromInner = from + outward * (laneWidth * 0.5f) + lift;
                 Vector3 fromOuter = fromInner + outward * width;
                 Vector3 toInner = to + outward * (laneWidth * 0.5f) + lift;
