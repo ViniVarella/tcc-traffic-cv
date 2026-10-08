@@ -188,7 +188,9 @@ perda na rede):
 ## Pedestres (fase exclusiva a cada dois ciclos)
 
 Status: rede, fase de pedestres, estado v3 e métricas implementados em
-2026-10-05 (branch `feat/pedestres`); só SUMO. Decisões do usuário: fase
+2026-10-05 (branch `feat/pedestres`); só SUMO até 2026-10-08, quando a
+Unity passou a renderizar pedestres, faixas e sinais (subseção **Pedestres na
+Unity**). Decisões do usuário: fase
 exclusiva (todos os veículos no vermelho, todas as faixas verdes) a cada dois
 ciclos; verde que cubra a travessia em "L" a 1,2 m/s; nova versão de estado.
 
@@ -439,6 +441,44 @@ Registro histórico: tudo nesta seção usa a demanda com motos
   mas a mediana dos pedestres sobe de 14 para 32 s. Não resolvia a saturação.
 - Ao olhar a fila no `sumo-gui`, o usuário notou que o cruzamento real não
   tinha tanto carro, o que levou à recalibração sem motos (seção acima).
+
+### Pedestres na Unity (2026-10-08, branch `feat/pedestres-unity`)
+
+- **Modelos:** Quaternius Animated Men/Women Pack, licença CC0, versão
+  *Smooth* (~4 mil polígonos). A malha vem com ~4,8 m e o importador usa
+  escala 0,36 (≈ 1,74 m / 1,67 m). Origem registrada em
+  `Assets/Art/TrafficModels/Models/Pedestrians/README.md`.
+- **Protocolo:** a mensagem de estado ganhou `pedestrians` (id, x, y, z,
+  ângulo e velocidade do `traci.person`), com a mesma conversão de
+  coordenadas dos veículos e vazia na rede sem pedestres
+  (`tests/test_state_message.py`).
+- **Render:** `PedestrianManager` toca a caminhada acima de 0,1 m/s, com a
+  cadência pela velocidade, e reaproveita os objetos.
+- **Cena:** o menu *Build SP Crosswalks and Corners* lê
+  `Cruzamento.ped.net.xml` e cria:
+  - faixas zebradas com listras de 0,4 m e 1 m livre antes da linha de
+    parada;
+  - cantos de espera, cada um a envoltória convexa da `walkingarea` com as
+    pontas das calçadas geradas (que subiram para 1 cm acima do asfalto,
+    como os cantos);
+  - 8 sinais de pedestre, ligados aos links 10–13.
+
+**Efeito dos pedestres na visão** (v2, seed 1001, 300 s de controle, 0
+frames perdidos; `results/logs/visao-pedestres-*.jsonl`,
+`experiments.evaluate_lane_features`):
+
+| Cenário | Contagem: erro relativo | Parados: erro relativo | Espera: erro relativo | Visão vê veículo onde não há | Ações iguais às do oráculo |
+|---|---:|---:|---:|---:|---:|
+| `calibrated` (sem pedestres) | 10% | 27% | 53% | 2,2% | 93% |
+| `calibrated_ped` | 4% | 7% | 11% | 0,9% | 96% |
+
+O erro relativo cai com pedestres porque as filas ficam maiores com a fase
+exclusiva (espera média do oráculo por faixa: 3,0 s → 43,5 s). Os erros
+absolutos da contagem ficam iguais (0,10 × 0,09 veículo por faixa). Nas
+capturas da câmera sul durante a fase de pedestres, o YOLO de duas classes
+não detecta as pessoas: as caixas são só os carros, com confiança de
+0,94–0,99. Pedestres não poluem o estado visual, então a v3 pode ser
+avaliada com percepção visual.
 
 ## Ambiente com ROIs de 60 m e preempção para emergências
 
