@@ -39,7 +39,7 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   motos** abaixo. Todos os resultados anteriores do cenário `calibrated`
   (inclusive os de pedestres) usam a demanda antiga e viram registro
   histórico; v2 e v3 foram retreinados (checkpoints `*-sem-motos-best.pt`).
-  As avaliações visuais (Unity) ainda são da demanda antiga.
+  Avaliações visuais (Unity) refeitas em 2026-10-08.
 
 ## Demanda calibrada sem motos (2026-10-07)
 
@@ -135,6 +135,55 @@ v3 12 / 74 s, max-pressure 7 / 53 s; original — ciclo fixo 49 / 163 s, v2
   74 → 76 s).
 - No `original_ped`, ainda saturado, a viatura continua presa na fila de
   inserção (~60–75 s) e os pedestres pioram com a preempção, como antes.
+
+### Avaliação visual com a demanda sem motos (Unity, 2026-10-08)
+
+Mesmo protocolo (seeds 201–203, 300 s + 1800 s), cenário `calibrated`, YOLO
+de duas classes, **0 frames perdidos** e 0 observações perdidas em todas as
+execuções. Arquivos: `results/evaluation/versoes-calibrated-visual.json` e
+`preempcao-calibrated-visual.json` (os da demanda antiga ganharam o sufixo
+`-motos`); logs em `results/logs/versoes-calibrated-visual.log` e
+`preempcao-visual-calibrated.log`. Teste rápido antes (v2, seed 201, 300 s):
+`versoes-calibrated-visual-teste.json`, espera 4,5 s.
+
+**Versões** (espera média; por seed entre parênteses):
+
+| Versão | Oráculo | Visão | Visão − oráculo | Trocas (visão) |
+|---|---:|---:|---:|---:|
+| ciclo fixo | 13,0 s | 13,0 s | 0 | 0 |
+| v1 | 4,41 s | **4,27 s** (4,41 / 4,41 / 3,99) | −0,14 | 121 |
+| v1.1 | 5,70 s | 5,70 s | 0 | 129 |
+| v2 | **4,15 s** | 4,31 s (4,47 / 4,03 / 4,44) | +0,16 | 110 |
+| max-pressure | 4,72 s | 4,77 s | +0,05 | 116 |
+
+Chegadas 915–918 e fila de inserção 0 em todas.
+
+- A visão custa no máximo 0,16 s. Com a demanda antiga a diferença da v2 era
+  0,5 s (9,1 × 8,6 s), porque as filas longas do Leste passavam da ROI.
+- Com visão, v1 e v2 empatam (diferença de 0,04 s, menor que a variação
+  entre seeds). Sem saturação, alternar perto do mínimo já é quase ótimo,
+  como no cenário `original`; a vantagem da v2 aparecia com o Leste
+  saturado.
+- A v1.1 é idêntica nas duas percepções, seed por seed: troca sempre no
+  verde mínimo (10 + 3 + 1 s ≈ 14 s por fase → 129 trocas em 1800 s), ou
+  seja, é uma política degenerada que não depende do estado.
+
+**Preempção com visão** (v2, 18 viaturas; perda total = espera de entrada +
+perda na rede):
+
+| Fonte do pedido | Perda total média | Máx. | Sem parar | Antecedência | Espera do tráfego |
+|---|---:|---:|---:|---:|---:|
+| nenhuma | 7,6 s | 19,7 s | 50% | — | 4,3 s |
+| V2I | 1,5 s | 3,2 s | 100% | ~23 s | 4,8 s |
+| visão | 2,7 s | 9,0 s | 89% | 4,9 s | 4,6 s |
+| V2I + visão | **1,4 s** | 3,3 s | 100% | — | 4,8 s |
+
+- A visão detectou as 18 viaturas, sem alarme falso. Sozinha, reduz a perda
+  em 65% (7,6 → 2,7 s); com a demanda antiga eram 68% (13,2 → 4,2 s).
+- V2I com percepção visual dá o mesmo resultado que com o oráculo (1,5 s,
+  máx. 3,2 s). A espera de entrada fica em 1,0 s em todos os modos (a
+  latência de 1 step), sem fila de inserção.
+- Custo para o tráfego: +0,3 s (visão) a +0,5 s (V2I).
 
 ## Pedestres (fase exclusiva a cada dois ciclos)
 

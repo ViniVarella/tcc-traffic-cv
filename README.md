@@ -114,13 +114,33 @@ contavam os veículos pelo centro da bbox com média móvel. Aqui elas recebem a
 mesma contagem por faixa usada pela v2. Também decidem a cada 1 s, como
 faziam originalmente.
 
-### Ambiente atual (câmeras e ROIs de 60 m), cenário calibrado
+### Ambiente atual, cenário calibrado (demanda sem motos)
 
-> **Demanda antiga.** As tabelas abaixo usam a calibração que contava motos
-> como carros (hoje `calibrated_motos`, registro histórico). A demanda
-> calibrada atual exclui as motos; os resultados com ela (percepção oráculo)
-> estão em `docs/IMPLEMENTATION_PROGRESS.md`, seção *Demanda calibrada sem
-> motos*. As avaliações visuais serão refeitas.
+Demanda medida pelo drone sem motos (andam no corredor e não formam fila):
+Leste 976 veíc/h (v/c 0,58), Sul 727, Oeste 139. Checkpoint da v2:
+`dqn-v2-sem-motos-best.pt`. Seeds 201–203, 300 s de aquecimento + 1800 s,
+0 frames perdidos na percepção visual.
+
+| Versão | Espera (visual) | Espera (oráculo) | Chegadas (visual) | Fila de inserção |
+|---|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 13,0 s | 13,0 s | 918 | 0 |
+| v1 (heurística) | **4,3 s** | 4,4 s | 915 | 0 |
+| v1.1 (DQN estado v1) | 5,7 s | 5,7 s | 916 | 0 |
+| v2 (DQN estado v2) | **4,3 s** | **4,1 s** | 916 | 0 |
+| max-pressure (referência) | 4,8 s | 4,7 s | 916 | 0 |
+
+Pela câmera, as versões adaptativas reduzem a espera do ciclo fixo em 56–67%,
+e a visão custa no máximo 0,16 s em relação à percepção perfeita. Sem o Leste
+saturado, v1 e v2 empatam com visão (4,27 × 4,31 s, dentro da variação entre
+seeds); com o oráculo, a v2 é a melhor. A v1.1 dá o mesmo número nas duas
+percepções porque troca sempre no verde mínimo (129 trocas em 30 min) e não
+depende do que vê.
+
+#### Demanda antiga (motos como carros) — registro histórico
+
+As tabelas abaixo usam a calibração que contava motos como carros (hoje
+`calibrated_motos`), que saturava o Leste (v/c 1,0). Não se comparam com a de
+cima.
 
 Câmeras reposicionadas, ROIs de 60 m por faixa, YOLO de duas classes e a v2
 pré-treinada nos dois cenários (`dqn-v2-roi60-mix-pretrain-best.pt`). Seeds
@@ -251,23 +271,27 @@ GPS dos sistemas reais), e o semáforo abre para o sentido de onde elas vêm:
 - se não é, o outro verde termina na hora, sem esperar o mínimo;
 - amarelo e all-red nunca são pulados.
 
-No mesmo ambiente (ROIs de 60 m, percepção oráculo, seeds 201–203, 30
-viaturas por política), a perda de tempo média das viaturas até a linha de
-retenção cai de 14–20 s para ~1 s, e todas cruzam sem parar. O custo é de +1
-a +4 s na espera média do restante do tráfego. A câmera também detecta as
-viaturas (classe `emergency` do YOLO dentro das ROIs) e serve como segunda
-fonte. Em malha fechada com percepção visual (v2, cenário calibrado, seeds
-201–203, 30 viaturas):
+Cenário calibrado sem motos, ROIs de 60 m, seeds 201–203, uma viatura a
+cada ~5 min (18 por política). A perda total soma a espera para entrar na
+rede e a perda até a linha de retenção. Com percepção oráculo, ela cai de
+16,6 s (ciclo fixo), 8,0 s (v2) e 7,9 s (max-pressure) para ~1,5 s, e todas
+cruzam sem parar. O custo é de +0,2 a +0,8 s na espera do restante do
+tráfego. A câmera também detecta as viaturas (classe `emergency` do YOLO
+dentro das ROIs) e serve como segunda fonte. Em malha fechada com percepção
+visual (v2, 0 frames perdidos):
 
-| Fonte do pedido | Perda média da viatura | Sem parar | Espera do tráfego |
+| Fonte do pedido | Perda total média (máx.) | Sem parar | Espera do tráfego |
 |---|---|---|---|
-| nenhuma | 13,2 s | 37% | 9,4 s |
-| V2I | 1,4 s | 100% | 10,5 s |
-| visão | 4,2 s | 80% | 9,9 s |
-| V2I + visão | 1,2 s | 100% | 11,3 s |
+| nenhuma | 7,6 s (19,7 s) | 50% | 4,3 s |
+| V2I | 1,5 s (3,2 s) | 100% | 4,8 s |
+| visão | 2,7 s (9,0 s) | 89% | 4,6 s |
+| V2I + visão | 1,4 s (3,3 s) | 100% | 4,8 s |
 
-A visão detectou as 30 viaturas, sem alarme falso, mas só as vê nos últimos
-60 m. Sozinha, reduz o atraso em 68%; junto do V2I, serve de redundância. Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
+A visão detectou as 18 viaturas, sem alarme falso, mas só as vê nos últimos
+60 m (~5 s antes da linha, contra ~23 s do V2I). Sozinha, reduz a perda em
+65%; junto do V2I, serve de redundância. Com a demanda antiga (motos como
+carros), os números eram 13,2 / 1,4 / 4,2 / 1,2 s, com tráfego em 9,4–11,3 s.
+Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 
 **Mudança de ambiente em 2026-09-30:** as câmeras foram reposicionadas e as
 ROIs passaram a cobrir 60 m por faixa. As tabelas de comparação acima são do
