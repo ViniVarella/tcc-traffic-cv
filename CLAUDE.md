@@ -184,8 +184,12 @@ cópia em `optimization/SP` (que segue com a calibração antiga).
 - Recompensa nos cenários com pedestres: `(1 − w)·veículos − w·pedestres`
   (`pedestrians.reward_weight` = 0,3, referência 1200 s). Sem o termo, o v3
   aprendeu a segurar o verde para espaçar a fase de pedestres.
-- Escopo atual: só SUMO. A Unity ainda não renderiza pedestres nem sinais de
-  pedestre.
+- Unity: a mensagem de estado leva `pedestrians` (vazia na rede sem
+  pedestres) e o `PedestrianManager` os renderiza (modelos Quaternius CC0,
+  versão *Smooth*, escala de importação 0,36; menu *Traffic Vision >
+  Pedestrians > Configure SP Pedestrians* recria clipes em loop, controllers e
+  prefabs). Ainda faltam faixas pintadas, cantos de espera e sinais de
+  pedestre, e o YOLO não foi avaliado com pedestres na imagem.
 
 ## Contrato do DQN
 
