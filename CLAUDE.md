@@ -188,7 +188,10 @@ cópia em `optimization/SP` (que segue com a calibração antiga).
   pedestres) e o `PedestrianManager` os renderiza (modelos Quaternius CC0,
   versão *Smooth*, escala de importação 0,36; menu *Traffic Vision >
   Pedestrians > Configure SP Pedestrians* recria clipes em loop, controllers e
-  prefabs). Ainda faltam faixas pintadas, cantos de espera e sinais de
+  prefabs). Faixas zebradas e cantos de espera vêm de
+  `Cruzamento.ped.net.xml` (menu *Build SP Crosswalks and Corners*, raiz
+  `SP Pedestrian Infrastructure`; rode depois de *Configure SP Visuals*,
+  pois os cantos se juntam às calçadas geradas). Ainda faltam os sinais de
   pedestre, e o YOLO não foi avaliado com pedestres na imagem.
 
 ## Contrato do DQN
