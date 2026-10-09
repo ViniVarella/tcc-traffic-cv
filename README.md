@@ -136,6 +136,28 @@ seeds); com o oráculo, a v2 é a melhor. A v1.1 dá o mesmo número nas duas
 percepções porque troca sempre no verde mínimo (129 trocas em 30 min) e não
 depende do que vê.
 
+### Ambiente atual com pedestres (cenário `calibrated_ped`)
+
+Mesma demanda e protocolo, com a fase exclusiva de pedestres a cada dois
+ciclos (todos os veículos no vermelho, 41 s + 3 s) e pedestres renderizados
+na Unity. Checkpoint da v3: `dqn-v3-sem-motos-best.pt`. 0 frames perdidos na
+percepção visual.
+
+| Versão | Espera veículos (visual) | Espera veículos (oráculo) | Espera pedestres (visual, mediana / p90) | Fila de inserção final (visual) |
+|---|---:|---:|---|---:|
+| Linha de base (ciclo fixo) | 24,5 s | 24,5 s | 64,1 s (48 / 163 s) | 0 |
+| v1 (heurística) | 30,1 s | 30,2 s | 21,8 s (11 / 59 s) | 26 |
+| v2 (DQN estado v2) | **20,4 s** | **21,3 s** | 28,3 s (14 / 77 s) | 0 |
+| v3 (DQN estado v3, com pedestres) | 21,5 s | **21,3 s** | 26,6 s (9 / 74 s) | 0 |
+| max-pressure (referência) | 32,6 s | 34,2 s | 21,4 s (11 / 57 s) | 39 |
+
+Os pedestres na imagem não atrapalham a visão: o YOLO não os detecta e cada
+versão fica a menos de 1,6 s do oráculo. v2 e v3 reduzem a espera dos
+veículos em 12–17% em relação ao ciclo fixo e a dos pedestres em mais da
+metade, e empatam entre si dentro da variação entre seeds. A v1 e o
+max-pressure deixam os pedestres esperando um pouco menos, mas acumulam fila
+de inserção e ficam piores que o ciclo fixo para os veículos.
+
 #### Demanda antiga (motos como carros) — registro histórico
 
 As tabelas abaixo usam a calibração que contava motos como carros (hoje

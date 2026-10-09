@@ -193,8 +193,11 @@ cópia em `optimization/SP` (que segue com a calibração antiga).
   `SP Pedestrian Infrastructure`; rode depois de *Configure SP Visuals*,
   pois os cantos se juntam às calçadas geradas). O mesmo menu cria os 8
   sinais de pedestre (`PedestrianSignalHead`, link 10–13 da faixa, verde só
-  com `G`/`g`), atualizados pelo `TrafficLightVisualController`. O YOLO ainda
-  não detecta pedestres e a percepção visual foi avaliada no `calibrated_ped`.
+  com `G`/`g`), atualizados pelo `TrafficLightVisualController`. O YOLO de duas
+  classes não detecta os pedestres; v1–v3 já foram avaliadas com visão no
+  `calibrated_ped`. Com pedestres o estado pode passar do limite UDP do
+  macOS (9216 bytes): `serialize_state_datagrams` o divide em partes
+  (`part`/`parts`) que o `PythonStateReceiver` junta pelo `step_id`.
 
 ## Contrato do DQN
 
