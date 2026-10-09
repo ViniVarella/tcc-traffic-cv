@@ -185,6 +185,47 @@ perda na rede):
   latência de 1 step), sem fila de inserção.
 - Custo para o tráfego: +0,3 s (visão) a +0,5 s (V2I).
 
+### Avaliação visual com pedestres (Unity, 2026-10-09)
+
+Cenário `calibrated_ped`, mesmo protocolo (seeds 201–203, 300 s + 1800 s),
+pedestres renderizados na Unity (subseção **Pedestres na Unity**), v3 =
+`dqn-v3-sem-motos-best.pt`, **0 frames perdidos** e 0 observações perdidas.
+Arquivo: `results/evaluation/versoes-calibrated_ped-visual.json`; log em
+`results/logs/versoes-calibrated_ped-visual.log`. Teste rápido antes (v3,
+seed 201, 300 s): `versoes-calibrated_ped-visual-teste.json`, espera 17,4 s.
+
+A primeira tentativa caiu no v1 com `OSError: Message too long`: com
+pedestres, a mensagem de estado passava do limite de 9216 bytes por
+datagrama UDP do macOS (`net.inet.udp.maxdgram`). O JSON agora é compacto e
+arredondado ao milímetro e, acima de 8192 bytes, vai em partes que a Unity
+junta pelo `step_id` (`fix:` 34112bb).
+
+**Versões** (espera dos veículos, por seed entre parênteses; pedestres:
+média, mediana / p90):
+
+| Versão | Veículos, oráculo | Veículos, visão | Fila final (visão) | Pedestres, oráculo | Pedestres, visão |
+|---|---:|---:|---:|---|---|
+| ciclo fixo | 24,5 s | 24,5 s | 0 | 64,1 s (48 / 163) | 64,1 s (48 / 163) |
+| v1 | 30,2 s | 30,1 s (27,4 / 30,4 / 32,5) | 26 | 22,0 s (11 / 57) | 21,8 s (11 / 59) |
+| v2 | 21,3 s | **20,4 s** (20,3 / 20,6 / 20,2) | 0 | 25,6 s (10 / 70) | 28,3 s (14 / 77) |
+| v3 | 21,3 s | 21,5 s (20,6 / 21,6 / 22,2) | 0 | 27,9 s (12 / 74) | 26,6 s (9 / 74) |
+| max-pressure | 34,2 s | 32,6 s | 39 | 19,1 s (7 / 53) | 21,4 s (11 / 57) |
+
+Chegadas de veículos (visão): ciclo fixo 906, v1 875, v2 909, v3 909,
+max-pressure 860; pedestres 153–161.
+
+- Com pedestres na imagem, a visão continua equivalente ao oráculo: as
+  diferenças vão de −1,6 a +0,2 s nos veículos e de −1,3 a +2,7 s na média dos
+  pedestres, da ordem da variação entre seeds.
+- v2 e v3 seguem empatadas nos veículos (20,4 × 21,5 s) e trocam de posição
+  nos pedestres em relação ao oráculo (v2 28,3 × v3 26,6 s; no oráculo, 25,6
+  × 27,9 s). Com 3 seeds, nenhuma das duas é melhor que a outra.
+- A v1 e o max-pressure decidem só pelas filas de veículos; deixam os
+  pedestres esperando menos (~21 s), mas acumulam fila de inserção (26 e 39
+  veículos no fim) e pioram a espera dos veículos para 30–33 s, acima do
+  ciclo fixo.
+- O ciclo fixo dá números idênticos nas duas percepções (não usa a visão).
+
 ## Pedestres (fase exclusiva a cada dois ciclos)
 
 Status: rede, fase de pedestres, estado v3 e métricas implementados em

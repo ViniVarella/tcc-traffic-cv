@@ -194,7 +194,7 @@ cópia em `optimization/SP` (que segue com a calibração antiga).
   pois os cantos se juntam às calçadas geradas). O mesmo menu cria os 8
   sinais de pedestre (`PedestrianSignalHead`, link 10–13 da faixa, verde só
   com `G`/`g`), atualizados pelo `TrafficLightVisualController`. O YOLO ainda
-  não foi avaliado com pedestres na imagem.
+  não detecta pedestres e a percepção visual foi avaliada no `calibrated_ped`.
 
 ## Contrato do DQN
 
