@@ -245,7 +245,7 @@ perdidos):
 Oráculo, mesma agenda (V2I): v2 26,7 → 5,2 s, v3 23,2 → 7,7 s.
 
 - **V2I com visão reproduz o oráculo:** v2 5,5 s (oráculo 5,2 s), v3 9,9 s
-  (7,7 s). A visão detectou as 36 viaturas de cada versão, sem alarme falso.
+  (7,7 s). A visão detectou as 18 viaturas em todos os modos, sem alarme falso.
 - **A máxima de ~39 s aparece em todos os modos:** é a viatura que chega
   durante a fase de pedestres, que nem a preempção encerra. Sem contar as
   perdas acima de 15 s (2–7 viaturas de 18), a média com preempção fica em
