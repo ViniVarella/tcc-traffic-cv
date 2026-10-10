@@ -226,6 +226,43 @@ max-pressure 860; pedestres 153–161.
   ciclo fixo.
 - O ciclo fixo dá números idênticos nas duas percepções (não usa a visão).
 
+**Preempção com visão e pedestres** (v2 e v3, mesma agenda de 18 viaturas;
+perda total = espera de entrada + perda na rede; arquivo
+`results/evaluation/preempcao-calibrated_ped-visual.json`, 0 frames
+perdidos):
+
+| Versão | Fonte do pedido | Perda total média | Máx. | Sem parar | Antecedência | Espera do tráfego | Pedestres (mediana / p90 / máx.) |
+|---|---|---:|---:|---:|---:|---:|---|
+| v2 | nenhuma | 24,4 s | 83,2 s | 50% | — | 20,2 s | 28,8 s (17 / 74 / 94) |
+| v2 | V2I | **5,5 s** | 38,9 s | 100% | ~27 s | 20,7 s | 31,3 s (16 / 84 / 111) |
+| v2 | visão | 14,2 s | 38,9 s | 72% | ~11 s | 21,1 s | 28,8 s (19 / 75 / 98) |
+| v2 | V2I + visão | 8,4 s | 38,9 s | 89% | — | 21,6 s | 30,2 s (15 / 82 / 110) |
+| v3 | nenhuma | 15,7 s | 41,3 s | 61% | — | 21,4 s | 28,3 s (15 / 77 / 95) |
+| v3 | V2I | 9,9 s | 38,9 s | 89% | ~31 s | 22,8 s | 30,5 s (18 / 80 / 111) |
+| v3 | visão | 13,4 s | 40,5 s | 67% | ~13 s | 21,4 s | 28,2 s (12 / 75 / 94) |
+| v3 | V2I + visão | **7,3 s** | 38,9 s | 83% | — | 23,4 s | 30,1 s (18 / 79 / 115) |
+
+Oráculo, mesma agenda (V2I): v2 26,7 → 5,2 s, v3 23,2 → 7,7 s.
+
+- **V2I com visão reproduz o oráculo:** v2 5,5 s (oráculo 5,2 s), v3 9,9 s
+  (7,7 s). A visão detectou as 36 viaturas de cada versão, sem alarme falso.
+- **A máxima de ~39 s aparece em todos os modos:** é a viatura que chega
+  durante a fase de pedestres, que nem a preempção encerra. Sem contar as
+  perdas acima de 15 s (2–7 viaturas de 18), a média com preempção fica em
+  2–5 s. Uma viatura tem 35 s de espera de entrada em todos os modos (a fila
+  da fase de pedestres chega à borda da rede).
+- **Visão sozinha** reduz a perda da v2 em 42% (24,4 → 14,2 s), menos que sem
+  pedestres (65%): ela vê a viatura ~11–13 s antes, e qualquer espera pela
+  fase de pedestres anula essa antecedência.
+- **V2I + visão não supera V2I na v2** (8,4 × 5,5 s), e na v3 é o melhor
+  modo. Com 18 viaturas por modo, duas ou três que caem na fase de pedestres
+  mudam a média em 3–5 s; as diferenças entre V2I e V2I + visão e entre v2 e
+  v3 estão dentro dessa variação.
+- **Pedestres:** a preempção piora pouco a espera deles (média +1 a +3 s,
+  máxima 94 → 111–115 s), sem os bloqueios de vários minutos da demanda
+  antiga.
+- **Tráfego:** +0,5 a +2 s de espera para os demais veículos.
+
 ## Pedestres (fase exclusiva a cada dois ciclos)
 
 Status: rede, fase de pedestres, estado v3 e métricas implementados em

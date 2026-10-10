@@ -313,6 +313,22 @@ A visão detectou as 18 viaturas, sem alarme falso, mas só as vê nos últimos
 60 m (~5 s antes da linha, contra ~23 s do V2I). Sozinha, reduz a perda em
 65%; junto do V2I, serve de redundância. Com a demanda antiga (motos como
 carros), os números eram 13,2 / 1,4 / 4,2 / 1,2 s, com tráfego em 9,4–11,3 s.
+
+Com pedestres (`calibrated_ped`, fase exclusiva de 44 s a cada dois ciclos),
+percepção visual, perda total média (sem parar):
+
+| Fonte do pedido | v2 | v3 |
+|---|---|---|
+| nenhuma | 24,4 s (50%) | 15,7 s (61%) |
+| V2I | **5,5 s** (100%) | 9,9 s (89%) |
+| visão | 14,2 s (72%) | 13,4 s (67%) |
+| V2I + visão | 8,4 s (89%) | **7,3 s** (83%) |
+
+A viatura que chega durante a fase de pedestres espera até o fim dela
+(máx. ~39 s em todos os modos), o que deixa a perda acima da do cenário sem
+pedestres. V2I com visão repete o oráculo (v2 5,2 s, v3 7,7 s), a visão
+detectou todas as viaturas sem alarme falso, e os pedestres esperam só 1–3 s
+a mais com a preempção.
 Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 
 **Mudança de ambiente em 2026-09-30:** as câmeras foram reposicionadas e as
