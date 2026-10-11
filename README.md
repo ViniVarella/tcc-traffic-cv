@@ -11,10 +11,12 @@ os dados internos do SUMO servem para renderização, sincronização, recompens
 de treino e avaliação.
 
 **Versão atual: v2** — DQN com cinco features visuais por faixa, pré-treinado
-só no SUMO e executado com a câmera. No mesmo ambiente de avaliação (demanda
-medida por drone, Leste saturado), é a única versão que dá mais verde ao
-Leste. Com isso, reduz a espera e zera a fila de entrada, enquanto a v1 e a
-v1.1 deixam centenas de veículos presos fora da rede (ver
+só no SUMO e executado com a câmera. No cenário calibrado (demanda medida por
+drone, sem motos), reduz a espera do ciclo fixo de 13,0 para 4,3 s pela
+câmera, a 0,16 s do resultado com percepção perfeita; sem saturação, empata
+com a heurística v1. Com a fase exclusiva de pedestres, a v2 e a **v3**
+(estado com as fases de pedestre) são as únicas versões que superam o ciclo
+fixo para os veículos, e empatam entre si (ver
 [Comparação no mesmo ambiente](#comparação-no-mesmo-ambiente)).
 
 ## Arquitetura
@@ -49,6 +51,7 @@ SUMO ──TraCI──> Python ──UDP/JSON (estado)──> Unity (veículos, 
 | **v1** | 2026-09-02 | Heurística por fila visual | Contagem por faixa | Primeiro controle em malha fechada pela câmera |
 | **v1.1** | 2026-09-04 | DQN (estado v1, 13 entradas) | Contagem por faixa + fase | Troca a regra fixa por uma política aprendida |
 | **v2** | 2026-09-29 | DQN (estado v2, 41 entradas) | Contagem, parados, ocupação, velocidade e espera por faixa + fase | Features cinemáticas, pré-treino só no SUMO, decisões só quando têm efeito, cenário calibrado |
+| **v3** | 2026-10-05 | DQN (estado v3, 44 entradas) | Estado v2 + fases de pedestre + verdes até a fase de pedestres | Só nos cenários com pedestres; a recompensa inclui a espera dos pedestres |
 
 ### v1 — Controle visual heurístico
 
@@ -87,12 +90,17 @@ mínimo permite". A análise posterior encontrou as causas:
 - **Decisões apenas quando têm efeito.** A política decide em verde, entre o
   verde mínimo e o máximo, a cada 5 s. As transições são SMDP, e a recompensa
   é um nível em [−1, 0] com parados, espera e fila de inserção.
-- **Cenário calibrado.** A demanda foi medida nos vídeos de drone: o Leste fica
-  saturado (v/c≈1,0), com chegadas Poisson e inserção realista.
+- **Cenário calibrado.** A demanda foi medida nos vídeos de drone, sem motos
+  (andam no corredor e não formam fila): Leste com v/c≈0,58, chegadas
+  Poisson e inserção realista. A calibração anterior contava motos como
+  carros e saturava o Leste (v/c≈1,0); os resultados dela ficaram como
+  registro histórico. O checkpoint atual (`dqn-v2-sem-motos-best.pt`) foi
+  pré-treinado nos cenários calibrado e original.
 - **Correções que valem para todas as versões.** O Python passa a manter o
   controle das fases no SUMO mesmo quando falta um frame (antes o programa
   estático podia pular o *all-red*), e a fila de inserção passou a ser medida.
-- Um ajuste fino com a Unity no loop (10 episódios) piorou a validação visual.
+- Um ajuste fino com a Unity no loop (10 episódios, demanda antiga) piorou a
+  validação visual.
   A política final é a pré-treinada no SUMO, usada direto com a câmera
   (zero-shot).
 
@@ -158,11 +166,31 @@ metade, e empatam entre si dentro da variação entre seeds. A v1 e o
 max-pressure deixam os pedestres esperando um pouco menos, mas acumulam fila
 de inserção e ficam piores que o ciclo fixo para os veículos.
 
-#### Demanda antiga (motos como carros) — registro histórico
+### Ambiente atual, cenário original (demanda equilibrada do netedit)
+
+Mesmo protocolo e mesmos checkpoints. A demanda não tem motos e não mudou;
+mudou o checkpoint da v2. Só percepção oráculo por enquanto: a rodada visual
+com o checkpoint atual ainda não foi feita.
+
+| Versão | Espera (oráculo) | Chegadas | Fila de inserção final |
+|---|---:|---:|---:|
+| Linha de base (ciclo fixo) | 14,9 s | 1431 | 37 |
+| v1 (heurística) | 4,7 s | 1473 | 0 |
+| v1.1 (DQN estado v1) | 4,6 s | 1474 | 0 |
+| v2 (DQN estado v2) | **4,5 s** | 1474 | 0 |
+| max-pressure (referência) | 4,6 s | 1474 | 0 |
+
+Com demanda equilibrada, alternar rápido já é quase ótimo: as versões
+adaptativas reduzem a espera do ciclo fixo em ~70% e ficam a 0,2 s umas das
+outras. O cenário `original_ped` satura com a fase exclusiva de pedestres
+(fila de inserção de 183–417 veículos) e não vem do drone; os números estão
+em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
+
+#### Registro histórico: demanda com motos e checkpoints anteriores
 
 As tabelas abaixo usam a calibração que contava motos como carros (hoje
-`calibrated_motos`), que saturava o Leste (v/c 1,0). Não se comparam com a de
-cima.
+`calibrated_motos`), que saturava o Leste (v/c 1,0), e o checkpoint anterior
+da v2. Não se comparam com as de cima.
 
 Câmeras reposicionadas, ROIs de 60 m por faixa, YOLO de duas classes e a v2
 pré-treinada nos dois cenários (`dqn-v2-roi60-mix-pretrain-best.pt`). Seeds
@@ -183,8 +211,9 @@ do oráculo em 85% das decisões. O max-pressure e a v1 ficam em 10,3–10,6 s,
 com mais veículos presos fora da rede. Detalhes e domain gap em
 [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 
-**Cenário original** (demanda equilibrada do netedit), mesmo protocolo, 0
-frames perdidos:
+**Cenário original** (demanda equilibrada do netedit), mesmo protocolo, com o
+checkpoint anterior da v2 (`dqn-v2-roi60-mix-pretrain-best.pt`), 0 frames
+perdidos:
 
 | Versão | Espera (visual) | Chegadas (visual) | Fila de inserção (visual) | Espera (oráculo) |
 |---|---:|---:|---:|---:|
@@ -271,10 +300,12 @@ espera média, com as mesmas chegadas e sem fila de inserção.
 ### Limitações
 
 - No ambiente anterior, as ROIs cobriam só 23–26 m por faixa, e filas
-  longas do Leste saturavam o estado. No atual, a faixa 1 do Leste
-  perde ~20% dos veículos por oclusão pela faixa 0 (ângulo lateral da câmera).
-- A velocidade visual é subestimada.
-- Há oclusão na faixa sul mais distante.
+  longas do Leste saturavam o estado. Com a demanda antiga (Leste saturado),
+  a faixa 1 do Leste perdia ~20% dos veículos por oclusão pela faixa 0; com a
+  demanda sem motos as filas são curtas e a contagem visual não fica abaixo
+  da real em nenhuma faixa (viés de +0,01 a +0,18 veículo; seed 1001, 300 s).
+- A velocidade visual é subestimada (−0,1 a −0,9 m/s por faixa) e a espera
+  visual, superestimada (+0,2 a +4,2 s).
 - A recompensa de treino vem do TraCI; só a política é exclusivamente visual.
 - A avaliação usou três seeds de teste.
 
@@ -331,10 +362,8 @@ detectou todas as viaturas sem alarme falso, e os pedestres esperam só 1–3 s
 a mais com a preempção.
 Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 
-**Mudança de ambiente em 2026-09-30:** as câmeras foram reposicionadas e as
-ROIs passaram a cobrir 60 m por faixa. As tabelas de comparação acima são do
-ambiente anterior (ROIs de ~25 m), salvo a do ambiente atual em "Comparação
-no mesmo ambiente".
+As tabelas desta seção usam o ambiente atual: câmeras de 60 m, YOLO de duas
+classes, demanda sem motos e checkpoints `*-sem-motos-best.pt`.
 
 ## Como reproduzir
 

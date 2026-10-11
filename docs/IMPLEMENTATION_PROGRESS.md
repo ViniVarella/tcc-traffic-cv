@@ -33,8 +33,9 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - YOLO de duas classes, detecção visual das viaturas, correção do filtro da
   ROI e avaliações visuais do ambiente de 60 m: concluídos em 2026-10-04.
 - Pedestres no SUMO (rede, fase exclusiva a cada dois ciclos, estado v3,
-  métricas): em andamento desde 2026-10-05 — seção **Pedestres** abaixo.
-  Unity e câmeras com pedestres ficam para a etapa seguinte.
+  métricas): desde 2026-10-05 — seção **Pedestres** abaixo. Pedestres,
+  faixas e sinais na Unity em 2026-10-08; avaliação visual com pedestres em
+  2026-10-09.
 - Demanda calibrada sem motos: 2026-10-07 — seção **Demanda calibrada sem
   motos** abaixo. Todos os resultados anteriores do cenário `calibrated`
   (inclusive os de pedestres) usam a demanda antiga e viram registro
@@ -135,6 +136,8 @@ v3 12 / 74 s, max-pressure 7 / 53 s; original — ciclo fixo 49 / 163 s, v2
   74 → 76 s).
 - No `original_ped`, ainda saturado, a viatura continua presa na fila de
   inserção (~60–75 s) e os pedestres pioram com a preempção, como antes.
+  Sem preempção, nem todas as viaturas cruzam até o fim da rodada (17/18 na
+  v2 e na v3, 16/18 no max-pressure); a média é só das que cruzaram.
 
 ### Avaliação visual com a demanda sem motos (Unity, 2026-10-08)
 
@@ -314,7 +317,7 @@ pedestres e os `.sumocfg` dos cenários `calibrated_ped` e `original_ped`.
 - Métricas novas: espera média, p95 e máxima dos pedestres (steps parados até
   sair da rede), pedestres atendidos e na rede ao fim.
 
-### Primeiras medições (ciclo fixo, só SUMO, seeds 201–203, 300 s + 1800 s)
+### Primeiras medições (ciclo fixo, só SUMO, seeds 201–203, 300 s + 1800 s) — demanda antiga (registro histórico)
 
 | Cenário calibrado | Espera dos veículos | Chegadas | Fila de inserção final | Espera média dos pedestres | Espera máx. dos pedestres |
 |---|---:|---:|---:|---:|---:|
@@ -327,7 +330,7 @@ calibrado, com o Leste saturado, a fila de inserção cresce. A espera máxima d
 dois ciclos". A v2 (treinada sem pedestres) foi pior que o ciclo fixo num
 teste de 900 s (31 × 25 s de espera), o que motiva o estado v3.
 
-### Versões com pedestres (percepção oráculo, seeds 201–203, 300 s + 1800 s)
+### Versões com pedestres (percepção oráculo, seeds 201–203, 300 s + 1800 s) — demanda antiga (registro histórico)
 
 v3 = `dqn-v3-ped-pretrain-best.pt` (pré-treino com `calibrated_ped` e
 `original_ped`, Double DQN, 40 episódios; melhor no episódio 39, escore
@@ -375,7 +378,7 @@ Leitura:
   com 45 s de fase exclusiva a cada dois ciclos, a capacidade do cruzamento
   fica abaixo da demanda nos dois cenários.
 
-### v3 com a espera dos pedestres na recompensa
+### v3 com a espera dos pedestres na recompensa — demanda antiga (registro histórico)
 
 Decisão do usuário (2026-10-05): manter a regra e incluir os pedestres na
 recompensa de treino. Nos cenários com pedestres a recompensa passa a ser
@@ -412,7 +415,7 @@ max-pressure com a recompensa nova). Avaliação no mesmo protocolo
   exclusivos a cada dois ciclos domina o resultado, e todas terminam com fila
   de inserção. O pré-treino ainda melhorava no fim (40 episódios).
 
-### Peso dos pedestres e treino mais longo (100 episódios)
+### Peso dos pedestres e treino mais longo (100 episódios) — demanda antiga (registro histórico)
 
 Pré-treinos do v3 com 100 episódios (seeds 51–150, disjuntas das de ajuste
 fino, validação e teste) e peso dos pedestres na recompensa `w` = 0,2, 0,3 e
@@ -452,7 +455,7 @@ Espera por seed (veículos / pedestres), v3 w = 0,3, 100 ep.: calibrado
   recompensa (o termo de pedestres) e a regra da fase exclusiva, que mantém
   todos os controladores com fila de inserção.
 
-### Preempção com pedestres (V2I, percepção oráculo)
+### Preempção com pedestres (V2I, percepção oráculo) — demanda antiga (registro histórico)
 
 `evaluate_preemption` nos cenários com pedestres, mesma agenda de 30 viaturas
 (10 por seed, seeds 201–203), v3 = `dqn-v3-ped-w03-e100-best.pt`. Arquivos:
@@ -559,6 +562,10 @@ não detecta as pessoas: as caixas são só os carros, com confiança de
 avaliada com percepção visual.
 
 ## Ambiente com ROIs de 60 m e preempção para emergências
+
+> **Registro histórico.** Os resultados desta seção usam a demanda antiga
+> (motos como carros, hoje `calibrated_motos`, Leste saturado) e checkpoints
+> anteriores. Os atuais estão na seção **Demanda calibrada sem motos**.
 
 Status: câmeras, ROIs e preempção V2I concluídos (branch `feat/cameras-60m`,
 2026-09-30). **Muda o ambiente:** os resultados da seção DQN v2 abaixo foram
@@ -926,6 +933,10 @@ ser refeita com a correção para valer como resultado do ambiente atual.
 ```
 
 ## DQN v2 — estado por faixa, pré-treino SUMO e avaliação visual
+
+> **Registro histórico.** Os resultados desta seção usam a demanda antiga
+> (motos como carros, hoje `calibrated_motos`, Leste saturado) e checkpoints
+> anteriores, com as ROIs de ~25 m. Os atuais estão na seção **Demanda calibrada sem motos**.
 
 Status: concluído (branch `feat/estado-faixa-v2`, 2026-09-28/29). Os números
 abaixo vêm de arquivos locais em `results/` (ignorados pelo Git) e podem ser
