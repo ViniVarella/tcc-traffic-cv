@@ -46,9 +46,9 @@ protótipos antigos.
 
 - A **política** observa apenas dados visuais. E2 e demais dados perfeitos do
   SUMO **não** entram na decisão.
-- A **recompensa de treino** usa verdade de terreno do TraCI (espera dos
+- A **recompensa de treino** usa *ground truth* do TraCI (espera dos
   veículos). Relatórios devem declarar isso; não chame o loop de "visão pura".
-- E2 serve apenas para avaliação offline visão × verdade de terreno
+- E2 serve apenas para avaliação offline visão × *ground truth*
   (`vision_evaluation.lane_detector_mapping` em `sp.yaml`,
   `vision/e2_evaluation.py`).
 
@@ -57,7 +57,7 @@ protótipos antigos.
 ```text
 python/                 código Python (rodar comandos a partir daqui)
   configs/sp.yaml       fonte de verdade do cenário SP
-  sumo/                 traci_client.py, scenarios.py, lane_feature_source.py (oráculo TraCI),
+  sumo/                 traci_client.py, scenarios.py, lane_feature_source.py (ground truth TraCI),
                         state_extractor.py, experiment_metrics.py, ground_truth.py
   bridge/               unity_comm.py (UDP/TCP), frame_bundle.py, protocol.py, serialization.py
   vision/               yolo_detector, byte_track_tracker, roi_counter, queue_estimator,
@@ -220,7 +220,7 @@ carregam como v1):
   - As features vêm de `ApproachKinematicsTracker` (`vision/lane_features.py`),
     alimentado por duas fontes com o mesmo contrato: `VisualLaneFeatureSource`
     (base das bboxes → homografia da ROI) e `TraciLaneFeatureSource`
-    (posições reais no intervalo da ROI — oráculo do pré-treino). Um teste de
+    (posições reais no intervalo da ROI — fonte *ground truth* do pré-treino). Um teste de
     paridade garante features idênticas para a mesma trajetória.
   - "Parado" = < 1,39 m/s por ≥ 1 s (padrão do E2). A Unity põe o pivô do
     modelo na posição da frente do veículo no SUMO; `lane_state.visual_ground_offset_m`
@@ -240,8 +240,11 @@ carregam como v1):
 - Checkpoints (`DqnAgent.save`) guardam `config` e `metadata` (versão, nomes
   das features, fonte, cenário). Se a dimensão ou a semântica do estado mudar,
   pesos antigos não são reaproveitáveis: crie uma nova versão de estado.
-- **Nunca** use o oráculo TraCI para controlar em uma avaliação "visual" sem
-  rotulá-la como percepção oráculo.
+- Nos textos (README, `docs/`, tese) a percepção com features do TraCI
+  chama-se **percepção *ground truth***, nunca "oráculo". No código ela
+  continua `oracle` (`--perception oracle`, `*-oracle.json`); não renomeie.
+- **Nunca** use a percepção *ground truth* (TraCI) para controlar em uma avaliação "visual" sem
+  rotulá-la como percepção *ground truth*.
 - **Compare versões só no mesmo ambiente**: mesmo cenário, seeds, aquecimento,
   duração, camada de segurança, métricas e percepção; muda só a decisão. Use
   `experiments.compare_versions` (regras das versões em
@@ -356,7 +359,7 @@ Todos a partir de `python/`:
 # Gerar a demanda calibrada (sem motos) a partir dos dados do drone
 ../.venv/bin/python -m experiments.build_calibrated_demand
 
-# Avaliar ciclo fixo, max-pressure e checkpoints v2 com percepção oráculo (só SUMO)
+# Avaliar ciclo fixo, max-pressure e checkpoints v2 com percepção ground truth (só SUMO)
 ../.venv/bin/python -m experiments.evaluate_policies_sumo --scenario calibrated \
   --dqn-model ../results/models/dqn-v2-pretrain-best.pt --output ../results/evaluation/policies-sumo-oracle-calibrated.json
 
@@ -364,7 +367,7 @@ Todos a partir de `python/`:
 ../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception oracle   # só SUMO
 ../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception visual   # Unity em Play Mode
 
-# Política v2 com visão (Unity em Play Mode) + log visão × oráculo por step
+# Política v2 com visão (Unity em Play Mode) + log visão × ground truth por step
 ../.venv/bin/python -m experiments.run_visual_policy --policy dqn --dqn-model <checkpoint-v2> --seeds 1001
 ../.venv/bin/python -m experiments.evaluate_lane_features --step-log <log.jsonl> --dqn-model <checkpoint-v2>
 
@@ -379,7 +382,7 @@ Todos a partir de `python/`:
   --episodes 100 --seed-start 51 --pedestrian-reward-weight 0.3 \
   --checkpoint-output ../results/models/dqn-v3-sem-motos-last.pt --best-checkpoint-output ../results/models/dqn-v3-sem-motos-best.pt
 
-# Versões com pedestres (oráculo); v3 só entra se pedido
+# Versões com pedestres (ground truth); v3 só entra se pedido
 ../.venv/bin/python -m experiments.compare_versions --scenario calibrated_ped --perception oracle --versions baseline,v1,v2,v3,max_pressure
 
 # Preempção para emergências (mesma agenda de viaturas; só SUMO)

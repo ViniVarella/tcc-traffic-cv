@@ -13,7 +13,7 @@ de treino e avaliação.
 **Versão atual: v2** — DQN com cinco features visuais por faixa, pré-treinado
 só no SUMO e executado com a câmera. No cenário calibrado (demanda medida por
 drone, sem motos), reduz a espera do ciclo fixo de 13,0 para 4,3 s pela
-câmera, a 0,16 s do resultado com percepção perfeita; sem saturação, empata
+câmera, a 0,16 s do resultado com percepção *ground truth*; sem saturação, empata
 com a heurística v1. Com a fase exclusiva de pedestres, a v2 e a **v3**
 (estado com as fases de pedestre) são as únicas versões que superam o ciclo
 fixo para os veículos, e empatam entre si (ver
@@ -82,7 +82,7 @@ mínimo permite". A análise posterior encontrou as causas:
   capacidade da ROI, mais fase e tempo. A base de cada bbox é projetada pela
   homografia da ROI de faixa, e um rastreador cinemático por câmera calcula
   velocidade e tempo parado.
-- **Pré-treino só no SUMO.** Um oráculo TraCI produz as mesmas features a
+- **Pré-treino só no SUMO.** Uma fonte *ground truth* (TraCI) produz as mesmas features a
   partir das posições reais no mesmo trecho das ROIs; um teste de paridade
   garante a equivalência. Cada episódio (300 s de aquecimento + 1800 s) leva
   ~6 s, contra ~1,5 s por step com a Unity. Foram 40 episódios, com ε linear
@@ -111,7 +111,15 @@ Todas as versões rodam no **mesmo ambiente**:
 - mesmo cenário, seeds inéditas `201`–`203`, 300 s de aquecimento e 1800 s
   controlados;
 - mesma camada de segurança, mesmas métricas e a **mesma percepção** — as
-  features por faixa do oráculo TraCI ou as da câmera.
+  features por faixa *ground truth* (TraCI) ou as da câmera.
+
+Há duas percepções. Na **percepção visual**, as features por faixa vêm das
+detecções do YOLO nas imagens da Unity. Na **percepção *ground truth***, vêm
+das posições e velocidades reais dos veículos no SUMO, no mesmo trecho de
+60 m coberto pelas câmeras. As duas passam pelo mesmo rastreador e produzem o
+mesmo vetor de estado; a diferença entre elas é o custo da visão. A
+recompensa de treino usa sempre o *ground truth*. No código, a percepção
+*ground truth* se chama `oracle` (`--perception oracle`, arquivos `*-oracle.json`).
 
 Só a lógica de decisão muda. As regras de cada versão estão em
 `python/experiments/version_policies.py`, e o comparador é
@@ -129,7 +137,7 @@ Leste 976 veíc/h (v/c 0,58), Sul 727, Oeste 139. Checkpoint da v2:
 `dqn-v2-sem-motos-best.pt`. Seeds 201–203, 300 s de aquecimento + 1800 s,
 0 frames perdidos na percepção visual.
 
-| Versão | Espera (visual) | Espera (oráculo) | Chegadas (visual) | Fila de inserção |
+| Versão | Espera (visual) | Espera (*ground truth*) | Chegadas (visual) | Fila de inserção |
 |---|---:|---:|---:|---:|
 | Linha de base (ciclo fixo) | 13,0 s | 13,0 s | 918 | 0 |
 | v1 (heurística) | **4,3 s** | 4,4 s | 915 | 0 |
@@ -138,9 +146,9 @@ Leste 976 veíc/h (v/c 0,58), Sul 727, Oeste 139. Checkpoint da v2:
 | max-pressure (referência) | 4,8 s | 4,7 s | 916 | 0 |
 
 Pela câmera, as versões adaptativas reduzem a espera do ciclo fixo em 56–67%,
-e a visão custa no máximo 0,16 s em relação à percepção perfeita. Sem o Leste
+e a visão custa no máximo 0,16 s em relação à percepção *ground truth*. Sem o Leste
 saturado, v1 e v2 empatam com visão (4,27 × 4,31 s, dentro da variação entre
-seeds); com o oráculo, a v2 é a melhor. A v1.1 dá o mesmo número nas duas
+seeds); com a percepção *ground truth*, a v2 é a melhor. A v1.1 dá o mesmo número nas duas
 percepções porque troca sempre no verde mínimo (129 trocas em 30 min) e não
 depende do que vê.
 
@@ -151,7 +159,7 @@ ciclos (todos os veículos no vermelho, 41 s + 3 s) e pedestres renderizados
 na Unity. Checkpoint da v3: `dqn-v3-sem-motos-best.pt`. 0 frames perdidos na
 percepção visual.
 
-| Versão | Espera veículos (visual) | Espera veículos (oráculo) | Espera pedestres (visual, mediana / p90) | Fila de inserção final (visual) |
+| Versão | Espera veículos (visual) | Espera veículos (*ground truth*) | Espera pedestres (visual, mediana / p90) | Fila de inserção final (visual) |
 |---|---:|---:|---|---:|
 | Linha de base (ciclo fixo) | 24,5 s | 24,5 s | 64,1 s (48 / 163 s) | 0 |
 | v1 (heurística) | 30,1 s | 30,2 s | 21,8 s (11 / 59 s) | 26 |
@@ -160,7 +168,7 @@ percepção visual.
 | max-pressure (referência) | 32,6 s | 34,2 s | 21,4 s (11 / 57 s) | 39 |
 
 Os pedestres na imagem não atrapalham a visão: o YOLO não os detecta e cada
-versão fica a menos de 1,6 s do oráculo. v2 e v3 reduzem a espera dos
+versão fica a menos de 1,6 s da percepção *ground truth*. v2 e v3 reduzem a espera dos
 veículos em 12–17% em relação ao ciclo fixo e a dos pedestres em mais da
 metade, e empatam entre si dentro da variação entre seeds. A v1 e o
 max-pressure deixam os pedestres esperando um pouco menos, mas acumulam fila
@@ -169,10 +177,10 @@ de inserção e ficam piores que o ciclo fixo para os veículos.
 ### Ambiente atual, cenário original (demanda equilibrada do netedit)
 
 Mesmo protocolo e mesmos checkpoints. A demanda não tem motos e não mudou;
-mudou o checkpoint da v2. Só percepção oráculo por enquanto: a rodada visual
+mudou o checkpoint da v2. Só percepção *ground truth* por enquanto: a rodada visual
 com o checkpoint atual ainda não foi feita.
 
-| Versão | Espera (oráculo) | Chegadas | Fila de inserção final |
+| Versão | Espera (*ground truth*) | Chegadas | Fila de inserção final |
 |---|---:|---:|---:|
 | Linha de base (ciclo fixo) | 14,9 s | 1431 | 37 |
 | v1 (heurística) | 4,7 s | 1473 | 0 |
@@ -196,7 +204,7 @@ Câmeras reposicionadas, ROIs de 60 m por faixa, YOLO de duas classes e a v2
 pré-treinada nos dois cenários (`dqn-v2-roi60-mix-pretrain-best.pt`). Seeds
 201–203, 0 frames perdidos na percepção visual.
 
-| Versão | Espera (visual) | Chegadas (visual) | Fila de inserção (visual) | Espera (oráculo) | Chegadas (oráculo) |
+| Versão | Espera (visual) | Chegadas (visual) | Fila de inserção (visual) | Espera (*ground truth*) | Chegadas (*ground truth*) |
 |---|---:|---:|---:|---:|---:|
 | Linha de base (ciclo fixo) | 16,1 s | 1503 | 97 | 16,1 s | 1503 |
 | v1 (heurística) | 10,3 s | 1488 | 112 | 10,3 s | 1486 |
@@ -206,8 +214,8 @@ pré-treinada nos dois cenários (`dqn-v2-roi60-mix-pretrain-best.pt`). Seeds
 
 Pela câmera, a v2 reduz a espera do ciclo fixo em 43% (16,1 → 9,1 s), é a
 versão que mais escoa veículos e quase zera a fila de inserção. Fica a 0,5 s
-do limite com percepção perfeita, e a ação com features visuais coincide com a
-do oráculo em 85% das decisões. O max-pressure e a v1 ficam em 10,3–10,6 s,
+do resultado com percepção *ground truth*, e a ação com features visuais coincide com a
+da percepção *ground truth* em 85% das decisões. O max-pressure e a v1 ficam em 10,3–10,6 s,
 com mais veículos presos fora da rede. Detalhes e domain gap em
 [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 
@@ -215,7 +223,7 @@ com mais veículos presos fora da rede. Detalhes e domain gap em
 checkpoint anterior da v2 (`dqn-v2-roi60-mix-pretrain-best.pt`), 0 frames
 perdidos:
 
-| Versão | Espera (visual) | Chegadas (visual) | Fila de inserção (visual) | Espera (oráculo) |
+| Versão | Espera (visual) | Chegadas (visual) | Fila de inserção (visual) | Espera (*ground truth*) |
 |---|---:|---:|---:|---:|
 | Linha de base (ciclo fixo) | 14,9 s | 1431 | 37 | 14,9 s |
 | v1 (heurística) | 4,6 s | 1472 | 0 | 4,7 s |
@@ -232,7 +240,7 @@ As tabelas abaixo são do **ambiente anterior** (câmeras antigas, ROIs de
 ~25 m, YOLO de uma classe) e ficam como registro; não se comparam com a de
 cima.
 
-### Percepção oráculo (só SUMO) — ambiente anterior
+### Percepção *ground truth* (só SUMO) — ambiente anterior
 
 **Cenário calibrado** (Leste saturado — onde a adaptação importa):
 
@@ -279,8 +287,8 @@ Cenário calibrado (Leste saturado), mesmo protocolo, 0 frames perdidos:
 O ciclo fixo não usa percepção, então o resultado é o mesmo das duas tabelas.
 Pela câmera, o quadro se repete: a v1 e a v1.1 escoam menos veículos que o
 ciclo fixo e deixam 250–290 veículos fora da rede, enquanto a v2 é a única que
-dá mais verde ao Leste. A v2 fica a 1,2 s de espera do limite com percepção
-perfeita; na seed 1001, a ação coincidiu com a do oráculo em 82,7% das
+dá mais verde ao Leste. A v2 fica a 1,2 s de espera do resultado com percepção
+*ground truth*; na seed 1001, a ação coincidiu com a da percepção *ground truth* em 82,7% das
 decisões.
 
 Cenário original (demanda equilibrada), mesmo protocolo, 0 frames perdidos:
@@ -326,7 +334,7 @@ GPS dos sistemas reais), e o semáforo abre para o sentido de onde elas vêm:
 
 Cenário calibrado sem motos, ROIs de 60 m, seeds 201–203, uma viatura a
 cada ~5 min (18 por política). A perda total soma a espera para entrar na
-rede e a perda até a linha de retenção. Com percepção oráculo, ela cai de
+rede e a perda até a linha de retenção. Com percepção *ground truth*, ela cai de
 16,6 s (ciclo fixo), 8,0 s (v2) e 7,9 s (max-pressure) para ~1,5 s, e todas
 cruzam sem parar. O custo é de +0,2 a +0,8 s na espera do restante do
 tráfego. A câmera também detecta as viaturas (classe `emergency` do YOLO
@@ -357,7 +365,7 @@ percepção visual, perda total média (sem parar):
 
 A viatura que chega durante a fase de pedestres espera até o fim dela
 (máx. ~39 s em todos os modos), o que deixa a perda acima da do cenário sem
-pedestres. V2I com visão repete o oráculo (v2 5,2 s, v3 7,7 s), a visão
+pedestres. V2I com visão repete a percepção *ground truth* (v2 5,2 s, v3 7,7 s), a visão
 detectou todas as viaturas sem alarme falso, e os pedestres esperam só 1–3 s
 a mais com a preempção.
 Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
@@ -376,10 +384,10 @@ cd python
 ../.venv/bin/python -m pip install -r requirements.txt
 ../.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
 
-# Pré-treino só no SUMO (percepção oráculo; sem Unity)
+# Pré-treino só no SUMO (percepção ground truth; sem Unity)
 ../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn
 
-# Todas as versões no mesmo ambiente, percepção oráculo (sem Unity; alguns minutos)
+# Todas as versões no mesmo ambiente, percepção ground truth (sem Unity; alguns minutos)
 ../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception oracle
 ../.venv/bin/python -m experiments.compare_versions --scenario original --perception oracle
 ```
@@ -393,7 +401,7 @@ Play Mode (reinicie o Play Mode antes de cada comando):
   --step-log-output ../results/logs/teste-visual-dqn.jsonl \
   --output ../results/evaluation/teste-visual-dqn.json
 
-# Diferença visão × oráculo a partir do log por step (sem Unity)
+# Diferença visão × ground truth a partir do log por step (sem Unity)
 ../.venv/bin/python -m experiments.evaluate_lane_features \
   --step-log ../results/logs/teste-visual-dqn.jsonl \
   --dqn-model ../results/models/dqn-v2-pretrain-best.pt
@@ -425,7 +433,7 @@ Sem o modelo, as viaturas de emergência aparecem como blocos vermelhos.
 
 ## Principais módulos
 
-- `python/sumo`: cliente TraCI, seleção de cenário, oráculo TraCI das
+- `python/sumo`: cliente TraCI, seleção de cenário, *ground truth* TraCI das
   features por faixa, estado enviado à Unity e métricas.
 - `python/bridge`: comunicação Python ↔ Unity (UDP de estado, TCP de frames
   agrupados por `step_id`).

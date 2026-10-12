@@ -224,7 +224,7 @@ E2 e não é reutilizado pela política visual. Há duas versões de estado:
   estimadas por visão: a base de cada bbox é projetada pela homografia da ROI
   de faixa e um rastreador cinemático por câmera calcula a velocidade e o
   tempo parado. No pré-treino, o mesmo rastreador recebe as posições reais do
-  SUMO restritas ao mesmo intervalo das ROIs (oráculo TraCI, nunca usado no
+  SUMO restritas ao mesmo intervalo das ROIs (*ground truth* TraCI, nunca usado no
   controle implantado).
 
 A rede tem duas ações, manter ou solicitar troca, e no v2 só é consultada em
@@ -254,7 +254,7 @@ Os detectores E2 do SP cobrem hoje 42,6–45,8 m, mas as ROIs das câmeras
 cobrem só 23–26 m por faixa (medido por `experiments.check_lane_geometry` a
 partir da pose e do FOV; intervalos em `lane_geometry` no `sp.yaml`). Portanto,
 visão e E2 não são diretamente comparáveis. A comparação estrita da
-percepção é visão × oráculo TraCI no intervalo de cada ROI, feita por
+percepção é visão × *ground truth* TraCI no intervalo de cada ROI, feita por
 `experiments.evaluate_lane_features`.
 
 ## Limites verificados
@@ -281,7 +281,7 @@ o heurístico visual. O DQN v2 substituiu-o:
 Pela câmera, o DQN v2 teve 10,3 s de espera média e 1599 chegadas, com fila de
 inserção de 1 veículo no fim. O ciclo fixo teve 16,1 s, 1503 chegadas e fila
 de 97 veículos; o max-pressure visual teve 11,1 s, 1498 chegadas e fila de 104
-veículos. Com percepção oráculo, o mesmo DQN teve 9,1 s. Detalhes e comandos
+veículos. Com percepção *ground truth*, o mesmo DQN teve 9,1 s. Detalhes e comandos
 em `docs/IMPLEMENTATION_PROGRESS.md`, seção **DQN v2**.
 
 No cenário `original`, com a câmera, as versões adaptativas empatam (v1 4,6 s;
