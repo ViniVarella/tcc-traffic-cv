@@ -177,20 +177,23 @@ de inserção e ficam piores que o ciclo fixo para os veículos.
 ### Ambiente atual, cenário original (demanda equilibrada do netedit)
 
 Mesmo protocolo e mesmos checkpoints. A demanda não tem motos e não mudou;
-mudou o checkpoint da v2. Só percepção *ground truth* por enquanto: a rodada visual
-com o checkpoint atual ainda não foi feita.
+mudou o checkpoint da v2. Percepção visual com 0 frames perdidos.
 
-| Versão | Espera (*ground truth*) | Chegadas | Fila de inserção final |
-|---|---:|---:|---:|
-| Linha de base (ciclo fixo) | 14,9 s | 1431 | 37 |
-| v1 (heurística) | 4,7 s | 1473 | 0 |
-| v1.1 (DQN estado v1) | 4,6 s | 1474 | 0 |
-| v2 (DQN estado v2) | **4,5 s** | 1474 | 0 |
-| max-pressure (referência) | 4,6 s | 1474 | 0 |
+| Versão | Espera (*ground truth*) | Espera (visão) | Chegadas (visão) | Fila de inserção final (visão) |
+|---|---:|---:|---:|---:|
+| Linha de base (ciclo fixo) | 14,9 s | 14,9 s | 1431 | 37 |
+| v1 (heurística) | 4,7 s | **4,6 s** | 1472 | 0 |
+| v1.1 (DQN estado v1) | 4,6 s | **4,6 s** | 1474 | 0 |
+| v2 (DQN estado v2) | **4,5 s** | 5,2 s | 1474 | 0 |
+| max-pressure (referência) | 4,6 s | 6,1 s | 1471 | 0 |
 
-Com demanda equilibrada, alternar rápido já é quase ótimo: as versões
-adaptativas reduzem a espera do ciclo fixo em ~70% e ficam a 0,2 s umas das
-outras. O cenário `original_ped` satura com a fase exclusiva de pedestres
+Com demanda equilibrada, alternar rápido já é quase ótimo: com a percepção
+*ground truth*, as versões adaptativas reduzem a espera do ciclo fixo em ~70%
+e ficam a 0,2 s umas das outras. Com a câmera, a v2 e o max-pressure trocam
+menos de fase (110 e 97 trocas, contra 128 e 129) e perdem 0,7 s e 1,5 s;
+ainda assim ficam 59–65% abaixo do ciclo fixo. Aqui a visão custa mais que no
+cenário calibrado (≤ 0,16 s), porque o ganho de cada decisão é pequeno e
+qualquer verde segurado a mais aparece na média. O cenário `original_ped` satura com a fase exclusiva de pedestres
 (fila de inserção de 183–417 veículos) e não vem do drone; os números estão
 em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 

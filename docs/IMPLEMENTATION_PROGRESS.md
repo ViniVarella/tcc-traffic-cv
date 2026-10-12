@@ -40,7 +40,8 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   motos** abaixo. Todos os resultados anteriores do cenário `calibrated`
   (inclusive os de pedestres) usam a demanda antiga e viram registro
   histórico; v2 e v3 foram retreinados (checkpoints `*-sem-motos-best.pt`).
-  Avaliações visuais (Unity) refeitas em 2026-10-08.
+  Avaliações visuais (Unity) refeitas em 2026-10-08 (cenário `original` em
+  2026-10-12).
 
 ## Demanda calibrada sem motos (2026-10-07)
 
@@ -187,6 +188,39 @@ perda na rede):
   máx. 3,2 s). A espera de entrada fica em 1,0 s em todos os modos (a
   latência de 1 step), sem fila de inserção.
 - Custo para o tráfego: +0,3 s (visão) a +0,5 s (V2I).
+
+### Avaliação visual do cenário original (Unity, 2026-10-12)
+
+Mesmo protocolo (seeds 201–203, 300 s + 1800 s), cenário `original`, v2 =
+`dqn-v2-sem-motos-best.pt`, **0 frames perdidos** e 0 observações perdidas.
+A demanda do `original` não mudou; mudou só o checkpoint da v2. Arquivo:
+`results/evaluation/versoes-original-visual.json` (a rodada com o checkpoint
+anterior ficou em `versoes-original-visual-motos.json`); log em
+`results/logs/versoes-original-visual.log`.
+
+| Versão | *Ground truth* | Visão | Visão − *ground truth* | Trocas (GT → visão) |
+|---|---:|---:|---:|---:|
+| ciclo fixo | 14,95 s | 14,95 s | 0 | 0 |
+| v1 | 4,72 s | **4,59 s** (4,55 / 4,65 / 4,57) | −0,13 | 129 → 129 |
+| v1.1 | 4,65 s | 4,65 s | 0 | 127 → 127 |
+| v2 | **4,47 s** | 5,18 s (5,20 / 5,13 / 5,22) | +0,71 | 128 → 110 |
+| max-pressure | 4,57 s | 6,08 s (6,19 / 5,77 / 6,27) | +1,51 | 129 → 97 |
+
+Chegadas 1471–1474 e fila de inserção final 0–1 nas adaptativas (ciclo fixo:
+1431 e 37).
+
+- Com a câmera, a v2 e o max-pressure trocam menos de fase e seguram o verde
+  um pouco mais; a v1, que só olha a contagem, não muda. O max-pressure
+  decide por veículos parados, e o "parado" visual vem da velocidade estimada
+  a 1 fps, subestimada em 0,1–0,9 m/s (seção do *domain gap*).
+- No cenário calibrado a visão custava no máximo 0,16 s; aqui custa até
+  1,5 s porque, com demanda equilibrada, alternar no mínimo já é quase ótimo e
+  qualquer verde a mais aparece na média. Mesmo assim, todas as adaptativas
+  ficam 59–69% abaixo do ciclo fixo.
+- O checkpoint anterior da v2 dava 4,88 s com visão no mesmo cenário (5,06 s
+  com *ground truth*): o atual é melhor com *ground truth* e pior com visão,
+  diferenças da ordem de 0,3–0,6 s.
+- A v1.1 de novo é idêntica nas duas percepções (troca sempre no mínimo).
 
 ### Avaliação visual com pedestres (Unity, 2026-10-09)
 
@@ -1116,7 +1150,7 @@ No cenário equilibrado, as versões adaptativas empatam também com a câmera; 
 v2 fica 0,8 s atrás da v1 em espera, com as mesmas chegadas.
 
 Arquivos: `results/evaluation/versoes-calibrated-oracle.json`,
-`versoes-original-oracle.json`, `versoes-original-visual.json` e `versoes-calibrated-visual-v1.json` (v1 e
+`versoes-original-oracle.json`, `versoes-original-visual-ambiente-25m.json` e `versoes-calibrated-visual-v1.json` (v1 e
 v1.1 visuais; a v2 e o max-pressure visuais estão em
 `teste-visual-dqn-zero-shot.json` e `teste-visual-max-pressure.json`).
 
@@ -1931,4 +1965,5 @@ Escopo previsto:
 ### Marco 9 em diante
 
 Controlador semafórico e experimentos comparativos concluídos com o DQN v2
-(seção **DQN v2**). Pendente: teste visual no cenário `original`.
+(seção **DQN v2**). Teste visual no cenário `original` com o checkpoint atual
+em 2026-10-12 (seção **Avaliação visual do cenário original**).
