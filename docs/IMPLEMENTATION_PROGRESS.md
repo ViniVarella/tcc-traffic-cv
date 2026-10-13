@@ -32,7 +32,7 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   ROIs de 60 m e preempção** abaixo.
 - YOLO de duas classes, detecção visual das viaturas, correção do filtro da
   ROI e avaliações visuais do ambiente de 60 m: concluídos em 2026-10-04.
-- Pedestres no SUMO (rede, fase exclusiva a cada dois ciclos, estado v3,
+- Pedestres no SUMO (rede, fase exclusiva de pedestres, estado v3,
   métricas): desde 2026-10-05 — seção **Pedestres** abaixo. Pedestres,
   faixas e sinais na Unity em 2026-10-08; avaliação visual com pedestres em
   2026-10-09.
@@ -42,6 +42,87 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   retirados deste registro.
   Avaliações visuais (Unity) refeitas em 2026-10-08 (cenário `original` em
   2026-10-12).
+- Fase de pedestres curta a cada ciclo (7 s + 11 s): 2026-10-13 — seção
+  **Fase de pedestres curta** abaixo. v3 retreinado
+  (`dqn-v3-fase-curta-best.pt`); versões com pedestres refeitas com
+  percepção *ground truth* e visual. Preempção com pedestres a refazer.
+
+## Fase de pedestres curta a cada ciclo (2026-10-13)
+
+Status: branch `feat/fase-pedestres-curta` (`210686d`, `5b4dcd3`).
+
+A fase antiga (verde de 41 s, o tempo para fazer o maior "L" a pé, + 3 s, a
+cada dois ciclos) parava todos os veículos por 44 s e deixava a espera deles
+em 21–25 s, o dobro do cenário sem pedestres. Agora cada pedestre atravessa
+uma rua por fase, e quem precisa de duas espera a fase seguinte na esquina:
+
+- **verde de 7 s**, o mínimo para começar a travessia;
+- **11 s de liberação** em vermelho total: 13,0 m (travessia mais larga, a
+  Leste) a 1,2 m/s. Quem entra no último segundo do verde termina antes de
+  os veículos voltarem;
+- **a cada ciclo** (L/O → Sul → pedestres). A cada dois ciclos, quem
+  atravessa duas ruas esperaria dois intervalos longos.
+
+`sp.yaml` (`pedestrians:`): `every_cycles: 1`, `green_seconds: 7`,
+`clearance_seconds: 11`, `widest_crossing_m: 13.0` (sai `longest_l_m`). A rede
+`.ped.net.xml` foi regenerada (`crossing_lengths` no gerador).
+
+**Escolha da variante** (percepção *ground truth*, seeds 201–203, v2 com
+`dqn-v2-sem-motos-best.pt` e o v3 antigo; espera média de veículos /
+pedestres). Referência: níveis de serviço do HCM 2000 para a espera de
+pedestre em semáforo (A < 10 s, B 10–20, C 20–30, D 30–40, E 40–60, F > 60 s).
+
+| Variante | Ciclo fixo | v2 |
+|---|---|---|
+| A: 11 + 3 s, a cada 2 ciclos | 16,2 / 107 s | 7,9 / 38 s |
+| B: 7 + 11 s, a cada 2 ciclos | 17,1 / 112 s | 10,3 / 45 s |
+| C: 11 + 3 s, a cada ciclo | 18,8 / 53 s | 12,1 / 19 s |
+| **D: 7 + 11 s, a cada ciclo** (escolhida) | 20,8 / 57 s | 14,2 / 23 s |
+| fase antiga: 41 + 3 s, a cada 2 ciclos | 24,5 / 64 s | 21,3 / 26 s |
+
+A e B dão a menor espera dos veículos, mas pedestres de ~40 s (nível D–E).
+C e D deixam os pedestres no nível C. Entre as duas, D é a única em que quem
+entra no fim do verde termina a travessia antes de os veículos voltarem
+(decisão do usuário).
+
+**v3 retreinado** com a fase nova: `dqn-v3-fase-curta-best.pt`, mesma
+receita (`calibrated_ped,original_ped`, w = 0,3, 100 episódios, seeds 51–150,
+~30 min), melhor no episódio 99 (score −0,146). A referência de 1200 s do
+termo dos pedestres na recompensa não foi recalculada. A v2 não precisou de
+retreino: ela vê a fase de pedestres como all-red. Os resultados da fase
+antiga ganharam o sufixo `-fase-41s`.
+
+**Versões no `calibrated_ped`** (seeds 201–203, 300 s + 1800 s; visão: Unity,
+**0 frames perdidos**; arquivos `versoes-calibrated_ped-{oracle,visual}.json`,
+log `results/logs/versoes-calibrated_ped-visual.log`). Espera dos veículos,
+por seed entre parênteses; pedestres: média (mediana / p90):
+
+| Versão | Veículos, *ground truth* | Veículos, visão | Fila média de inserção (GT / visão) | Pedestres, *ground truth* | Pedestres, visão | Trocas (GT / visão) |
+|---|---:|---:|---:|---|---|---:|
+| ciclo fixo | 20,8 s | 20,8 s (21,4 / 20,4 / 20,6) | 0,9 / 0,9 | 56,6 s (47 / 140) | 56,6 s (47 / 140) | 0 / 0 |
+| v1 | 25,3 s | 24,6 s (22,5 / 25,8 / 25,7) | 10,3 / 9,3 | 22,6 s (20 / 53) | 22,3 s (21 / 53) | 71 / 71 |
+| v2 | **14,2 s** | **14,1 s** (13,9 / 14,3 / 14,2) | 0,1 / 0,1 | 23,4 s (21 / 57) | 25,0 s (22 / 58) | 68 / 66 |
+| v3 | **14,2 s** | 14,7 s (14,2 / 14,6 / 15,2) | 0,1 / 0,1 | 26,6 s (26 / 60) | 27,4 s (25 / 60) | 62 / 62 |
+| max-pressure | 26,5 s | 21,0 s (19,7 / 22,9 / 20,4) | 12,2 / 1,9 | 22,3 s (20 / 51) | 24,2 s (23 / 57) | 73 / 68 |
+
+Chegadas de veículos (visão): 911–922 em todas as versões; pedestres
+159–161; 0 teleportes.
+
+- **v2 com a câmera reduz a espera dos veículos em 32%** em relação ao ciclo
+  fixo (20,8 → 14,1 s; com a fase antiga eram 13–17%) e a dos pedestres em
+  56% (56,6 → 25,0 s; p90 140 → 58 s).
+- **A visão reproduz a percepção *ground truth*** na v2 (−0,1 s) e na v3
+  (+0,5 s). Nos pedestres, a diferença é de +0,8 a +1,6 s.
+- **v2 e v3 empatam nos veículos**; a v3 deixa os pedestres ~2–3 s a mais nas
+  duas percepções. Com a fase a cada ciclo, saber quantos verdes faltam até
+  ela já não ajuda: a resposta é sempre a mesma.
+- **v1 e max-pressure ficam piores que o ciclo fixo para os veículos.** Eles
+  trocam no verde mínimo sempre que a fila oposta é maior. Agora cada ciclo
+  inclui 18 s de fase de pedestres, então cada troca a mais custa caro. Com a
+  câmera, o max-pressure troca menos (68 × 73), porque a contagem visual
+  demora a refletir a fila oposta. Isso reduz a fila de inserção (12,2 → 1,9)
+  e a espera (26,5 → 21,0 s). Ele não melhora por ver melhor: segura o verde
+  por mais tempo.
 
 ## Demanda calibrada sem motos (2026-10-07)
 
@@ -99,6 +180,10 @@ v3 12 / 74 s, max-pressure 7 / 53 s; original — ciclo fixo 49 / 163 s, v2
   fase de pedestres no estado) e o max-pressure pioram os veículos.
 - O cenário `original_ped` (demanda sintética do netedit, Sul com 1.630
   veíc/h) ainda satura com a fase exclusiva; ele não vem do drone.
+
+As linhas com pedestres desta subseção (versões e preempção) usam a fase
+antiga (41 s + 3 s a cada dois ciclos) e o v3 `dqn-v3-sem-motos-best.pt`.
+Para as versões com a fase atual, ver a seção **Fase de pedestres curta**.
 
 **Preempção (V2I, viaturas a cada ~5 min, 18 viaturas)**, perda total
 (espera de entrada + perda na rede), sem → com preempção:
@@ -238,7 +323,11 @@ Chegadas 1471–1474 e fila de inserção final 0–1 nas adaptativas (ciclo fix
   diferenças da ordem de 0,3–0,6 s.
 - A v1.1 de novo é idêntica nas duas percepções (troca sempre no mínimo).
 
-### Avaliação visual com pedestres (Unity, 2026-10-09)
+### Avaliação visual com pedestres (Unity, 2026-10-09; fase antiga)
+
+Fase de pedestres antiga (41 s + 3 s a cada dois ciclos); com a fase
+atual, ver a seção **Fase de pedestres curta**. Os arquivos desta subseção
+ganharam o sufixo `-fase-41s`.
 
 Cenário `calibrated_ped`, mesmo protocolo (seeds 201–203, 300 s + 1800 s),
 pedestres renderizados na Unity (subseção **Pedestres na Unity**), v3 =
@@ -317,7 +406,7 @@ Percepção *ground truth*, mesma agenda (V2I), antes da correção: v2 26,7 →
   antiga.
 - **Tráfego:** +0,5 a +2 s de espera para os demais veículos.
 
-## Pedestres (fase exclusiva a cada dois ciclos)
+## Pedestres (fase exclusiva)
 
 Status: rede, fase de pedestres, estado v3 e métricas implementados em
 2026-10-05 (branch `feat/pedestres`); só SUMO até 2026-10-08, quando a
@@ -325,6 +414,8 @@ Unity passou a renderizar pedestres, faixas e sinais (subseção **Pedestres na
 Unity**). Decisões do usuário: fase
 exclusiva (todos os veículos no vermelho, todas as faixas verdes) a cada dois
 ciclos; verde que cubra a travessia em "L" a 1,2 m/s; nova versão de estado.
+Desde 2026-10-13 a fase é curta e vem a cada ciclo (seção **Fase de
+pedestres curta**); a tabela de "L" abaixo é da regra antiga.
 
 ### Rede
 
@@ -350,6 +441,8 @@ pedestres e os `.sumocfg` dos cenários `calibrated_ped` e `original_ped`.
 
 ### Fase de pedestres
 
+Regra antiga (até 2026-10-13):
+
 | Esquina | Travessia + esquina + travessia | Verde a 1,2 m/s |
 |---|---|---:|
 | Nordeste (Leste + Norte) | 13,0 + 20,3 + 12,0 = 45,3 m | 38 s |
@@ -357,8 +450,10 @@ pedestres e os `.sumocfg` dos cenários `calibrated_ped` e `original_ped`.
 | **Sudoeste (Sul + Oeste)** | **12,8 + 24,0 + 11,2 = 48,05 m** | **41 s** |
 | Noroeste (Oeste + Norte) | 11,2 + 12,0 + 12,0 = 35,2 m | 30 s |
 
-- Sequência: L/O → Sul → L/O → Sul → all-red (1 s) → verde de pedestres
-  (41 s, o maior "L") → liberação em vermelho total (3 s) → L/O.
+- Sequência antiga: L/O → Sul → L/O → Sul → all-red (1 s) → verde de
+  pedestres (41 s, o maior "L") → liberação em vermelho total (3 s) → L/O.
+  Atual: L/O → Sul → all-red (1 s) → verde de pedestres (7 s) → liberação
+  (11 s) → L/O.
 - Obrigatória como o amarelo: a política não a encerra nem a pula. A
   preempção não a interrompe; uma viatura que chega quando ela ainda não
   começou passa à frente, e a fase vem na próxima oportunidade.

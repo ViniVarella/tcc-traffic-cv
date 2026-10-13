@@ -14,9 +14,10 @@ de treino e avaliação.
 só no SUMO e executado com a câmera. No cenário calibrado (demanda medida por
 drone, sem motos), reduz a espera do ciclo fixo de 13,0 para 4,3 s pela
 câmera, a 0,16 s do resultado com percepção *ground truth*; sem saturação, empata
-com a heurística v1. Com a fase exclusiva de pedestres, a v2 e a **v3**
-(estado com as fases de pedestre) são as únicas versões que superam o ciclo
-fixo para os veículos, e empatam entre si (ver
+com a heurística v1. Com a fase exclusiva de pedestres, a v2 reduz pela
+câmera a espera dos veículos em 32% e a dos pedestres em 56% em relação ao
+ciclo fixo; a **v3** (estado com as fases de pedestre) empata com ela, e são
+as únicas versões que superam o ciclo fixo para os veículos (ver
 [Comparação no mesmo ambiente](#comparação-no-mesmo-ambiente)).
 
 ## Arquitetura
@@ -152,25 +153,32 @@ depende do que vê.
 
 ### Ambiente atual com pedestres (cenário `calibrated_ped`)
 
-Mesma demanda e protocolo, com a fase exclusiva de pedestres a cada dois
-ciclos (todos os veículos no vermelho, 41 s + 3 s) e pedestres renderizados
-na Unity. Checkpoint da v3: `dqn-v3-sem-motos-best.pt`. 0 frames perdidos na
+Mesma demanda e protocolo, com a fase exclusiva de pedestres a cada ciclo
+(L/O → Sul → pedestres): todos os veículos no vermelho, 7 s de verde para
+começar a travessia + 11 s de liberação, o tempo de cruzar a rua mais larga
+(13,0 m) a 1,2 m/s. Quem atravessa duas ruas espera a fase seguinte na
+esquina. Pedestres renderizados na Unity. Checkpoint da v3:
+`dqn-v3-fase-curta-best.pt`, treinado com esta fase. 0 frames perdidos na
 percepção visual.
 
-| Versão | Espera veículos (visual) | Espera veículos (*ground truth*) | Espera pedestres (visual, mediana / p90) | Fila de inserção final (visual) |
+| Versão | Espera veículos (visual) | Espera veículos (*ground truth*) | Espera pedestres (visual, mediana / p90) | Fila média de inserção (visual) |
 |---|---:|---:|---|---:|
-| Linha de base (ciclo fixo) | 24,5 s | 24,5 s | 64,1 s (48 / 163 s) | 0 |
-| v1 (heurística) | 30,1 s | 30,2 s | 21,8 s (11 / 59 s) | 26 |
-| v2 (DQN estado v2) | **20,4 s** | **21,3 s** | 28,3 s (14 / 77 s) | 0 |
-| v3 (DQN estado v3, com pedestres) | 21,5 s | **21,3 s** | 26,6 s (9 / 74 s) | 0 |
-| max-pressure (referência) | 32,6 s | 34,2 s | 21,4 s (11 / 57 s) | 39 |
+| Linha de base (ciclo fixo) | 20,8 s | 20,8 s | 56,6 s (47 / 140 s) | 0,9 |
+| v1 (heurística) | 24,6 s | 25,3 s | 22,3 s (21 / 53 s) | 9,3 |
+| v2 (DQN estado v2) | **14,1 s** | **14,2 s** | 25,0 s (22 / 58 s) | 0,1 |
+| v3 (DQN estado v3, com pedestres) | 14,7 s | **14,2 s** | 27,4 s (25 / 60 s) | 0,1 |
+| max-pressure (referência) | 21,0 s | 26,5 s | 24,2 s (23 / 57 s) | 1,9 |
 
-Os pedestres na imagem não atrapalham a visão: o YOLO não os detecta e cada
-versão fica a menos de 1,6 s da percepção *ground truth*. v2 e v3 reduzem a espera dos
-veículos em 12–17% em relação ao ciclo fixo e a dos pedestres em mais da
-metade, e empatam entre si dentro da variação entre seeds. A v1 e o
-max-pressure deixam os pedestres esperando um pouco menos, mas acumulam fila
-de inserção e ficam piores que o ciclo fixo para os veículos.
+Os pedestres na imagem não atrapalham a visão: o YOLO não os detecta, e a v2
+e a v3 ficam a até 0,5 s da percepção *ground truth*. A v2 reduz a espera dos
+veículos de 20,8 para 14,1 s (−32%) e a dos pedestres de 56,6 para 25,0 s
+(p90 140 → 58 s). A v3 empata com ela nos veículos e deixa os pedestres 2–3 s
+a mais: com a fase a cada ciclo, saber quantos verdes faltam até ela não
+acrescenta nada. A v1 e o max-pressure trocam no verde mínimo sempre que a
+fila oposta é maior, e cada ciclo a mais traz outra fase de pedestres de 18 s,
+com todos os veículos parados. Por isso ficam iguais ao ciclo fixo ou piores
+para os veículos. Com a câmera, o max-pressure troca menos, porque a contagem
+visual demora a mostrar a fila oposta, e chega a empatar com o ciclo fixo.
 
 ### Ambiente atual, cenário original (demanda equilibrada do netedit)
 
@@ -242,27 +250,15 @@ A visão detectou as 18 viaturas, sem alarme falso, mas só as vê nos últimos
 60 m (~5 s antes da linha, contra ~23 s do V2I). Sozinha, reduz a perda em
 65%; junto do V2I, serve de redundância.
 
-Com pedestres (`calibrated_ped`, fase exclusiva de 44 s a cada dois ciclos),
-percepção visual, perda total média (sem parar; linhas com V2I a refazer,
-como acima):
-
-| Fonte do pedido | v2 | v3 |
-|---|---|---|
-| nenhuma | 24,4 s (50%) | 15,7 s (61%) |
-| V2I | **5,5 s** (100%) | 9,9 s (89%) |
-| visão | 14,2 s (72%) | 13,4 s (67%) |
-| V2I + visão | 8,4 s (89%) | **7,3 s** (83%) |
-
-A viatura que chega durante a fase de pedestres espera até o fim dela
-(máx. ~39 s em todos os modos), o que deixa a perda acima da do cenário sem
-pedestres. Com percepção *ground truth* e V2I, já corrigida, a perda é de
-8,6 s (v2) e 6,2 s (v3); a diferença vem de quantas viaturas caem na fase de
-pedestres (cada uma soma ~1–2 s à média). A visão detectou todas as viaturas
-sem alarme falso, e os pedestres esperam só 1–3 s a mais com a preempção.
-Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
+Com pedestres (`calibrated_ped`), a preempção está sendo refeita com a fase
+de pedestres atual (7 s + 11 s a cada ciclo). Os resultados da fase antiga
+(41 s + 3 s a cada dois ciclos) ficam em
+[`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md). A fase de
+pedestres é obrigatória: a viatura que chega durante ela espera até o fim.
 
 As tabelas desta seção usam o ambiente atual: câmeras de 60 m, YOLO de duas
-classes, demanda sem motos e checkpoints `*-sem-motos-best.pt`.
+classes, demanda sem motos, v2 `dqn-v2-sem-motos-best.pt` e, com pedestres,
+v3 `dqn-v3-fase-curta-best.pt`.
 
 ## Como reproduzir
 
