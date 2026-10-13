@@ -301,22 +301,28 @@ Chegadas 915–918 e fila de inserção 0 em todas.
   seja, é uma política degenerada que não depende do estado.
 
 **Preempção com visão** (v2, 18 viaturas; perda total = espera de entrada +
-perda na rede). *V2I e V2I + visão: antes da correção da lacuna na inserção,
-a refazer.*
+perda na rede; arquivo `results/evaluation/preempcao-calibrated-visual.json`,
+0 frames perdidos). V2I e V2I + visão refeitos em 2026-10-13, depois da
+correção do aviso na inserção (`preempcao-calibrated-visual-correcao.json`,
+log `results/logs/preempcao-visual-calibrated-correcao.log`, juntados ao
+arquivo principal); os anteriores ficaram em
+`preempcao-calibrated-visual-lacuna-insercao.json`.
 
 | Fonte do pedido | Perda total média | Máx. | Sem parar | Antecedência | Espera do tráfego |
 |---|---:|---:|---:|---:|---:|
 | nenhuma | 7,6 s | 19,7 s | 50% | — | 4,3 s |
-| V2I | 1,5 s | 3,2 s | 100% | ~23 s | 4,8 s |
+| V2I | **1,4 s** | 2,0 s | 100% | ~23 s | 4,6 s |
 | visão | 2,7 s | 9,0 s | 89% | 4,9 s | 4,6 s |
-| V2I + visão | **1,4 s** | 3,3 s | 100% | — | 4,8 s |
+| V2I + visão | **1,4 s** | 2,0 s | 100% | — | 4,9 s |
+
+Antes da correção: V2I 1,5 s (máx. 3,2 s), V2I + visão 1,4 s (máx. 3,3 s).
 
 - A visão detectou as 18 viaturas, sem alarme falso. Sozinha, reduz a perda
   em 65% (7,6 → 2,7 s).
-- V2I com percepção visual dá o mesmo resultado que com a percepção *ground truth* (1,5 s,
-  máx. 3,2 s). A espera de entrada fica em 1,0 s em todos os modos (a
+- V2I com percepção visual dá o mesmo resultado que com a percepção
+  *ground truth* (1,4 s × 1,3 s); a perda na rede não passa de 1,0 s. A espera de entrada fica em 1,0 s em todos os modos (a
   latência de 1 step), sem fila de inserção.
-- Custo para o tráfego: +0,3 s (visão) a +0,5 s (V2I).
+- Custo para o tráfego: +0,3 s (visão e V2I) a +0,6 s (V2I + visão).
 
 ### Avaliação visual do cenário original (Unity, 2026-10-12)
 
@@ -398,9 +404,10 @@ max-pressure 860; pedestres 153–161.
 
 **Preempção com visão e pedestres** (v2 e v3, mesma agenda de 18 viaturas;
 perda total = espera de entrada + perda na rede; arquivo
-`results/evaluation/preempcao-calibrated_ped-visual.json`, 0 frames
-perdidos). *V2I e V2I + visão: antes da correção da lacuna na inserção, a
-refazer.*
+`results/evaluation/preempcao-calibrated_ped-visual-fase-41s.json`, 0 frames
+perdidos). V2I e V2I + visão são de antes da correção da lacuna na inserção.
+Não foram refeitos porque a fase mudou; com a fase atual, ver a seção **Fase
+de pedestres curta**.
 
 | Versão | Fonte do pedido | Perda total média | Máx. | Sem parar | Antecedência | Espera do tráfego | Pedestres (mediana / p90 / máx.) |
 |---|---|---:|---:|---:|---:|---:|---|

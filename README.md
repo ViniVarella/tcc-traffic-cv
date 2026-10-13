@@ -236,15 +236,14 @@ rede e a perda até a linha de retenção. Com percepção *ground truth*, ela c
 cruzam sem parar. O custo é de até +0,6 s na espera do restante do
 tráfego. A câmera também detecta as viaturas (classe `emergency` do YOLO
 dentro das ROIs) e serve como segunda fonte. Em malha fechada com percepção
-visual (v2, 0 frames perdidos; as linhas com V2I são de antes da correção
-de 2026-10-12 do aviso no step da inserção e serão refeitas):
+visual (v2, 0 frames perdidos):
 
 | Fonte do pedido | Perda total média (máx.) | Sem parar | Espera do tráfego |
 |---|---|---|---|
 | nenhuma | 7,6 s (19,7 s) | 50% | 4,3 s |
-| V2I | 1,5 s (3,2 s) | 100% | 4,8 s |
+| V2I | **1,4 s** (2,0 s) | 100% | 4,6 s |
 | visão | 2,7 s (9,0 s) | 89% | 4,6 s |
-| V2I + visão | 1,4 s (3,3 s) | 100% | 4,8 s |
+| V2I + visão | **1,4 s** (2,0 s) | 100% | 4,9 s |
 
 A visão detectou as 18 viaturas, sem alarme falso, mas só as vê nos últimos
 60 m (~5 s antes da linha, contra ~23 s do V2I). Sozinha, reduz a perda em
