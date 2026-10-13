@@ -259,8 +259,11 @@ ciclo), percepção visual, v2, 0 frames perdidos:
 | visão | 6,4 s (21,3 s) | 72% | 14,8 s | 25,3 s |
 | V2I + visão | 2,4 s (10,6 s) | 100% | 15,3 s | 28,0 s |
 
-A fase de pedestres é obrigatória: a viatura que chega durante ela espera até
-o fim, no máximo ~10 s com V2I. A visão detectou as 18 viaturas sem alarme
+Com percepção *ground truth* e V2I, a perda fica em 1,7–2,0 s no ciclo
+fixo, na v2 e na v3 (100% sem parar). No max-pressure ela é de 6,2 s, porque
+a fila de inserção segura a viatura antes de ela entrar na rede. A fase de
+pedestres é obrigatória: a viatura que chega durante ela espera até o fim, no
+máximo ~10 s com V2I. A visão detectou as 18 viaturas sem alarme
 falso. Sozinha, ela reduz a perda em 51%; junto do V2I, serve de redundância.
 O custo é de +0,5 a +1,0 s para os outros veículos e de até +3 s para os
 pedestres.

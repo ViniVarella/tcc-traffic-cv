@@ -45,8 +45,8 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Fase de pedestres curta a cada ciclo (7 s + 11 s): 2026-10-13 — seção
   **Fase de pedestres curta** abaixo. v3 retreinado
   (`dqn-v3-fase-curta-best.pt`); versões com pedestres refeitas com
-  percepção *ground truth* e visual; preempção com visão refeita (v2).
-  Preempção *ground truth* com pedestres a refazer.
+  percepção *ground truth* e visual; preempção refeita com as duas
+  percepções.
 
 ## Fase de pedestres curta a cada ciclo (2026-10-13)
 
@@ -124,6 +124,30 @@ Chegadas de veículos (visão): 911–922 em todas as versões; pedestres
   demora a refletir a fila oposta. Isso reduz a fila de inserção (12,2 → 1,9)
   e a espera (26,5 → 21,0 s). Ele não melhora por ver melhor: segura o verde
   por mais tempo.
+
+**Preempção com percepção *ground truth*** (V2I, mesma agenda de 18 viaturas,
+seeds 201–203; arquivo `results/evaluation/preempcao-calibrated_ped-oracle.json`,
+log `results/logs/preempcao-oracle-calibrated_ped-fase-curta.log`). Perda
+total sem → com preempção; espera do tráfego e dos pedestres (média, p90) com
+preempção:
+
+| Versão | Perda total (máx. com preempção) | Sem parar | Espera do tráfego | Pedestres |
+|---|---:|---:|---:|---|
+| ciclo fixo | 35,3 → **1,7 s** (6,4 s) | 11% → 100% | 20,9 → 21,6 s | 56,2 s (138) |
+| v2 | 20,0 → 2,0 s (9,8 s) | 28% → 100% | 14,2 → 15,3 s | 25,6 s (59) |
+| v3 | 13,0 → 2,0 s (9,8 s) | 44% → 100% | 14,8 → 14,5 s | 29,1 s (68) |
+| max-pressure | 45,3 → 6,2 s (31,2 s) | 22% → 100% | 27,0 → 24,3 s | 24,0 s (56) |
+
+- Com a preempção, todas as viaturas cruzam sem parar. A perda fica em
+  1,7–2,0 s; a única exceção (~10 s) é a viatura que chega durante a fase de
+  pedestres. Com a fase antiga, a perda era de 6–9 s, e a pior chegava a 39 s.
+- O max-pressure é a exceção: a fila de inserção dele (24,7 veículos em média
+  sem preempção) segura a viatura antes de entrar na rede (espera de entrada de
+  5,1 s, máx. 31 s).
+- Sem preempção, a perda da v2 é maior com percepção *ground truth* do que
+  com visão (20,0 × 13,0 s). A agenda é a mesma; o que muda é em que fase
+  cada viatura chega. Com 18 viaturas, isso varia de uma rodada para outra.
+- Pedestres: +0,6 a +2,0 s na média com a preempção; máxima até 101 s (v3).
 
 **Preempção com visão** (v2, `calibrated_ped`, mesma agenda de 18 viaturas,
 seeds 201–203; perda total = espera de entrada + perda na rede; arquivo
