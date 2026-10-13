@@ -37,9 +37,9 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   faixas e sinais na Unity em 2026-10-08; avaliação visual com pedestres em
   2026-10-09.
 - Demanda calibrada sem motos: 2026-10-07 — seção **Demanda calibrada sem
-  motos** abaixo. Todos os resultados anteriores do cenário `calibrated`
-  (inclusive os de pedestres) usam a demanda antiga e viram registro
-  histórico; v2 e v3 foram retreinados (checkpoints `*-sem-motos-best.pt`).
+  motos** abaixo. v2 e v3 foram retreinados (checkpoints
+  `*-sem-motos-best.pt`); os resultados obtidos com a demanda anterior foram
+  retirados deste registro.
   Avaliações visuais (Unity) refeitas em 2026-10-08 (cenário `original` em
   2026-10-12).
 
@@ -65,26 +65,8 @@ pedestre do SimJamCV não são confiáveis.
 | Oeste (E6) | 169 | 139 | 0,20 | 0,17 |
 
 As conversões de cada aproximação mantêm as proporções anteriores. A rota
-antiga ficou como cenário `calibrated_motos` (`Cruzamento.calibrated-motos.*`),
-só como registro histórico.
-
-Checagem (percepção *ground truth*, seeds 201–203, 300 s + 1800 s; v2 = checkpoint antigo,
-treinado com a demanda anterior, só indicativo). Arquivos:
-`results/evaluation/versoes-{calibrated,calibrated_ped}-oracle-sem-motos-checagem.json`.
-
-| Cenário | Versão | Espera veíc. | Chegadas | Fila de inserção | Ped. mediana | Ped. p90 |
-|---|---|---:|---:|---:|---:|---:|
-| calibrado | ciclo fixo | 13,0 s | 918 | 0 | — | — |
-| calibrado | v2 (antigo) | 4,3 s | 918 | 0 | — | — |
-| calibrado | max-pressure | 4,7 s | 917 | 0 | — | — |
-| calibrado + pedestres | ciclo fixo | 24,5 s | 906 | 0 | 48 s | 163 s |
-| calibrado + pedestres | v2 (antigo) | 21,1 s | 907 | 0 | 13 s | 69 s |
-| calibrado + pedestres | max-pressure | 34,2 s | 828 | 77 | 7 s | 53 s |
-
-Sem motos, nenhuma versão satura sem pedestres; o ciclo fixo fica na mesma
-ordem dos atrasos medidos pelo drone. A fase exclusiva de pedestres ainda
-custa ~10 s de espera aos veículos, mas não cria mais fila de inserção (exceto
-no max-pressure).
+antiga continua como cenário `calibrated_motos` (`Cruzamento.calibrated-motos.*`):
+o gerador lê dela as proporções de conversão.
 
 ### Retreino e avaliação com a demanda sem motos (percepção *ground truth*, seeds 201–203, 300 s + 1800 s)
 
@@ -196,8 +178,7 @@ execuções. Arquivos: `results/evaluation/versoes-calibrated-visual.json` e
 
 Chegadas 915–918 e fila de inserção 0 em todas.
 
-- A visão custa no máximo 0,16 s. Com a demanda antiga a diferença da v2 era
-  0,5 s (9,1 × 8,6 s), porque as filas longas do Leste passavam da ROI.
+- A visão custa no máximo 0,16 s.
 - Com visão, v1 e v2 empatam (diferença de 0,04 s, menor que a variação
   entre seeds). Sem saturação, alternar perto do mínimo já é quase ótimo,
   como no cenário `original`; a vantagem da v2 aparecia com o Leste
@@ -218,7 +199,7 @@ a refazer.*
 | V2I + visão | **1,4 s** | 3,3 s | 100% | — | 4,8 s |
 
 - A visão detectou as 18 viaturas, sem alarme falso. Sozinha, reduz a perda
-  em 65% (7,6 → 2,7 s); com a demanda antiga eram 68% (13,2 → 4,2 s).
+  em 65% (7,6 → 2,7 s).
 - V2I com percepção visual dá o mesmo resultado que com a percepção *ground truth* (1,5 s,
   máx. 3,2 s). A espera de entrada fica em 1,0 s em todos os modos (a
   latência de 1 step), sem fila de inserção.
@@ -247,7 +228,7 @@ Chegadas 1471–1474 e fila de inserção final 0–1 nas adaptativas (ciclo fix
 - Com a câmera, a v2 e o max-pressure trocam menos de fase e seguram o verde
   um pouco mais; a v1, que só olha a contagem, não muda. O max-pressure
   decide por veículos parados, e o "parado" visual vem da velocidade estimada
-  a 1 fps, subestimada em 0,1–0,9 m/s (seção do *domain gap*).
+  a 1 fps, subestimada em 0,1–0,9 m/s (subseção **Pedestres na Unity**).
 - No cenário calibrado a visão custava no máximo 0,16 s; aqui custa até
   1,5 s porque, com demanda equilibrada, alternar no mínimo já é quase ótimo e
   qualquer verde a mais aparece na média. Mesmo assim, todas as adaptativas
@@ -387,211 +368,33 @@ pedestres e os `.sumocfg` dos cenários `calibrated_ped` e `original_ped`.
 - Métricas novas: espera média, p95 e máxima dos pedestres (steps parados até
   sair da rede), pedestres atendidos e na rede ao fim.
 
-### Primeiras medições (ciclo fixo, só SUMO, seeds 201–203, 300 s + 1800 s) — demanda antiga (registro histórico)
+### Decisões de projeto (tomadas antes da recalibração da demanda)
 
-| Cenário calibrado | Espera dos veículos | Chegadas | Fila de inserção final | Espera média dos pedestres | Espera máx. dos pedestres |
-|---|---:|---:|---:|---:|---:|
-| sem pedestres | 16,1 s | 1503 | 97 | — | — |
-| com pedestres | 25,4–26,3 s | 1281–1364 | 265–309 | 61–66 s | ~180 s |
-
-A fase de pedestres tira ~45 s de cada dois ciclos dos veículos; no cenário
-calibrado, com o Leste saturado, a fila de inserção cresce. A espera máxima de
-~180 s corresponde a quase dois ciclos inteiros: é o custo da regra "a cada
-dois ciclos". A v2 (treinada sem pedestres) foi pior que o ciclo fixo num
-teste de 900 s (31 × 25 s de espera), o que motiva o estado v3.
-
-### Versões com pedestres (percepção *ground truth*, seeds 201–203, 300 s + 1800 s) — demanda antiga (registro histórico)
-
-v3 = `dqn-v3-ped-pretrain-best.pt` (pré-treino com `calibrated_ped` e
-`original_ped`, Double DQN, 40 episódios; melhor no episódio 39, escore
-−0,451 contra −0,472 do ciclo fixo e −0,541 do max-pressure na validação, e
-ainda subindo). v2 = `dqn-v2-roi60-mix-pretrain-best.pt`, treinada sem
-pedestres. 0 teleportes em todas as rodadas. Arquivos:
-`results/evaluation/versoes-{calibrated,original}_ped-oracle.json`.
-
-**Calibrado com pedestres**
-
-| Versão | Espera veículos | Chegadas | Fila de inserção | Trocas | Espera média ped. | p95 ped. | Máx. ped. |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Ciclo fixo | 25,7 s | 1326 | 290 | 0 | 64,0 s | 170 s | 179 s |
-| v1 | 55,6 s | 964 | 629 | 72 | 16,2 s | 57 s | 60 s |
-| v2 | 26,0 s | 1233 | 367 | 48 | 32,8 s | 96 s | 110 s |
-| v3 | 26,4 s | 1249 | 360 | 30 | 45,3 s | 134 s | 146 s |
-| max-pressure | 55,2 s | 965 | 628 | 72 | 16,7 s | 57 s | 60 s |
-
-**Original com pedestres**
-
-| Versão | Espera veículos | Chegadas | Fila de inserção | Trocas | Espera média ped. | p95 ped. | Máx. ped. |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Ciclo fixo | 32,3 s | 1260 | 224 | 0 | 64,4 s | 172 s | 180 s |
-| v1 | 49,3 s | 1043 | 417 | 69 | 16,8 s | 56 s | 63 s |
-| v2 | 28,6 s | 1301 | 188 | 56 | 27,1 s | 82 s | 93 s |
-| v3 | 27,0 s | 1289 | 193 | 26 | 48,7 s | 133 s | 149 s |
-| max-pressure | 44,1 s | 1123 | 357 | 68 | 19,4 s | 60 s | 66 s |
-
-Leitura:
-
-- **A regra acopla os pedestres à duração dos verdes.** Como a fase de
-  pedestres vem a cada dois ciclos e dura 45 s, quem troca rápido (v1 e
-  max-pressure, verdes no mínimo) chama a fase de pedestres muitas vezes:
-  pedestres esperam ~16 s, mas os veículos perdem tanto tempo que a espera
-  dobra (~55 s) e a fila de inserção passa de 600. Quem segura o verde (ciclo
-  fixo 40/40, v2, v3) faz o contrário: veículos ~26 s e pedestres 33–64 s.
-- **O v3 aprendeu a segurar o verde** (26–30 trocas, contra 48–56 da v2): com
-  a recompensa só dos veículos, espaçar a fase de pedestres é vantajoso. Isso
-  aumenta a espera dos pedestres (45–49 s, máximo ~150 s) sem ganho claro para
-  os veículos no calibrado (26,4 × 25,7 s do ciclo fixo); no original o v3 é o
-  melhor para os veículos (27,0 × 32,3 s).
-- **A v2, mesmo sem conhecer os pedestres, fica perto do v3 para os veículos e
-  bem melhor para os pedestres**, porque troca mais.
-- **Todos ficam saturados:** a fila de inserção final de 188–629 mostra que,
-  com 45 s de fase exclusiva a cada dois ciclos, a capacidade do cruzamento
-  fica abaixo da demanda nos dois cenários.
-
-### v3 com a espera dos pedestres na recompensa — demanda antiga (registro histórico)
-
-Decisão do usuário (2026-10-05): manter a regra e incluir os pedestres na
-recompensa de treino. Nos cenários com pedestres a recompensa passa a ser
-`(1 − w)·veículos − w·min(1, Σ espera atual dos pedestres parados / ref.)`,
-com `w = 0,3` e ref. = 1200 s (p90 dessa soma com o ciclo fixo; com 600 s o
-termo saturava em 32% do tempo). Bloco `pedestrians:` do `sp.yaml`. A política
-continua sem ver o TraCI.
-
-Pré-treino igual ao anterior (`dqn-v3-pedrw-pretrain-best.pt`, 40 episódios,
-melhor no 39: escore −0,342 contra −0,407 do ciclo fixo e −0,386 do
-max-pressure com a recompensa nova). Avaliação no mesmo protocolo
-(`versoes-*_ped-oracle-v3pedrw.json`):
-
-| Cenário | Versão | Espera veículos | Chegadas | Fila de inserção | Trocas | Espera média ped. | Máx. ped. |
-|---|---|---:|---:|---:|---:|---:|---:|
-| calibrado | ciclo fixo | 25,7 s | 1326 | 290 | 0 | 64,0 s | 179 s |
-| calibrado | v2 | 26,0 s | 1233 | 367 | 48 | 32,8 s | 110 s |
-| calibrado | v3 (só veículos) | 26,4 s | 1249 | 360 | 30 | 45,3 s | 146 s |
-| calibrado | **v3 (veículos + pedestres)** | 27,3 s | 1230 | 381 | 34 | 39,9 s | 129 s |
-| original | ciclo fixo | 32,3 s | 1260 | 224 | 0 | 64,4 s | 180 s |
-| original | v2 | 28,6 s | 1301 | 188 | 56 | 27,1 s | 93 s |
-| original | v3 (só veículos) | 27,0 s | 1289 | 193 | 26 | 48,7 s | 149 s |
-| original | **v3 (veículos + pedestres)** | **25,6 s** | **1315** | **159** | 34 | 38,0 s | 122 s |
-
-- O termo de pedestres funcionou na direção esperada: o v3 troca mais (34 ×
-  26–30) e reduz a espera dos pedestres em 5–11 s, com espera máxima ~20 s
-  menor.
-- No **original**, o v3 com pedestres é o melhor para os veículos de todas as
-  versões (25,6 s, mais chegadas, menor fila) e domina o v3 anterior nos dois
-  critérios. A v2 ainda deixa os pedestres esperando menos (27 × 38 s).
-- No **calibrado**, a v2 é melhor que os dois v3 nos dois critérios (26,0 s e
-  32,8 s). O v3 não supera o ciclo fixo para os veículos neste cenário.
-- Nenhuma versão é a melhor nos dois critérios ao mesmo tempo: o custo de 45 s
-  exclusivos a cada dois ciclos domina o resultado, e todas terminam com fila
-  de inserção. O pré-treino ainda melhorava no fim (40 episódios).
-
-### Peso dos pedestres e treino mais longo (100 episódios) — demanda antiga (registro histórico)
-
-Pré-treinos do v3 com 100 episódios (seeds 51–150, disjuntas das de ajuste
-fino, validação e teste) e peso dos pedestres na recompensa `w` = 0,2, 0,3 e
-0,5 (`--pedestrian-reward-weight`). Mesmo protocolo de avaliação (percepção *ground truth*,
-seeds 201–203). Arquivos: `results/models/dqn-v3-ped-w0X-e100-best.pt`,
-`results/evaluation/versoes-*_ped-oracle-v3-w0X-e100.json`.
-
-| Versão | Calibrado: espera veículos | Chegadas | Fila | Espera ped. (p95) | Original: espera veículos | Chegadas | Fila | Espera ped. (p95) |
-|---|---:|---:|---:|---|---:|---:|---:|---|
-| Ciclo fixo | 25,7 s | 1326 | 290 | 64,0 s (170) | 32,3 s | 1260 | 224 | 64,4 s (172) |
-| v2 (sem pedestres no treino) | 26,0 s | 1233 | 367 | 32,8 s (96) | 28,6 s | 1301 | 188 | 27,1 s (82) |
-| v3 só veículos, 40 ep. | 26,4 s | 1249 | 360 | 45,3 s (134) | 27,0 s | 1289 | 193 | 48,7 s (133) |
-| v3 w = 0,3, 40 ep. | 27,3 s | 1230 | 381 | 39,9 s (114) | 25,6 s | 1315 | 159 | 38,0 s (110) |
-| v3 w = 0,2, 100 ep. | 27,2 s | 1177 | 429 | 30,5 s (87) | 26,8 s | 1286 | 191 | 31,8 s (88) |
-| **v3 w = 0,3, 100 ep.** | **26,7 s** | 1175 | 429 | **30,2 s (88)** | **26,9 s** | 1290 | 185 | **29,8 s (85)** |
-| v3 w = 0,5, 100 ep. | 33,4 s | 1006 | 608 | 23,5 s (68) | 31,8 s | 1202 | 284 | 25,3 s (72) |
-| v1 / max-pressure | ~55 s | ~965 | ~628 | ~16 s (57) | 44–49 s | 1043–1123 | 357–417 | 17–19 s (56–60) |
-
-Espera por seed (veículos / pedestres), v3 w = 0,3, 100 ep.: calibrado
-26,1/29,1, 27,3/29,4, 26,7/32,2 s; original 26,9/27,2, 26,9/28,5, 27,0/33,5 s.
-
-- **Treinar mais ajudou:** com w = 0,3, 100 episódios reduziram a espera dos
-  pedestres de ~39 para ~30 s nos dois cenários, com espera máxima ~100 s
-  (era ~125 s), e melhoraram os veículos no calibrado (27,3 → 26,7 s).
-- **O peso controla o equilíbrio:** w = 0,5 leva os pedestres a ~24 s, mas os
-  veículos pioram para 32–33 s, quase como o ciclo fixo e com fila de
-  inserção bem maior; w = 0,2 e 0,3 ficam praticamente iguais.
-- **v3 (w = 0,3, 100 ep.) × v2:** nenhum domina o outro. No calibrado, a v2
-  escoa mais veículos (1233 × 1175; espera 26,0 × 26,7 s) e o v3 faz os
-  pedestres esperarem menos (30,2 × 32,8 s). No original, o v3 é melhor para os
-  veículos (26,9 × 28,6 s) e a v2 para os pedestres (27,1 × 29,8 s).
-- **Referência do ambiente com pedestres:** v3 com w = 0,3 e 100 episódios
-  (`dqn-v3-ped-w03-e100-best.pt`), padrão de `compare_versions --versions ...,v3`.
-  É o único que, nos dois cenários, fica a ≤ 1 s do melhor para os veículos
-  e a ≤ 3 s do melhor para os pedestres sem sacrificar o outro lado.
-- O estado v3 sozinho não trouxe ganho claro sobre a v2; o que mais pesa é a
-  recompensa (o termo de pedestres) e a regra da fase exclusiva, que mantém
-  todos os controladores com fila de inserção.
-
-### Preempção com pedestres (V2I, percepção *ground truth*) — demanda antiga (registro histórico)
-
-`evaluate_preemption` nos cenários com pedestres, mesma agenda de 30 viaturas
-(10 por seed, seeds 201–203), v3 = `dqn-v3-ped-w03-e100-best.pt`. Arquivos:
-`results/evaluation/preempcao-{calibrated,original}_ped-oracle.json`.
-
-| Cenário | Versão | Modo | Perda média viatura | Perda máx. | Sem parar | Espera veículos | Espera ped. | Máx. ped. |
-|---|---|---|---:|---:|---:|---:|---:|---:|
-| calibrado | ciclo fixo | sem | 37,6 s | 96 s | 46% | 25,7 s | 64,0 s | 179 s |
-| calibrado | ciclo fixo | V2I | 5,0 s | 30 s | 80% | 23,2 s | 99,5 s | 339 s |
-| calibrado | v2 | sem | 23,6 s | 106 s | 27% | 26,4 s | 33,8 s | 112 s |
-| calibrado | v2 | V2I | 6,7 s | 49 s | 77% | 22,5 s | 82,0 s | 367 s |
-| calibrado | v3 | sem | 28,9 s | 97 s | 35% | 26,5 s | 30,9 s | 100 s |
-| calibrado | v3 | V2I | 5,2 s | 36 s | 80% | 21,5 s | 71,2 s | 320 s |
-| calibrado | max-pressure | sem | 62,1 s | 149 s | 5% | 55,4 s | 16,9 s | 60 s |
-| calibrado | max-pressure | V2I | 7,4 s | 94 s | 83% | 25,1 s | 71,8 s | 324 s |
-| original | ciclo fixo | sem | 30,2 s | 89 s | 43% | 32,0 s | 64,0 s | 179 s |
-| original | ciclo fixo | V2I | 13,4 s | 102 s | 70% | 30,4 s | 110,3 s | 432 s |
-| original | v2 | sem | 34,7 s | 105 s | 11% | 29,6 s | 28,0 s | 96 s |
-| original | v2 | V2I | 18,8 s | 182 s | 63% | 27,1 s | 93,3 s | 431 s |
-| original | v3 | sem | 35,7 s | 87 s | 10% | 27,2 s | 29,3 s | 93 s |
-| original | v3 | V2I | 11,4 s | 126 s | 67% | 26,7 s | 72,1 s | 357 s |
-| original | max-pressure | sem | 42,6 s | 91 s | 14% | 44,8 s | 19,0 s | 70 s |
-| original | max-pressure | V2I | 13,3 s | 152 s | 70% | 35,8 s | 73,7 s | 403 s |
-
-- **Viaturas:** a preempção continua reduzindo bastante a perda (−65 a −88%),
-  mas fica longe do ~1 s do ambiente sem pedestres: uma viatura que chega
-  durante a fase de pedestres espera até o fim dela (45 s), e a perda máxima
-  vai a 30–180 s. 20–37% das viaturas ainda param.
-- **Problema encontrado — pedestres:** com preempção, a espera média dos
-  pedestres sobe de 31–64 s para 71–110 s e a máxima para **320–432 s**. Pela
-  regra atual, uma viatura adia a fase de pedestres que ainda não começou, e a
-  fase só volta depois do próximo verde Sul completo. Com uma viatura a cada
-  ~3 min, a fase de pedestres é adiada repetidamente e alguns pedestres
-  esperam mais de 7 minutos. A regra precisa ser revista antes de valer como
-  resultado.
-- A espera dos veículos cai com a preempção no calibrado (21–25 s) justamente
-  porque as fases de pedestres adiadas devolvem tempo aos veículos.
-
-### Investigação da preempção com pedestres (demanda antiga, 2026-10-07)
-
-Registro histórico: tudo nesta seção usa a demanda com motos
-(`calibrated_motos`), que saturava o Leste.
-
-- **Regra de adiamento corrigida** (`fix:` 7483050): a fase de pedestres
-  adiada por uma viatura vem no all-red seguinte, logo depois do verde dela,
-  e o ciclo retoma pelo verde que viria. Quase não mudou os números (v3
-  calibrado: máx. de pedestres 320 → 312 s), então não era a causa principal.
-- **Causa real:** com a fase exclusiva, o Leste (já com v/c 1,0) ficava com
-  fila de inserção de 190–430 veículos. A viatura do Leste entrava no fim dessa
-  fila, fora da rede, e o aviso V2I segurava o verde L/O por até ~220 s,
-  travando o Sul e a fase de pedestres.
-- **Métrica corrigida:** a perda da viatura só contava depois da entrada na
-  rede (uma viatura com ~220 s de espera aparecia com 2,3 s). Agora o resumo
-  traz `mean_insertion_delay_s` e `mean_total_loss_at_crossing_s` (inserção +
+- **Estado v3:** a v2, treinada sem pedestres, ficou pior que o ciclo fixo
+  na rede com a fase exclusiva, o que motivou um estado que vê as fases de
+  pedestre e quantos verdes faltam até a próxima.
+- **Pedestres na recompensa** (decisão do usuário, 2026-10-05): com a
+  recompensa só dos veículos, o v3 aprendeu a segurar o verde para espaçar a
+  fase de pedestres, e os pedestres esperavam mais. Nos cenários com
+  pedestres a recompensa é `(1 − w)·veículos − w·min(1, Σ espera atual dos
+  pedestres parados / ref.)`, com ref. = 1200 s (p90 dessa soma com o ciclo
+  fixo; com 600 s o termo saturava em 32% do tempo). Bloco `pedestrians:` do
+  `sp.yaml`; a política continua sem ver o TraCI.
+- **Peso e duração do treino:** `w` = 0,2, 0,3 e 0,5 com 100 episódios
+  (seeds 51–150). Com 0,5 os veículos pioravam até perto do ciclo fixo; 0,2 e
+  0,3 ficaram praticamente iguais. Ficou `w` = 0,3, e 100 episódios foram
+  melhores que 40 para veículos e pedestres.
+- **Fase a cada dois ciclos, não três:** a cada três ciclos os veículos
+  ganhavam, mas a mediana de espera dos pedestres dobrava.
+- **Adiamento pela viatura** (`fix:` 7483050): a fase de pedestres ainda não
+  iniciada que uma viatura adia vem no all-red seguinte, logo depois do verde
+  dela, e o ciclo retoma pelo verde que viria. Antes ela esperava mais um
+  verde Sul completo, e alguns pedestres ficavam mais de 7 min parados.
+- **Métricas da viatura:** a perda só contava depois da entrada na rede, e uma
+  viatura presa na fila de inserção parecia não ter atraso. O resumo passou a
+  ter `mean_insertion_delay_s` e `mean_total_loss_at_crossing_s` (inserção +
   perda na rede), e os pedestres ganharam mediana e p90.
-- **Viaturas a cada 5 min** (`interval_s` 180 → 300; resultados de 3 min com
-  sufixo `-viaturas-3min`). v3 calibrado com pedestres, V2I: perda na rede
-  3,8 s, mas espera de entrada de 71,7 s e perda total de 75,5 s (sem
-  preempção, 109,6 s). Pedestres: mediana 18 → 38 s, p90 83 → 216 s. Sem
-  pedestres, a v2 fica com perda total de 4,5 s (calibrado) e 3,2 s (original).
-- **Fase a cada 3 ciclos** (ciclo fixo, v2 e max-pressure; arquivos
-  `versoes-*_ped-oracle-ped-cada{2,3}.json`): no calibrado, a v2 vai de
-  26,0 para 21,4 s de espera e de 367 para 263 veículos na fila de inserção,
-  mas a mediana dos pedestres sobe de 14 para 32 s. Não resolvia a saturação.
-- Ao olhar a fila no `sumo-gui`, o usuário notou que o cruzamento real não
-  tinha tanto carro, o que levou à recalibração sem motos (seção acima).
+- **Viaturas a cada ~5 min** (`interval_s` 180 → 300).
 
 ### Pedestres na Unity (2026-10-08, branch `feat/pedestres-unity`)
 
@@ -623,7 +426,9 @@ frames perdidos; `results/logs/visao-pedestres-*.jsonl`,
 | `calibrated` (sem pedestres) | 10% | 27% | 53% | 2,2% | 93% |
 | `calibrated_ped` | 4% | 7% | 11% | 0,9% | 96% |
 
-O erro relativo cai com pedestres porque as filas ficam maiores com a fase
+No `calibrated`, o viés por faixa fica em +0,01 a +0,18 veículo na contagem
+(nenhuma faixa subconta), −0,1 a −0,9 m/s na velocidade e +0,2 a +4,2 s na
+espera. O erro relativo cai com pedestres porque as filas ficam maiores com a fase
 exclusiva (espera média *ground truth* por faixa: 3,0 s → 43,5 s). Os erros
 absolutos da contagem ficam iguais (0,10 × 0,09 veículo por faixa). Nas
 capturas da câmera sul durante a fase de pedestres, o YOLO de duas classes
@@ -633,13 +438,9 @@ avaliada com percepção visual.
 
 ## Ambiente com ROIs de 60 m e preempção para emergências
 
-> **Registro histórico.** Os resultados desta seção usam a demanda antiga
-> (motos como carros, hoje `calibrated_motos`, Leste saturado) e checkpoints
-> anteriores. Os atuais estão na seção **Demanda calibrada sem motos**.
-
 Status: câmeras, ROIs e preempção V2I concluídos (branch `feat/cameras-60m`,
-2026-09-30). **Muda o ambiente:** os resultados da seção DQN v2 abaixo foram
-obtidos com as ROIs de ~25 m e não se comparam com os desta seção.
+2026-09-30). Os resultados atuais estão na seção **Demanda calibrada sem
+motos**.
 
 ### Câmeras e ROIs
 
@@ -655,12 +456,11 @@ obtidos com as ROIs de ~25 m e não se comparam com os desta seção.
   importadas na cena pelo menu *Import SP Calibration JSON*). A borda
   distante fica a ~8% do topo da imagem; um carro a 60 m tem ~31–53 px de
   altura. A capacidade de cada ROI passou de ~3,4 para 8 veículos parados.
-- O YOLO atual foi treinado com os ângulos antigos e precisa ser retreinado.
+- O YOLO foi retreinado para as poses novas (seção **Segundo fine-tuning**).
 
 ### Detecção visual de viaturas (segunda fonte de preempção)
 
-Status: implementada e avaliada em malha fechada em 2026-10-02 (resultados no
-fim desta seção).
+Status: implementada e avaliada em malha fechada em 2026-10-02.
 
 - **Regra** (`vision/visual_emergency.py`): por aproximação, não por
   `track_id`. A 1 fps uma viatura a ~14 m/s cruza os 60 m da ROI em ~4 frames,
@@ -696,238 +496,9 @@ fim desta seção).
   --versions v2 --seeds 201,202,203
 ```
 
-#### Resultado em malha fechada (percepção visual)
-
-Mesmo ambiente para os quatro modos: cenário calibrado, política v2
-(`dqn-v2-roi60-mix-pretrain-best.pt`, pré-treinado nas ROIs de 60 m com os dois cenários),
-percepção visual (YOLO de duas classes + ByteTrack,
-1 fps), seeds 201–203, aquecimento 300 s + 1800 s, a mesma agenda de 30
-viaturas. Muda só a fonte do pedido. `missing_frames = 0`. Arquivo:
-`results/evaluation/preempcao-calibrated-visual.json`.
-
-Rodado de novo em 2026-10-03, depois da correção do filtro da ROI de
-aproximação (seção "Correção" abaixo).
-
-| Modo | Perda média da viatura | Perda máx. | Sem parar | Espera do tráfego | Chegadas | Fila de inserção |
-|---|---|---|---|---|---|---|
-| sem preempção | 13,2 s | 26,2 s | 37% | 9,4 s | 1608 | 8 |
-| V2I | 1,4 s | 5,6 s | 100% | 10,5 s | 1606 | 11 |
-| visão | 4,2 s | 19,5 s | 80% | 9,9 s | 1605 | 11 |
-| V2I + visão | 1,2 s | 4,0 s | 100% | 11,3 s | 1609 | 6 |
-
-Perda média da viatura por seed (201/202/203): sem 12,0 / 13,0 / 14,6 s;
-V2I 1,8 / 1,2 / 1,2 s; visão 6,2 / 2,5 / 3,7 s; ambos 1,3 / 1,0 / 1,3 s.
-
-- **Detecção visual:** 30/30 viaturas detectadas e 0 alarmes falsos em 30
-  eventos, em todos os modos.
-- **Visão sozinha** reduz a perda média em 68% (13,2 → 4,2 s), e 80% das
-  viaturas cruzam sem parar (37% sem preempção). Não zera o atraso: a
-  antecedência média até a linha é de 6,7 s, contra ~30 s do V2I, e uma viatura
-  que chega no vermelho ainda espera amarelo + all-red (4 s) e a fila à frente.
-  Custa +0,5 s na espera média do tráfego.
-- **V2I** é a melhor fonte isolada (1,4 s, 100% sem parar); custa +1,1 s.
-- **V2I + visão** é o melhor modo (1,2 s, perda máxima 4,0 s, 100% sem parar),
-  igual ao V2I dentro da variação entre seeds. A visão serve de redundância
-  quando o aviso V2I falha.
-- A antecedência da visão depende do modo: sem preempção (16,1 s) as viaturas
-  ficam paradas na fila dentro da ROI e são vistas por mais tempo.
-
-#### Antes da correção do filtro (2026-10-02, registro)
-
-Arquivo: `results/evaluation/preempcao-calibrated-visual-filtro-centro.json`.
-
-| Modo | Perda média da viatura | Perda máx. | Sem parar | Espera do tráfego | Chegadas |
-|---|---|---|---|---|---|
-| sem preempção | 15,8 s | 52,6 s | 37% | 10,3 s | 1580 |
-| V2I | 1,2 s | 3,8 s | 97% | 11,7 s | 1592 |
-| visão | 7,2 s | 25,8 s | 53% | 10,7 s | 1572 |
-| V2I + visão | 1,4 s | 6,9 s | 100% | 11,7 s | 1592 |
-
-- **Detecção visual:** 30/30 viaturas detectadas e 0 alarmes falsos em 30
-  eventos, em todos os modos.
-- **Visão sozinha** reduz a perda média em ~55% (15,8 → 7,2 s), mas não a zera:
-  o pedido sai a ~40 m da linha, e a antecedência média até a linha foi 6,9 s,
-  contra ~30 s do V2I. Quando a viatura chega no vermelho, amarelo + all-red
-  (4 s) e a fila à frente ainda a atrasam. Custa pouco ao tráfego (+0,4 s na
-  espera média).
-- **V2I** continua sendo a melhor fonte (1,2 s); custa +1,4 s na espera média.
-- **V2I + visão** fica igual ao V2I (diferenças dentro da variação entre
-  seeds) e foi o único modo em que 100% das viaturas cruzaram sem parar. A
-  visão serve de redundância quando o aviso V2I falha.
-- A antecedência da visão depende do modo. Sem preempção (14,2 s)
-  as viaturas ficam paradas na fila dentro da ROI e são vistas por mais tempo.
-  A fila de inserção no fim do episódio varia muito entre seeds (0–87) e não
-  serve para comparar os modos.
-
-### Versões no ambiente novo (percepção *ground truth*, seeds 201–203, 1800 s)
-
-A v2 foi pré-treinada de novo para as ROIs de 60 m
-(`dqn-v2-roi60-pretrain-best.pt`: episódio 34, escore −0,058 contra −0,314 do
-ciclo fixo e −0,300 do max-pressure).
-
-| Versão | Calibrado: espera | Chegadas | Fila de inserção | Original: espera | Chegadas |
-|---|---:|---:|---:|---:|---:|
-| Linha de base (ciclo fixo) | 16,1 s | 1503 | 97 | 14,9 s | 1431 |
-| v1 (heurística) | 10,3 s | 1486 | 117 | 4,7 s | 1473 |
-| v1.1 (DQN estado v1) | 12,9 s | 1312 | 289 | 4,6 s | 1474 |
-| v2 (DQN estado v2) | 10,1 s | 1602 | 0 | 8,3 s | 1469 |
-| max-pressure | 10,8 s | 1492 | 108 | 4,6 s | 1474 |
-
-- Com ROIs maiores, a v1 e o max-pressure passam a enxergar filas longas e
-  melhoram no calibrado; a v2 continua a única que zera a fila de inserção.
-- **No cenário original, essa v2 piorou** (8,3 s, contra 4,6 s das demais):
-  dava 64% do verde ao Leste mesmo com demanda equilibrada, porque treinou só
-  no cenário calibrado.
-
-**v2 pré-treinada com os dois cenários** (`--scenarios calibrated,original`,
-episódios alternados, validação nos dois; `dqn-v2-roi60-mix-pretrain-best.pt`,
-episódio 34). É a v2 de referência do ambiente novo:
-
-| Versão | Calibrado: espera | Chegadas | Fila de inserção | Original: espera | Chegadas |
-|---|---:|---:|---:|---:|---:|
-| Linha de base (ciclo fixo) | 16,1 s | 1503 | 97 | 14,9 s | 1431 |
-| v1 (heurística) | 10,3 s | 1486 | 117 | 4,7 s | 1473 |
-| v2 treinada só no calibrado | 10,1 s | 1602 | 0 | 8,3 s | 1469 |
-| **v2 treinada nos dois cenários** | **8,6 s** | **1603** | **4** | **4,4 s** | **1474** |
-| max-pressure | 10,8 s | 1492 | 108 | 4,6 s | 1474 |
-
-Treinar com os dois cenários melhorou a v2 nos dois: no calibrado, reduz a
-espera em 1,5 s mantendo as chegadas; no original, passa de pior a melhor.
-
-### Versões no ambiente novo — percepção visual (Unity, cenário calibrado)
-
-Rodado em 2026-10-03, depois da correção do filtro da ROI de aproximação
-(próxima seção): `compare_versions --scenario calibrated --perception visual`,
-seeds 201–203, 300 s + 1800 s, YOLO de duas classes, v2 =
-`dqn-v2-roi60-mix-pretrain-best.pt`, sem viaturas. `missing_frames = 0`.
-Arquivo: `results/evaluation/versoes-calibrated-visual.json`.
-
-| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas | *Ground truth*: espera / chegadas / fila |
-|---|---:|---:|---:|---:|---:|---:|---|
-| Linha de base (ciclo fixo) | 16,1 s | 36,2 s | 1503 | 97 | 50% | 0 | 16,1 s / 1503 / 97 |
-| v1 (heurística) | 10,3 s | 33,9 s | 1488 | 112 | 59% | 112 | 10,3 s / 1486 / 117 |
-| v1.1 (DQN estado v1) | 12,9 s | 38,0 s | 1312 | 289 | 50% | 129 | 12,9 s / 1312 / 289 |
-| **v2 (DQN estado v2)** | **9,1 s** | **30,3 s** | **1596** | **11** | 61% | 80 | 8,6 s / 1603 / 4 |
-| max-pressure | 10,6 s | 33,7 s | 1542 | 59 | 61% | 103 | 10,8 s / 1492 / 108 |
-
-Espera por seed (201/202/203): v2 9,4 / 9,1 / 9,0 s; max-pressure 10,7 / 10,6 /
-10,4 s; v1 10,6 / 10,0 / 10,3 s.
-
-- **Ciclo fixo × v2 com câmera:** espera −43% (16,1 → 9,1 s), viagem −16%,
-  +93 chegadas, fila de inserção 97 → 11.
-- **v2 × max-pressure e v1:** a v2 vence nas três seeds, com 1,5 s a menos de
-  espera que o max-pressure e +54 chegadas.
-- **Custo da percepção na v2:** caiu de +2,0 s para **+0,5 s** de espera em
-  relação à percepção *ground truth* (−7 chegadas, +7 na fila). A v1 com câmera agora iguala a
-  v1 com percepção *ground truth*.
-- **Verdes da v2:** Leste/Oeste com média de 23,6 s (2% terminam no mínimo, 5%
-  chegam aos 40 s); Sul com média de 15,1 s (35% no mínimo).
-
-**Domain gap** (log da v2, 5.433 steps;
-`results/evaluation/domain-gap-roi60-calibrated-v2.json`):
-
-| Faixa | Contagem (MAE / viés) | Veículos perdidos | Velocidade (viés) | Espera (viés) |
-|---|---|---:|---:|---:|
-| east/lane_0 | 0,26 / +0,18 | 7% | −1,44 m/s | +7,3 s |
-| east/lane_1 | 0,30 / −0,18 | 20% | −0,87 m/s | +0,4 s |
-| south/lane_0–3 | 0,08–0,23 / +0,06 a +0,19 | 1% | −0,3 a −1,0 m/s | +1,4 a +5,2 s |
-| west/lane_0 | 0,03 / +0,03 | 0,2% | −0,16 m/s | +0,4 s |
-
-- A ação do DQN com features visuais coincide com a da percepção *ground truth* em **84,8%**
-  das 640 decisões (era 71,1% antes da correção).
-- O que sobra no Leste é a oclusão da faixa 1 pela faixa 0 (ângulo lateral da
-  câmera). A velocidade continua subestimada e a espera superestimada, sem
-  impedir a v2 de ficar a 0,5 s da percepção *ground truth*.
-- Com esse resultado, o ajuste fino visual não é necessário para a conclusão
-  principal.
-
-#### Antes da correção do filtro (2026-10-02, registro)
-
-
-Rodado em 2026-10-02: `compare_versions --scenario calibrated --perception visual`,
-seeds 201–203, 300 s + 1800 s, YOLO de duas classes (`--classes 0,1`, 960 px),
-v2 = `dqn-v2-roi60-mix-pretrain-best.pt`, sem viaturas de emergência.
-`missing_frames = 0`. Arquivo: `results/evaluation/versoes-calibrated-visual-filtro-centro.json`;
-logs por step em `results/logs/versoes-calibrated-visual-<versão>-filtro-centro.jsonl`.
-
-| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas | *Ground truth*: espera / chegadas / fila |
-|---|---:|---:|---:|---:|---:|---:|---|
-| Linha de base (ciclo fixo) | 16,1 s | 36,2 s | 1503 | 97 | 50% | 0 | 16,1 s / 1503 / 97 |
-| v1 (heurística) | 11,1 s | 35,2 s | 1423 | 179 | 55% | 118 | 10,3 s / 1486 / 117 |
-| v1.1 (DQN estado v1) | 12,9 s | 38,0 s | 1311 | 290 | 50% | 129 | 12,9 s / 1312 / 289 |
-| **v2 (DQN estado v2)** | **10,6 s** | **32,8 s** | **1556** | **45** | 59% | 88 | 8,6 s / 1603 / 4 |
-| max-pressure | 10,5 s | 33,7 s | 1528 | 74 | 60% | 106 | 10,8 s / 1492 / 108 |
-
-A coluna da percepção *ground truth* é a mesma configuração com percepção perfeita (tabelas
-acima). Leitura:
-
-- **Ciclo fixo × adaptativos:** com câmera, a v2 reduz a espera em 34%
-  (16,1 → 10,6 s), a viagem em 9% e a fila de inserção de 97 para 45, com mais
-  chegadas (+53). A v1 e a v1.1 esperam menos que o ciclo fixo, mas deixam mais
-  veículos fora da rede (179 e 290): escoam menos.
-- **v2 × max-pressure:** espera praticamente igual (10,6 × 10,5 s), mas a v2
-  tem mais chegadas (+28), viagem 0,9 s menor e fila de inserção menor (45 × 74).
-- **Custo da percepção na v2:** +2,0 s de espera, −47 chegadas e +41 na fila em
-  relação à percepção *ground truth*. É a maior perda entre as versões; a v1.1 não muda (alterna
-  no ciclo mínimo, independente do estado) e o max-pressure fica igual à
-  percepção *ground truth*, dentro da variação.
-- A v1 e a v1.1 usam checkpoints e regras das câmeras antigas (~25 m); aqui
-  entram sem retreino.
-
-**Domain gap visão × *ground truth*** (`evaluate_lane_features` no log da v2, 5.433
-steps, todos com visão; domain gap recalculado a partir do log `-filtro-centro`):
-
-| Faixa | Contagem (viés) | Parados (viés) | Espera (viés) | Velocidade (viés) |
-|---|---:|---:|---:|---:|
-| east/lane_0 | −0,68 | −0,02 | +6,0 s | −1,31 m/s |
-| east/lane_1 | −1,12 | −0,53 | −3,1 s | −0,61 m/s |
-| south/lane_0–3 | +0,03 a +0,15 | +0,06 a +0,30 | +0,8 a +4,9 s | −0,4 a −1,2 m/s |
-| west/lane_0 | −0,02 | +0,04 | +0,5 s | −0,30 m/s |
-
-- O erro está concentrado no **Leste**, a aproximação saturada que mais pesa:
-  a câmera conta ~0,7–1,1 veículo a menos por faixa. Com isso a v2 visual dá
-  59% do verde ao Leste/Oeste, contra 63% com a percepção *ground truth*, e acumula fila.
-- A velocidade visual é subestimada em todas as faixas, e a espera do sul é
-  superestimada.
-- O ponto de solo da visão fica ~0,7–0,8 m a montante da posição *ground truth* (mediana:
-  −0,81 m no leste, −0,76 m no sul, −0,69 m no oeste);
-  `lane_state.visual_ground_offset_m` continua 0.
-- A ação do DQN com features visuais coincide com a ação com features
-  *ground truth* em **71,1%** das 605 decisões.
-
-### Versões no ambiente novo — percepção visual (Unity, cenário original)
-
-Rodado em 2026-10-04, com o filtro corrigido e o mesmo protocolo do calibrado
-(seeds 201–203, 300 s + 1800 s, v2 = `dqn-v2-roi60-mix-pretrain-best.pt`,
-sem viaturas). `missing_frames = 0`. Arquivo:
-`results/evaluation/versoes-original-visual.json` (o resultado do ambiente de
-25 m foi preservado em `versoes-original-visual-ambiente-25m.json`).
-
-| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas | *Ground truth*: espera / chegadas |
-|---|---:|---:|---:|---:|---:|---:|---|
-| Linha de base (ciclo fixo) | 14,9 s | 37,3 s | 1431 | 37 | 50% | 0 | 14,9 s / 1431 |
-| v1 (heurística) | 4,6 s | 27,2 s | 1472 | 0 | 50% | 129 | 4,7 s / 1473 |
-| v1.1 (DQN estado v1) | 4,6 s | 27,3 s | 1474 | 0 | 50% | 127 | — |
-| v2 (DQN estado v2) | 4,9 s | 27,5 s | 1471 | 0 | 49% | 122 | 4,4 s / 1474 |
-| max-pressure | 6,1 s | 28,6 s | 1470 | 0 | 48% | 98 | 4,6 s / 1474 |
-
-Espera por seed (201/202/203): v2 4,9 / 5,0 / 4,7 s; v1 4,5 / 4,7 / 4,6 s;
-max-pressure 6,2 / 5,7 / 6,3 s.
-
-- Com demanda equilibrada, todas as versões adaptativas reduzem a espera do
-  ciclo fixo em 59–69% e escoam toda a demanda (fila de inserção zero).
-- A v2 com câmera fica 0,3 s atrás da v1 e da v1.1 (4,9 × 4,6 s), com as
-  mesmas chegadas: não piora com demanda equilibrada. Em relação à percepção *ground truth*,
-  perde 0,5 s, como no calibrado. A ação com features visuais coincide com a da
-  percepção *ground truth* em 87,1% das 425 decisões (`domain-gap-roi60-original-v2.json`).
-- O max-pressure é a única versão que piora com a câmera (4,6 → 6,1 s): troca
-  menos (98 × 129 trocas) e deixa verdes mais longos que o necessário.
-- Junto com o calibrado: a v2 é a melhor versão quando a demanda é desigual
-  (−43% de espera, maior vazão) e empata com as demais quando é equilibrada.
-
 ### Correção: filtro da ROI de aproximação pela base da caixa (2026-10-03)
 
-A análise da subcontagem do Leste (log da v2 visual acima) mostrou:
+A análise da subcontagem do Leste no log da v2 visual mostrou:
 
 - **Leste, 50–60 m: ~100% dos veículos perdidos nas duas faixas**, mesmo
   isolados (sem veículo à frente). Não era oclusão: o YOLO detecta esses
@@ -940,77 +511,32 @@ A análise da subcontagem do Leste (log da v2 visual acima) mostrou:
   Leste 2 → 195, Sul 46 → 192, Oeste 3 → 30. Abaixo de 50 m não muda.
 - A geometria está correta: com o veículo detectado, a distância visual fica
   +0,8 m da posição *ground truth* em todas as faixas e distâncias.
-- A faixa 1 do Leste também perde 17–40% a 10–50 m, mais com fila parada (35%)
-  que em movimento (26%). Aí as detecções brutas já faltam: é oclusão pela
-  faixa 0 no ângulo lateral da câmera Leste, e não se corrige no filtro.
+- Com as filas longas da demanda anterior, a faixa 1 do Leste também perdia
+  17–40% a 10–50 m, mais com fila parada (35%) que em movimento (26%). Aí as detecções brutas já faltavam: é oclusão pela
+  faixa 0 no ângulo lateral da câmera Leste, e não se corrige no filtro. Com
+  a demanda atual as filas são curtas e nenhuma faixa subconta.
 
 Correção: `filter_detections_to_roi(..., anchor="bottom_center")` no
 `VisualPipeline`, com o mesmo ponto de solo das features por faixa (o padrão
 `center` continua para o legado `test_unity_vision`). Na detecção de viaturas,
 o pedido passa a sair a ~55–60 m da linha, em vez de ~40 m.
 
-**Consequência:** os resultados com percepção visual de 2026-10-02 (versões e
-preempção) foram obtidos com o filtro pelo centro. Cada tabela continua
-internamente comparável (todas as linhas tinham o mesmo filtro), mas precisa
-ser refeita com a correção para valer como resultado do ambiente atual.
+### Preempção por aviso V2I
 
-### Preempção por aviso V2I (percepção *ground truth*, seeds 201–203, 1800 s)
-
-- Viaturas de emergência entram a cada ~3 min (10 por seed, 30 por política),
-  sorteadas entre Sul, Leste e Oeste, obedecendo ao semáforo.
+- Viaturas de emergência entram a cada ~5 min, sorteadas entre Sul, Leste e
+  Oeste, obedecendo ao semáforo.
 - O aviso V2I chega 15 s antes de a viatura entrar na rede. A preempção
   assume quando ela está a ≤ 20 s da linha de retenção: mantém o verde dela
   (além do verde máximo, se preciso) ou encerra o outro verde sem esperar o
   mínimo. Amarelo e all-red nunca são pulados.
-- Métrica da viatura: perda de tempo até cruzar a linha de retenção
-  (`getTimeLoss`).
-
-| Cenário | Política | Perda média da viatura | Perda máxima | Viaturas sem parar | Espera do tráfego | Chegadas |
-|---|---|---:|---:|---:|---:|---:|
-| calibrado | ciclo fixo | 19,6 → **1,1 s** | 50,4 → 4,3 s | 44% → 100% | 16,1 → 17,1 s | 1511 → 1576 |
-| calibrado | v2 | 14,1 → **1,1 s** | 41,4 → 3,8 s | 30% → 100% | 10,1 → 11,5 s | 1612 → 1609 |
-| calibrado | max-pressure | 15,9 → **1,3 s** | 42,7 → 4,4 s | 31% → 100% | 11,0 → 14,9 s | 1493 → 1556 |
-| original | ciclo fixo | 17,0 → **1,0 s** | 47,5 → 3,8 s | 40% → 100% | 14,9 → 18,4 s | 1438 → 1425 |
-| original | v2 | 8,9 → **1,1 s** | 37,9 → 3,5 s | 50% → 100% | 8,5 → 11,7 s | 1481 → 1474 |
-| original | max-pressure | 9,8 → **1,3 s** | 20,3 → 3,7 s | 37% → 100% | 4,6 → 7,2 s | 1484 → 1481 |
-
-(Cada célula mostra sem → com preempção.)
-
-- Com preempção, todas as viaturas cruzam sem parar, com ~1 s de perda média
-  e no máximo ~4 s, independentemente da política.
-- O custo é de +1 a +4 s na espera média do restante do tráfego. No ciclo
-  fixo e no max-pressure calibrados, as chegadas até aumentam, porque as
-  preempções quebram ciclos mal repartidos para o Leste saturado.
-- Com a v2 treinada nos dois cenários, o resultado se mantém: perda média
-  9,5 → 1,1 s (calibrado) e 10,1 → 1,3 s (original), 100% sem parar, com a
-  espera do tráfego passando de 8,7 → 10,3 s e 4,5 → 7,1 s.
-- Arquivos: `results/evaluation/preempcao-{calibrated,original}-oracle.json`,
-  `preempcao-mix-{calibrated,original}-oracle.json`,
-  `versoes-roi60-{calibrated,original}-oracle.json` e
-  `versoes-roi60-mix-{calibrated,original}-oracle.json`.
-
-### Comandos
-
-```bash
-../.venv/bin/python -m experiments.extend_lane_rois --length 60     # ROIs a partir da borda próxima
-../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated,original \
-  --checkpoint-output ../results/models/dqn-v2-roi60-mix-pretrain-last.pt \
-  --best-checkpoint-output ../results/models/dqn-v2-roi60-mix-pretrain-best.pt
-../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception oracle \
-  --v2-dqn-model ../results/models/dqn-v2-roi60-mix-pretrain-best.pt
-../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated \
-  --v2-dqn-model ../results/models/dqn-v2-roi60-mix-pretrain-best.pt
-```
+- Métrica da viatura: perda total até cruzar a linha de retenção (espera de
+  entrada + `getTimeLoss`).
 
 ## DQN v2 — estado por faixa, pré-treino SUMO e avaliação visual
 
-> **Registro histórico.** Os resultados desta seção usam a demanda antiga
-> (motos como carros, hoje `calibrated_motos`, Leste saturado) e checkpoints
-> anteriores, com as ROIs de ~25 m. Os atuais estão na seção **Demanda calibrada sem motos**.
-
-Status: concluído (branch `feat/estado-faixa-v2`, 2026-09-28/29). Os números
-abaixo vêm de arquivos locais em `results/` (ignorados pelo Git) e podem ser
-reproduzidos com os comandos do fim da seção.
+Status: concluído (branch `feat/estado-faixa-v2`, 2026-09-28/29). Esta seção
+registra o desenho da v2; os resultados atuais estão na seção **Demanda
+calibrada sem motos**.
 
 ### Por que o v1 foi substituído
 
@@ -1033,7 +559,7 @@ reproduzidos com os comandos do fim da seção.
   e `update_without_vision()` mantém amarelo, all-red e verde máximo quando não
   há visão. **Resultados gravados antes dessa correção devem ser refeitos.**
 - **Cenários.** `sp.yaml` declara `calibrated` (padrão; demanda medida nos
-  vídeos de drone, Leste com v/c≈1,0) e `original`; escolha com `--scenario`.
+  vídeos de drone) e `original`; escolha com `--scenario`.
   Na cópia calibrada em `sumo/sp`, as chegadas são Poisson (a seed passa a
   mudar a demanda) e a inserção é realista (`departLane="best"`,
   `departSpeed="max"`): com o padrão do SUMO, 231 veículos ficavam pendentes em
@@ -1049,8 +575,8 @@ câmeras Unity. As larguras projetadas coincidem com as das lanes (3,0–4,3 m
 para 3,2/4,0 m), mas as ROIs cobrem só **23–26 m por faixa**, terminando na
 linha de retenção, enquanto os E2 atuais cobrem 42,6–45,8 m. Os intervalos
 medidos estão em `lane_geometry` no `sp.yaml`, protegidos por teste. Decisão:
-**manter as ROIs como estão** e declarar a limitação — o estado satura em
-~3–4 veículos por faixa quando a fila do Leste passa da ROI.
+**manter as ROIs como estão** e declarar a limitação. Depois elas foram
+substituídas pelas de 60 m (seção **Ambiente com ROIs de 60 m**).
 
 ### Estado v2 e treino
 
@@ -1068,127 +594,15 @@ medidos estão em `lane_geometry` no `sp.yaml`, protegidos por teste. Decisão:
   espera nativa e fila de inserção), vinda do TraCI; não é entrada da política.
 - Pré-treino só SUMO com a percepção *ground truth*: 40 episódios de 300 s de aquecimento +
   1800 s controlados (~6 s por episódio), seeds 1–40, Double DQN, ε linear por
-  decisão. Melhor checkpoint: episódio 34 (6.797 passos de gradiente), escore
-  de validação −0,059 contra −0,314 do ciclo fixo e −0,340 do max-pressure.
-
-### Resultados — percepção *ground truth* (seeds 201–203, 1800 s, média)
-
-| Cenário | Política | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O |
-|---|---|---:|---:|---:|---:|---:|
-| calibrado | ciclo fixo 40/40 | 16,1 s | 36,2 s | 1503 | 97 | 50% |
-| calibrado | max-pressure | 12,8 s | 37,5 s | 1317 | 284 | 50% |
-| calibrado | DQN v2 | 9,1 s | 30,9 s | 1598 | 6 | 66% |
-| original | ciclo fixo 40/40 | 14,9 s | 37,3 s | 1431 | 37 | 50% |
-| original | max-pressure | 4,6 s | 27,2 s | 1474 | 0 | 50% |
-| original | DQN v2 | 5,1 s | 27,6 s | 1472 | 0 | 55% |
-
-O DQN v2 aprendeu a dar mais verde ao Leste saturado; no cenário original, em
-que não treinou, empata com o max-pressure.
-
-### Domain gap visão × *ground truth* (Unity, seed 1001, 900 s)
-
-911 steps, 0 frames perdidos. Com a política pré-treinada usada direto com
-visão (zero-shot), a espera foi 10,9 s contra 8,3 s com a percepção *ground truth*, com o mesmo
-número de chegadas (790 × 791) e a mesma fração de verde (68%). A ação gulosa
-coincidiu com a da percepção *ground truth* em 82,7% das 98 decisões.
-
-- Contagem e parados: correlação 0,82–0,95, exceto `south/lane_3` (subconta
-  0,74 veículo em média, r=0,59 — provável oclusão pelas outras faixas).
-- Velocidade subestimada (Leste −1,4 a −1,9 m/s; r≈0,6–0,7) e espera
-  superestimada (até +11,8 s em `south/lane_1`), coerentes com o atraso da
-  regressão de 3 pontos a 1 fps.
-- Offset do ponto de solo (mediana): −0,66 m (Leste), −0,54 m (Sul) e
-  −0,75 m (Oeste); abaixo de 1 m, então `visual_ground_offset_m` ficou em 0.
+  decisão. Treinada só no calibrado, a v2 especializava e piorava no
+  original; por isso o pré-treino usa os dois cenários.
 
 ### Ajuste fino visual
 
-10 episódios de 900 s nas seeds 41–50 (~100 transições por episódio, ~900
-passos de gradiente) pioraram a validação visual: −0,080 (zero-shot) → −0,102
-→ −0,139. O critério manteve o zero-shot; `dqn-v2-visual-best.pt` tem os mesmos
-pesos de `dqn-v2-pretrain-best.pt`. Causa provável, não verificada: o replay
-recomeça vazio e só com as transições correlacionadas do ajuste fino.
-
-### Resultado final — percepção visual (Unity, seeds 201–203, 1800 s, média)
-
-| Política | Percepção | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O |
-|---|---|---:|---:|---:|---:|---:|
-| ciclo fixo 40/40 | — | 16,1 s | 36,2 s | 1503 | 97 | 50% |
-| max-pressure | visual | 11,1 s | 33,9 s | 1498 | 104 | 56% |
-| **DQN v2 (zero-shot)** | **visual** | **10,3 s** | **32,1 s** | **1599** | **1** | **67%** |
-| DQN v2 | *ground truth* | 9,1 s | 30,9 s | 1598 | 6 | 66% |
-
-Pela câmera, o DQN v2 reduz a espera em 36% em relação ao ciclo fixo, escoa 6%
-mais veículos e zera a fila de inserção; o max-pressure visual tem espera
-parecida, mas acumula 104 veículos esperando para entrar. O custo da visão em
-relação à percepção *ground truth* é de 1,2 s de espera. As execuções visuais foram
-reprodutíveis seed a seed e sem frames perdidos.
-
-### Comparação das versões no mesmo ambiente
-
-`experiments.compare_versions` roda a linha de base, a v1, a v1.1, a v2 e o
-max-pressure com o mesmo cenário, as mesmas seeds (201–203), 300 s de
-aquecimento, 1800 s controlados, a mesma camada de segurança e a mesma
-percepção. As regras de cada versão estão em `experiments/version_policies.py`.
-A v1 e a v1.1 recebem a contagem por faixa da mesma percepção usada pela v2,
-em vez do centro da bbox com média móvel da época, e decidem a cada 1 s.
-
-Percepção *ground truth*, cenário calibrado:
-
-| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas |
-|---|---:|---:|---:|---:|---:|---:|
-| Linha de base (ciclo fixo) | 16,1 s | 36,2 s | 1503 | 97 | 50% | 0 |
-| v1 (heurística) | 12,2 s | 36,9 s | 1349 | 254 | 52% | 126 |
-| v1.1 (DQN estado v1) | 12,9 s | 38,0 s | 1311 | 290 | 50% | 129 |
-| v2 (DQN estado v2) | 9,1 s | 30,9 s | 1598 | 6 | 66% | 93 |
-| max-pressure | 12,8 s | 37,5 s | 1317 | 284 | 50% | 127 |
-
-Percepção *ground truth*, cenário original:
-
-| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O | Trocas |
-|---|---:|---:|---:|---:|---:|---:|
-| Linha de base (ciclo fixo) | 14,9 s | 37,3 s | 1431 | 37 | 50% | 0 |
-| v1 (heurística) | 4,7 s | 27,4 s | 1473 | 0 | 50% | 129 |
-| v1.1 (DQN estado v1) | 4,6 s | 27,3 s | 1474 | 0 | 50% | 127 |
-| v2 (DQN estado v2) | 5,1 s | 27,6 s | 1472 | 0 | 55% | 116 |
-| max-pressure | 4,6 s | 27,2 s | 1474 | 0 | 50% | 129 |
-
-- **No cenário calibrado,** a v1 e a v1.1 alternam no ciclo mínimo e dividem o
-  verde 50/50. Escoam menos veículos que o ciclo fixo e deixam 250–290
-  veículos fora da rede; a espera média delas só parece melhor porque esses
-  veículos não entram na conta. A v2 dá 66% do verde ao Leste e ganha em todas
-  as métricas.
-- **No cenário original,** com demanda equilibrada, as versões adaptativas
-  empatam; a v2, que não treinou nele, fica 0,4–0,5 s atrás.
-Percepção visual (Unity), cenário calibrado, 0 frames perdidos:
-
-| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O |
-|---|---:|---:|---:|---:|---:|
-| Linha de base (ciclo fixo) | 16,1 s | 36,2 s | 1503 | 97 | 50% |
-| v1 (heurística) | 12,1 s | 36,7 s | 1351 | 253 | 52% |
-| v1.1 (DQN estado v1) | 12,9 s | 38,0 s | 1312 | 289 | 50% |
-| v2 (DQN estado v2) | 10,3 s | 32,1 s | 1599 | 1 | 67% |
-| max-pressure | 11,1 s | 33,9 s | 1498 | 104 | 56% |
-
-Com a câmera, a ordem é a mesma da percepção *ground truth*: só a v2 dá mais verde ao Leste,
-e a v1/v1.1 ficam abaixo do ciclo fixo em chegadas.
-
-Percepção visual (Unity), cenário original, 0 frames perdidos:
-
-| Versão | Espera | Viagem | Chegadas | Fila de inserção final | Verde L/O |
-|---|---:|---:|---:|---:|---:|
-| Linha de base (ciclo fixo) | 14,9 s | 37,3 s | 1431 | 37 | 50% |
-| v1 (heurística) | 4,6 s | 27,2 s | 1473 | 0 | 50% |
-| v1.1 (DQN estado v1) | 4,6 s | 27,2 s | 1474 | 0 | 50% |
-| v2 (DQN estado v2) | 5,4 s | 28,0 s | 1469 | 1 | 56% |
-| max-pressure | 5,8 s | 28,3 s | 1472 | 0 | 49% |
-
-No cenário equilibrado, as versões adaptativas empatam também com a câmera; a
-v2 fica 0,8 s atrás da v1 em espera, com as mesmas chegadas.
-
-Arquivos: `results/evaluation/versoes-calibrated-oracle.json`,
-`versoes-original-oracle.json`, `versoes-original-visual-ambiente-25m.json` e `versoes-calibrated-visual-v1.json` (v1 e
-v1.1 visuais; a v2 e o max-pressure visuais estão em
-`teste-visual-dqn-zero-shot.json` e `teste-visual-max-pressure.json`).
+10 episódios de 900 s com a Unity no loop (seeds 41–50, ~900 passos de
+gradiente) pioraram a validação visual, e o critério manteve a política
+pré-treinada (zero-shot). Causa provável, não verificada: o replay recomeça
+vazio e só com as transições correlacionadas do ajuste fino.
 
 ### Registro histórico da v1 e da v1.1 (protocolos diferentes)
 
@@ -1222,35 +636,6 @@ v1.1 (DQN visual, estado v1), seeds 201–203, 2026-09-04:
 | Tempo médio de espera | 6,85 s | 4,41 s | 4,44 s |
 | Fila média | 8,73 | 4,15 | 4,21 |
 | Fila máxima | 18,67 | 10,33 | 10,33 |
-
-### Limitações registradas
-
-- ROIs de ~25 m: filas longas do Leste saturam o estado.
-- Velocidade visual subestimada e oclusão na faixa sul mais distante.
-- A recompensa do treino vem do TraCI (a política é que é só visual).
-- Três seeds de teste; o ajuste fino simples não melhorou o zero-shot.
-
-### Comandos (a partir de `python/`)
-
-```bash
-# Pré-treino e avaliação só SUMO (percepção ground truth)
-../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn
-../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception oracle
-../.venv/bin/python -m experiments.evaluate_policies_sumo --scenario calibrated \
-  --dqn-model ../results/models/dqn-v2-pretrain-best.pt \
-  --output ../results/evaluation/teste-sumo-oraculo.json
-
-# Com a Unity em Play Mode (SPImport, Dataset Capture desativado; reinicie o Play Mode antes de cada comando)
-../.venv/bin/python -m experiments.run_visual_policy --scenario calibrated --policy dqn \
-  --dqn-model ../results/models/dqn-v2-pretrain-best.pt --seeds 201,202,203 --control-seconds 1800 \
-  --step-log-output ../results/logs/teste-visual-dqn-zero-shot.jsonl \
-  --output ../results/evaluation/teste-visual-dqn-zero-shot.json
-../.venv/bin/python -m experiments.evaluate_lane_features \
-  --step-log ../results/logs/etapa11-gap-seed-1001.jsonl \
-  --dqn-model ../results/models/dqn-v2-pretrain-best.pt
-../.venv/bin/python -m experiments.finetune_dqn_visual \
-  --init-checkpoint ../results/models/dqn-v2-pretrain-best.pt
-```
 
 ## Avaliação visão versus E2 — cenário SP
 
