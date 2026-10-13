@@ -45,7 +45,8 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Fase de pedestres curta a cada ciclo (7 s + 11 s): 2026-10-13 — seção
   **Fase de pedestres curta** abaixo. v3 retreinado
   (`dqn-v3-fase-curta-best.pt`); versões com pedestres refeitas com
-  percepção *ground truth* e visual. Preempção com pedestres a refazer.
+  percepção *ground truth* e visual; preempção com visão refeita (v2).
+  Preempção *ground truth* com pedestres a refazer.
 
 ## Fase de pedestres curta a cada ciclo (2026-10-13)
 
@@ -123,6 +124,33 @@ Chegadas de veículos (visão): 911–922 em todas as versões; pedestres
   demora a refletir a fila oposta. Isso reduz a fila de inserção (12,2 → 1,9)
   e a espera (26,5 → 21,0 s). Ele não melhora por ver melhor: segura o verde
   por mais tempo.
+
+**Preempção com visão** (v2, `calibrated_ped`, mesma agenda de 18 viaturas,
+seeds 201–203; perda total = espera de entrada + perda na rede; arquivo
+`results/evaluation/preempcao-calibrated_ped-visual.json`, log
+`results/logs/preempcao-visual-calibrated_ped.log`, **0 frames perdidos**;
+já com a correção do aviso V2I no step da inserção):
+
+| Fonte do pedido | Perda total média | Máx. | Sem parar | Antecedência | Espera do tráfego | Pedestres (mediana / p90 / máx.) |
+|---|---:|---:|---:|---:|---:|---|
+| nenhuma | 13,0 s | 41,3 s | 50% | — | 14,3 s | 25,1 s (22 / 59 / 93) |
+| V2I | **1,8 s** | 9,8 s | 100% | ~23 s (V2I) | 15,3 s | 26,6 s (22 / 63 / 92) |
+| visão | 6,4 s | 21,3 s | 72% | ~8 s (câmera) | 14,8 s | 25,3 s (23 / 59 / 93) |
+| V2I + visão | 2,4 s | 10,6 s | 100% | — | 15,3 s | 28,0 s (23 / 68 / 106) |
+
+A visão detectou as 18 viaturas em todos os modos, sem alarme falso.
+
+- **Com V2I, 17 das 18 viaturas perdem ≤ 2 s.** A exceção (~10 s) chegou
+  durante a fase de pedestres, que a preempção não encerra. Com a fase antiga
+  essa espera chegava a ~39 s e puxava a média para 5,5 s; agora a fase dura
+  18 s.
+- **A visão sozinha reduz a perda em 51%** (13,0 → 6,4 s). Ela vê a viatura
+  só nos últimos 60 m (~8 s antes da linha), e 5 das 18 ainda param. V2I +
+  visão empata com V2I, e a visão serve de redundância.
+- **Custo:** +0,5 a +1,0 s na espera dos outros veículos. Os pedestres
+  esperam em média +0,2 a +2,9 s, e a espera máxima chega a 106 s no modo
+  V2I + visão.
+
 
 ## Demanda calibrada sem motos (2026-10-07)
 

@@ -250,11 +250,21 @@ A visão detectou as 18 viaturas, sem alarme falso, mas só as vê nos últimos
 60 m (~5 s antes da linha, contra ~23 s do V2I). Sozinha, reduz a perda em
 65%; junto do V2I, serve de redundância.
 
-Com pedestres (`calibrated_ped`), a preempção está sendo refeita com a fase
-de pedestres atual (7 s + 11 s a cada ciclo). Os resultados da fase antiga
-(41 s + 3 s a cada dois ciclos) ficam em
-[`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md). A fase de
-pedestres é obrigatória: a viatura que chega durante ela espera até o fim.
+Com pedestres (`calibrated_ped`, fase de pedestres de 7 s + 11 s a cada
+ciclo), percepção visual, v2, 0 frames perdidos:
+
+| Fonte do pedido | Perda total média (máx.) | Sem parar | Espera do tráfego | Espera dos pedestres |
+|---|---|---|---|---|
+| nenhuma | 13,0 s (41,3 s) | 50% | 14,3 s | 25,1 s |
+| V2I | **1,8 s** (9,8 s) | 100% | 15,3 s | 26,6 s |
+| visão | 6,4 s (21,3 s) | 72% | 14,8 s | 25,3 s |
+| V2I + visão | 2,4 s (10,6 s) | 100% | 15,3 s | 28,0 s |
+
+A fase de pedestres é obrigatória: a viatura que chega durante ela espera até
+o fim, no máximo ~10 s com V2I. A visão detectou as 18 viaturas sem alarme
+falso. Sozinha, ela reduz a perda em 51%; junto do V2I, serve de redundância.
+O custo é de +0,5 a +1,0 s para os outros veículos e de até +3 s para os
+pedestres.
 
 As tabelas desta seção usam o ambiente atual: câmeras de 60 m, YOLO de duas
 classes, demanda sem motos, v2 `dqn-v2-sem-motos-best.pt` e, com pedestres,
