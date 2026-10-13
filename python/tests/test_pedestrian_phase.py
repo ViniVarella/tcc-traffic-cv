@@ -59,6 +59,19 @@ class PedestrianPhaseTests(unittest.TestCase):
         self.assertEqual((clearance - green, back - clearance), (41, 3))
         self.assertEqual(controller.phase_manager.get_current_phase().phase_index, 0)
 
+    def test_sp_profile_has_a_short_phase_after_every_south_green(self) -> None:
+        config = {**CONFIG, "pedestrians": SP_CONFIG["pedestrians"]}
+        controller = DqnTrafficController("tls", config, pedestrian_phase=True)
+        time = run_until(controller, 1, PhaseManager.SOUTH_GREEN)
+        green = run_until(controller, time + 1, PhaseManager.PEDESTRIAN_GREEN)
+        clearance = run_until(controller, green + 1, PhaseManager.PEDESTRIAN_CLEARANCE)
+        back = run_until(controller, clearance + 1, PhaseManager.EAST_WEST_GREEN)
+        self.assertEqual((clearance - green, back - clearance), (7, 11))
+        self.assertEqual(controller.greens_until_pedestrian(), 1)  # L/O e depois Sul, então pedestres
+        time = run_until(controller, back + 1, PhaseManager.SOUTH_GREEN)
+        self.assertEqual(controller.greens_until_pedestrian(), 0)
+        run_until(controller, time + 1, PhaseManager.PEDESTRIAN_GREEN)
+
     def test_policy_cannot_end_the_pedestrian_phase(self) -> None:
         controller = DqnTrafficController("tls", CONFIG, pedestrian_phase=True)
         time = run_until(controller, 1, PhaseManager.SOUTH_GREEN)

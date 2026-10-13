@@ -113,6 +113,16 @@ def sumocfg(net: str, routes: Sequence[str], additional: str, comment: str) -> s
     )
 
 
+def crossing_lengths(net_path: Path) -> dict[str, float]:
+    """Comprimento de cada travessia (edge ``function="crossing"``) da rede."""
+    root = ElementTree.parse(net_path).getroot()
+    lengths = {edge.get("id"): float(edge.find("lane").get("length"))
+               for edge in root.iter("edge") if edge.get("function") == "crossing"}
+    if not lengths:
+        raise ValueError("A rede não tem travessias de pedestres.")
+    return lengths
+
+
 def l_paths(net_path: Path) -> list[tuple[str, str, float]]:
     """Comprimento de cada "L": travessia + caminho na esquina + travessia vizinha.
 
@@ -163,7 +173,7 @@ def main() -> None:
     tl = tree.getroot().find(f"tlLogic[@id='{TLS_ID}']")
     vehicle_states = [phase.get("state") for phase in original.findall("phase")]
     crossings = len(tl.find("phase").get("state")) - len(vehicle_states[0])
-    durations = [phase.get("duration") for phase in original.findall("phase")] + ["30", "3"]
+    durations = [phase.get("duration") for phase in original.findall("phase")] + ["7", "11"]
     for phase in list(tl):
         tl.remove(phase)
     for (_, state), duration in zip(pedestrian_program(vehicle_states, crossings), durations):
@@ -185,9 +195,9 @@ def main() -> None:
     paths = l_paths(target)
     for first, second, length in paths:
         print(f"pedestrian_l first={first} second={second} length_m={length:.2f}")
-    longest = max(length for *_, length in paths)
-    print(f"pedestrian_network_complete crossings={crossings} longest_l_m={longest:.2f} "
-          f"green_s={math.ceil(longest / args.walking_speed)} output={target}")
+    widest = max(crossing_lengths(target).values())
+    print(f"pedestrian_network_complete crossings={crossings} widest_crossing_m={widest:.2f} "
+          f"clearance_s={math.ceil(widest / args.walking_speed)} output={target}")
 
 
 if __name__ == "__main__":

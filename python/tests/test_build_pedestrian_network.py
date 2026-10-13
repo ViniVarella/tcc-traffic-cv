@@ -8,9 +8,11 @@ import unittest
 
 import yaml
 
-from experiments.build_pedestrian_network import flows_xml, pedestrian_flows, pedestrian_program, shift_lane_ids, wait_at_stop_line
+from experiments.build_pedestrian_network import (crossing_lengths, flows_xml, pedestrian_flows, pedestrian_program,
+                                                  shift_lane_ids, wait_at_stop_line)
 
 
+PED_NET = Path(__file__).resolve().parents[2] / "sumo" / "sp" / "Cruzamento.ped.net.xml"
 CONFIG = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 VEHICLE_STATES = ["GGGrrrrrrG", "yyyrrrrrry", "rrrrrrrrrr", "rrrGgGGGGr", "rrryyyyyyr"]
 
@@ -47,9 +49,13 @@ class BuilderTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             pedestrian_flows(("E0", "E1"), 0.0, 3600.0)
 
-    def test_profile_green_covers_the_longest_l_at_design_speed(self) -> None:
+    def test_clearance_covers_the_widest_crossing_at_design_speed(self) -> None:
         pedestrians = CONFIG["pedestrians"]
-        self.assertEqual(pedestrians["green_seconds"], math.ceil(pedestrians["longest_l_m"] / pedestrians["walking_speed_mps"]))
+        self.assertAlmostEqual(pedestrians["widest_crossing_m"], max(crossing_lengths(PED_NET).values()), places=2)
+        # Quem entra no último segundo do verde termina a travessia antes de os veículos voltarem.
+        self.assertEqual(pedestrians["clearance_seconds"],
+                         math.ceil(pedestrians["widest_crossing_m"] / pedestrians["walking_speed_mps"]))
+        self.assertEqual(pedestrians["every_cycles"], 1)
         self.assertEqual(CONFIG["traffic_light"]["phases"]["pedestrian_green"], 5)
         self.assertIn("calibrated_ped", CONFIG["sumo"]["scenarios"])
 

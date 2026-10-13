@@ -45,16 +45,18 @@ traffic_light:
 
 # Fase exclusiva de pedestres (só nos cenários *_ped): todos os veículos no
 # vermelho e todas as faixas de pedestre no verde, a cada every_cycles ciclos
-# (L/O → Sul → L/O → Sul → pedestres). O verde cobre o maior percurso em "L"
-# (travessia + esquina + travessia vizinha = 48,05 m, esquina Sudoeste) a
-# 1,2 m/s; a liberação é vermelho total. Valores de
-# experiments.build_pedestrian_network.
+# (L/O → Sul → pedestres). Verde curto para começar a travessia e liberação em
+# vermelho total (o "vermelho intermitente") que cobre a travessia mais larga
+# (Leste, 13,0 m) a 1,2 m/s: quem entra no último segundo do verde termina antes
+# de os veículos voltarem. Quem atravessa duas ruas espera a fase seguinte na
+# esquina. Até 2026-10-13 a fase era a cada 2 ciclos, com 41 s de verde (maior
+# "L", 48,05 m) + 3 s. Comprimentos de experiments.build_pedestrian_network.
 pedestrians:
-  every_cycles: 2
+  every_cycles: 1
   walking_speed_mps: 1.2
-  longest_l_m: 48.05
-  green_seconds: 41
-  clearance_seconds: 3
+  widest_crossing_m: 13.0
+  green_seconds: 7
+  clearance_seconds: 11
   # Recompensa de treino nos cenários *_ped: (1 − w)·veículos − w·pedestres,
   # com pedestres = min(1, soma da espera atual dos pedestres parados / ref.).
   # Sem este termo, o v3 aprendeu a segurar o verde para espaçar a fase de
