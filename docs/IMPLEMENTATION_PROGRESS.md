@@ -123,22 +123,56 @@ v3 12 / 74 s, max-pressure 7 / 53 s; original — ciclo fixo 49 / 163 s, v2
 
 | Cenário | Ciclo fixo | v2 | v3 | max-pressure |
 |---|---:|---:|---:|---:|
-| calibrado | 16,6 → **1,4 s** | 8,0 → **1,5 s** | — | 7,9 → 1,5 s |
-| original | 31,3 → 13,6 s | 12,2 → 3,1 s | — | 13,0 → 3,3 s |
-| calibrado + pedestres | 32,9 → 5,8 s | 26,7 → **5,2 s** | 23,2 → 7,7 s | 90,1 → 19,9 s |
-| original + pedestres | 118,5 → 69,9 s | 96,8 → 74,9 s | 97,6 → 81,4 s | 106,4 → 101,1 s |
+| calibrado | 16,6 → **1,3 s** | 8,0 → **1,3 s** | — | 7,9 → 1,4 s |
+| original | 31,3 → 13,6 s | 12,2 → 2,9 s | — | 13,0 → **2,8 s** |
+| calibrado + pedestres | 32,9 → 7,9 s | 26,7 → 8,6 s | 23,2 → **6,2 s** | 90,1 → 15,9 s |
+| original + pedestres | 118,5 → 69,9 s | 96,8 → 72,8 s | 97,6 → 81,5 s | 106,4 → 99,9 s |
+
+Valores com preempção refeitos em 2026-10-12, depois da correção do aviso V2I
+no step da inserção (subseção seguinte). Os anteriores ficaram em
+`preempcao-*-oracle-lacuna-insercao.json`.
 
 - Calibrado sem pedestres: 100% das viaturas cruzam sem parar, espera de
   entrada ~1 s.
 - **Calibrado com pedestres: o problema da investigação anterior sumiu.** A
-  espera de entrada fica em 3–4 s, a perda total cai para 5–8 s (máx. 39 s,
+  espera de entrada fica em 3–4 s, a perda total cai para 6–9 s (máx. 39 s,
   quem chega durante a fase de pedestres) e os pedestres praticamente não
-  pioram com a preempção (v2: mediana 15 → 13 s, p90 72 → 74 s; v3: 12 → 16 s,
-  74 → 76 s).
+  pioram com a preempção (v2: mediana 15 → 12 s, p90 72 → 74 s; v3: 12 → 14 s,
+  74 → 74 s).
 - No `original_ped`, ainda saturado, a viatura continua presa na fila de
   inserção (~60–75 s) e os pedestres pioram com a preempção, como antes.
   Sem preempção, nem todas as viaturas cruzam até o fim da rodada (17/18 na
   v2 e na v3, 16/18 no max-pressure); a média é só das que cruzaram.
+
+### Correção: aviso V2I no step da inserção da viatura (2026-10-12)
+
+No step em que a viatura era inserida, `EmergencyTraffic.step` chamava
+`add_vehicle` e não emitia pedido: ela só aparece no TraCI no step seguinte.
+Nesse step a preempção soltava o semáforo e a política voltava a ser
+consultada; se pedisse troca, começava um amarelo com a viatura chegando. Em
+todos os modos com V2I, as 18 viaturas passaram por essa lacuna. Apareceu na
+avaliação visual do `original`: na seed 203 o DQN trocou o verde Sul no step
+da inserção e a viatura parou (15,9 s de perda, contra 3,9 s com percepção
+*ground truth*). A correção (commit `b8cf953`, com teste) mantém o pedido no
+step da inserção com o tempo de uma aproximação inteira. "Sem preempção" e
+"só visão" não dependem do aviso V2I e não mudam.
+
+Percepção *ground truth* refeita nos quatro cenários (tabela acima):
+
+- sem pedestres, a perda com V2I cai um pouco (calibrado 1,4–1,5 → 1,3–1,4 s;
+  original v2 3,1 → 2,9 s, max-pressure 3,3 → 2,8 s) e o custo para o tráfego
+  diminui (v2 calibrado +0,8 → +0,6 s; original +1,1 → +0,7 s);
+- no `calibrated_ped`, a v2 ficou pior (5,2 → 8,6 s, 94% → 72% sem parar) e a
+  v3 melhor (7,7 → 6,2 s). As viaturas que pioraram foram anunciadas com a
+  fase de pedestres já em andamento (conferido nas fases de cada step), que a
+  preempção espera terminar. A correção mudou o instante de algumas trocas, a
+  fase de pedestres caiu em outro ponto do ciclo e outras viaturas passaram a
+  coincidir com ela. Com 18 viaturas, cada uma que espera a fase de pedestres
+  soma ~1–2 s à média: a diferença entre v2 e v3 está dentro dessa variação.
+
+As linhas "V2I" e "V2I + visão" das tabelas visuais abaixo ainda são de antes
+da correção; os comandos para refazê-las estão em
+`TEMP_PREEMPCAO_CORRECAO.txt` (`--detections v2i,both --skip-no-preemption`).
 
 ### Avaliação visual com a demanda sem motos (Unity, 2026-10-08)
 
@@ -173,7 +207,8 @@ Chegadas 915–918 e fila de inserção 0 em todas.
   seja, é uma política degenerada que não depende do estado.
 
 **Preempção com visão** (v2, 18 viaturas; perda total = espera de entrada +
-perda na rede):
+perda na rede). *V2I e V2I + visão: antes da correção da lacuna na inserção,
+a refazer.*
 
 | Fonte do pedido | Perda total média | Máx. | Sem parar | Antecedência | Espera do tráfego |
 |---|---:|---:|---:|---:|---:|
@@ -266,7 +301,8 @@ max-pressure 860; pedestres 153–161.
 **Preempção com visão e pedestres** (v2 e v3, mesma agenda de 18 viaturas;
 perda total = espera de entrada + perda na rede; arquivo
 `results/evaluation/preempcao-calibrated_ped-visual.json`, 0 frames
-perdidos):
+perdidos). *V2I e V2I + visão: antes da correção da lacuna na inserção, a
+refazer.*
 
 | Versão | Fonte do pedido | Perda total média | Máx. | Sem parar | Antecedência | Espera do tráfego | Pedestres (mediana / p90 / máx.) |
 |---|---|---:|---:|---:|---:|---:|---|
@@ -279,7 +315,7 @@ perdidos):
 | v3 | visão | 13,4 s | 40,5 s | 67% | ~13 s | 21,4 s | 28,2 s (12 / 75 / 94) |
 | v3 | V2I + visão | **7,3 s** | 38,9 s | 83% | — | 23,4 s | 30,1 s (18 / 79 / 115) |
 
-Percepção *ground truth*, mesma agenda (V2I): v2 26,7 → 5,2 s, v3 23,2 → 7,7 s.
+Percepção *ground truth*, mesma agenda (V2I), antes da correção: v2 26,7 → 5,2 s, v3 23,2 → 7,7 s (depois: 8,6 s e 6,2 s).
 
 - **V2I com visão reproduz a percepção *ground truth*:** v2 5,5 s (*ground truth*: 5,2 s), v3 9,9 s
   (7,7 s). A visão detectou as 18 viaturas em todos os modos, sem alarme falso.

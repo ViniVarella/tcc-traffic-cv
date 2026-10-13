@@ -338,11 +338,12 @@ GPS dos sistemas reais), e o semáforo abre para o sentido de onde elas vêm:
 Cenário calibrado sem motos, ROIs de 60 m, seeds 201–203, uma viatura a
 cada ~5 min (18 por política). A perda total soma a espera para entrar na
 rede e a perda até a linha de retenção. Com percepção *ground truth*, ela cai de
-16,6 s (ciclo fixo), 8,0 s (v2) e 7,9 s (max-pressure) para ~1,5 s, e todas
-cruzam sem parar. O custo é de +0,2 a +0,8 s na espera do restante do
+16,6 s (ciclo fixo), 8,0 s (v2) e 7,9 s (max-pressure) para 1,3–1,4 s, e todas
+cruzam sem parar. O custo é de até +0,6 s na espera do restante do
 tráfego. A câmera também detecta as viaturas (classe `emergency` do YOLO
 dentro das ROIs) e serve como segunda fonte. Em malha fechada com percepção
-visual (v2, 0 frames perdidos):
+visual (v2, 0 frames perdidos; as linhas com V2I são de antes da correção
+de 2026-10-12 do aviso no step da inserção e serão refeitas):
 
 | Fonte do pedido | Perda total média (máx.) | Sem parar | Espera do tráfego |
 |---|---|---|---|
@@ -357,7 +358,8 @@ A visão detectou as 18 viaturas, sem alarme falso, mas só as vê nos últimos
 carros), os números eram 13,2 / 1,4 / 4,2 / 1,2 s, com tráfego em 9,4–11,3 s.
 
 Com pedestres (`calibrated_ped`, fase exclusiva de 44 s a cada dois ciclos),
-percepção visual, perda total média (sem parar):
+percepção visual, perda total média (sem parar; linhas com V2I a refazer,
+como acima):
 
 | Fonte do pedido | v2 | v3 |
 |---|---|---|
@@ -368,9 +370,10 @@ percepção visual, perda total média (sem parar):
 
 A viatura que chega durante a fase de pedestres espera até o fim dela
 (máx. ~39 s em todos os modos), o que deixa a perda acima da do cenário sem
-pedestres. V2I com visão repete a percepção *ground truth* (v2 5,2 s, v3 7,7 s), a visão
-detectou todas as viaturas sem alarme falso, e os pedestres esperam só 1–3 s
-a mais com a preempção.
+pedestres. Com percepção *ground truth* e V2I, já corrigida, a perda é de
+8,6 s (v2) e 6,2 s (v3); a diferença vem de quantas viaturas caem na fase de
+pedestres (cada uma soma ~1–2 s à média). A visão detectou todas as viaturas
+sem alarme falso, e os pedestres esperam só 1–3 s a mais com a preempção.
 Detalhes em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 
 As tabelas desta seção usam o ambiente atual: câmeras de 60 m, YOLO de duas
