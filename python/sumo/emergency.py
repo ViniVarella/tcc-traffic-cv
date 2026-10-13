@@ -124,6 +124,10 @@ class EmergencyTraffic:
                     client.add_vehicle(plan.vehicle_id, plan.from_edge, plan.to_edge, EMERGENCY_TYPE)
                     vehicle.inserted = True
                     vehicle.inserted_s = sim_time
+                    # Continua pedindo no step da inserção: a viatura só aparece
+                    # no TraCI no step seguinte, e uma lacuna de 1 step soltava
+                    # a preempção.
+                    requests.append(EmergencyRequest(plan.vehicle_id, plan.approach, self._full_approach_s()))
                 elif sim_time >= plan.depart_s - self.settings.announce_before_s:
                     # Anunciada pelo despacho, ainda antes de entrar na rede.
                     requests.append(EmergencyRequest(plan.vehicle_id, plan.approach, plan.depart_s - sim_time + self._full_approach_s()))

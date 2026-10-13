@@ -41,6 +41,8 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--detections", default=None,
                         help=f"Fontes do pedido de preempção, entre {','.join(EMERGENCY_DETECTIONS)}. "
                              "Padrão: v2i (oracle) ou v2i,vision,both (visual).")
+    parser.add_argument("--skip-no-preemption", action="store_true",
+                        help="Não roda o modo sem preempção (para refazer só os modos com preempção).")
     parser.add_argument("--versions", default="baseline,v2,max_pressure")
     parser.add_argument("--seeds", default="201,202,203")
     parser.add_argument("--warmup-seconds", type=float, default=300.0)
@@ -78,7 +80,8 @@ def main() -> None:
     preemption = PreemptionSettings.from_config(config)
     versions = build_version_policies(config, [item.strip() for item in args.versions.split(",") if item.strip()],
                                       args.v1_dqn_model, args.v2_dqn_model, args.v3_dqn_model)
-    modes = [("sem_preempcao", None, "v2i")] + [(f"com_preempcao_{item}", preemption, item) for item in detections]
+    modes = [] if args.skip_no_preemption else [("sem_preempcao", None, "v2i")]
+    modes += [(f"com_preempcao_{item}", preemption, item) for item in detections]
     report: dict[str, Any] = {"perception": args.perception, "detections": detections, "scenario": scenario, "seeds": seeds,
                               "warmup_s": args.warmup_seconds, "control_s": args.control_seconds, "results": {}}
     bridge = UnityBridge.from_config(config) if args.perception == "visual" else None

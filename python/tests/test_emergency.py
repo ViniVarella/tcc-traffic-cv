@@ -73,6 +73,10 @@ class EmergencyTrafficTests(unittest.TestCase):
         self.assertAlmostEqual(requests[15][0].eta_s, 5 + 75 / 13.89)
         self.assertEqual(client.added, ["emergency_0"])
         self.assertAlmostEqual(requests[21][0].eta_s, 7.0)  # 70 m restantes a 10 m/s
+        # Sem lacuna no step da inserção: senão a preempção solta o semáforo
+        # e a política pode pedir uma troca com a viatura chegando.
+        self.assertTrue(all(requests[time] for time in range(15, 28)))
+        self.assertAlmostEqual(requests[20][0].eta_s, 75 / 13.89)
         crossing = min(time for time, items in requests.items() if time > 21 and not items)
         self.assertEqual(crossing, 28)
         summary = traffic.summary()
