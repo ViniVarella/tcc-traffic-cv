@@ -171,9 +171,13 @@ cópia em `optimization/SP` (que segue com a calibração antiga).
   pedestre; o gerador põe `contPos="0"` nessas conexões, senão os dois pontos
   de espera internos cedem um ao outro (deadlock e teleportes).
 - Fase exclusiva de pedestres (fases 5 e 6 do programa; bloco `pedestrians:`
-  do `sp.yaml`): todos os veículos no vermelho, a cada `every_cycles` = 2
-  ciclos (L/O → Sul → L/O → Sul → pedestres), verde de 41 s (maior "L" da
-  rede, 48,05 m, a 1,2 m/s) + 3 s de liberação. É obrigatória como o
+  do `sp.yaml`): todos os veículos no vermelho depois de todo verde Sul
+  (`every_cycles` = 1: L/O → Sul → pedestres), 7 s de verde + 11 s de
+  liberação em vermelho total (travessia mais larga, 13,0 m, a 1,2 m/s: quem
+  entra no fim do verde termina antes dos veículos). Quem atravessa duas ruas
+  espera a fase seguinte na esquina. Até 2026-10-13 eram 41 s (maior "L") +
+  3 s a cada 2 ciclos; resultados e checkpoints v3 com essa regra não se
+  comparam com os atuais (v3 atual: `dqn-v3-fase-curta-best.pt`). É obrigatória como o
   amarelo: a política não a encerra, e a preempção espera o fim dela (uma
   fase de pedestres ainda não iniciada é adiada pela viatura e vem no
   all-red seguinte, logo depois do verde dela; o ciclo retoma pelo verde que
@@ -380,7 +384,7 @@ Todos a partir de `python/`:
 # Pré-treino do DQN v3 (com pedestres; referência: w = 0,3, 100 episódios, seeds 51–150)
 ../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated_ped,original_ped --state-version 3 \
   --episodes 100 --seed-start 51 --pedestrian-reward-weight 0.3 \
-  --checkpoint-output ../results/models/dqn-v3-sem-motos-last.pt --best-checkpoint-output ../results/models/dqn-v3-sem-motos-best.pt
+  --checkpoint-output ../results/models/dqn-v3-fase-curta-last.pt --best-checkpoint-output ../results/models/dqn-v3-fase-curta-best.pt
 
 # Versões com pedestres (ground truth); v3 só entra se pedido
 ../.venv/bin/python -m experiments.compare_versions --scenario calibrated_ped --perception oracle --versions baseline,v1,v2,v3,max_pressure
