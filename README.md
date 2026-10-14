@@ -303,15 +303,30 @@ Play Mode (reinicie o Play Mode antes de cada comando):
 
 ```bash
 ../.venv/bin/python -m experiments.run_visual_policy --scenario calibrated --policy dqn \
-  --dqn-model ../results/models/dqn-v2-pretrain-best.pt --seeds 201,202,203 --control-seconds 1800 \
+  --dqn-model ../results/models/dqn-v2-sem-motos-best.pt --seeds 201,202,203 --control-seconds 1800 \
   --step-log-output ../results/logs/teste-visual-dqn.jsonl \
   --output ../results/evaluation/teste-visual-dqn.json
 
 # Diferença visão × ground truth a partir do log por step (sem Unity)
 ../.venv/bin/python -m experiments.evaluate_lane_features \
   --step-log ../results/logs/teste-visual-dqn.jsonl \
-  --dqn-model ../results/models/dqn-v2-pretrain-best.pt
+  --dqn-model ../results/models/dqn-v2-sem-motos-best.pt
 ```
+
+**Painel web** (demonstração ao vivo; Unity em Play Mode, nenhum outro SUMO
+rodando):
+
+```bash
+../.venv/bin/python -m experiments.api_server   # abra http://127.0.0.1:8000/
+```
+
+O painel escolhe cenário, versão e fonte da preempção, mostra as três câmeras
+com as caixas do YOLO e despacha viaturas sob demanda (aviso V2I imediato; a
+viatura entra 15 s depois). As filas por aproximação vêm da câmera; a espera e
+os veículos parados dos gráficos vêm do TraCI (*ground truth*) e não entram na
+decisão. É um episódio longo de demonstração (30 s de aquecimento), não uma
+avaliação: os números das tabelas vêm de `compare_versions` e
+`evaluate_preemption`.
 
 O detector ajustado (`runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`)
 tem duas classes, `0 vehicle` e `1 emergency`; os scripts v2 já usam esse modelo

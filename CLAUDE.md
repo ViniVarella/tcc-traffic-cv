@@ -68,6 +68,8 @@ python/                 código Python (rodar comandos a partir daqui)
                         traffic_controller.py (heurístico), policies.py, rewards.py,
                         decision_scheduler.py
   experiments/          entry points (python -m experiments.<nome>)
+  dashboard/            painel web FastAPI (app.py, telemetry.py); entrada experiments.api_server,
+                        páginas em python/static/
   tests/                unittest (test_*.py)
 sumo/sp/                rede, rotas e detectores do cenário SP (Cruzamento.*)
 unity/TrafficVisionUnity/   projeto Unity 6000.0.53f1 (Unity 6, URP, macOS/Metal)
@@ -392,6 +394,11 @@ Todos a partir de `python/`:
 
 # Preempção para emergências (mesma agenda de viaturas; só SUMO)
 ../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated
+
+# Painel web de demonstração (Unity em Play Mode; http://127.0.0.1:8000/). Mesmo
+# Environment.run e mesmas versões das avaliações; botão de viatura usa
+# EmergencyTraffic.dispatch. Não é avaliação: não use seus números em tabelas.
+../.venv/bin/python -m experiments.api_server
 
 # Estender ROIs de faixa a partir da borda próxima desenhada na calibração
 ../.venv/bin/python -m experiments.extend_lane_rois --length 60
