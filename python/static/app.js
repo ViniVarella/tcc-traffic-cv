@@ -208,6 +208,14 @@ document.querySelectorAll('.camera-viewport img').forEach(img => {
     img.addEventListener('load', () => { img.style.visibility = 'visible'; });
 });
 
+// Os streams MJPEG nunca terminam: ligados no HTML, seguram o evento load e
+// a aba fica "carregando" para sempre. Só começam depois que a página carregou.
+function startCameraStreams() {
+    document.querySelectorAll('.camera-viewport img[data-stream]').forEach(img => { img.src = img.dataset.stream; });
+}
+if (document.readyState === 'complete') startCameraStreams();
+else window.addEventListener('load', startCameraStreams);
+
 document.querySelectorAll('.camera-viewport').forEach(el => {
     el.addEventListener('click', () => openCamera(el.dataset.camera));
 });
