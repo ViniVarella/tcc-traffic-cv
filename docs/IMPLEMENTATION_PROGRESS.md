@@ -43,12 +43,34 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   Avaliações visuais (Unity) refeitas em 2026-10-08 (cenário `original` em
   2026-10-12).
 - Fase de pedestres curta a cada ciclo (7 s + 11 s): 2026-10-13 — seção
-  **Fase de pedestres curta** abaixo. v3 retreinado
+  **Fase de pedestres curta** abaixo. Experimento DQN estado v3 retreinado
   (`dqn-v3-fase-curta-best.pt`); versões com pedestres refeitas com
   percepção *ground truth* e visual; preempção refeita com as duas
   percepções.
+- Versões do produto TraffIQ (v1 a v4) e painel web para o Eureka:
+  2026-10-14 — seção **Versões do produto** abaixo.
 
-## Fase de pedestres curta a cada ciclo (2026-10-13)
+## Versões do produto TraffIQ (2026-10-14)
+
+Desde 2026-10-14 as versões são do **produto** (decisão do usuário): cada uma
+acrescenta uma capacidade, e o modelo que decide pode se repetir. Treinar um
+modelo não cria uma versão.
+
+| Versão | Período | O que acrescenta | Quem decide |
+|---|---|---|---|
+| v1 | 2026-09-02 | Controle em malha fechada pela câmera | Regra de fila |
+| v1.1 | 2026-09-04 | Primeira política aprendida (colapsou em "trocar sempre") | DQN estado v1 |
+| v2 | 2026-09-29 | Features cinemáticas por faixa, pré-treino só no SUMO | DQN estado v2 |
+| v3 | 2026-09-30 a 10-04 | Prioridade para viaturas (V2I + câmera) | DQN estado v2 |
+| **v4** (atual) | 2026-10-05 a 10-13 | Fase exclusiva de pedestres (7 s + 11 s a cada ciclo) | DQN estado v2 |
+
+O **DQN estado v3** (44 entradas) é um experimento: empatou com o DQN estado
+v2 e não entrou no produto. **Numeração nas seções abaixo:** até esta data,
+"v1", "v1.1", "v2" e "v3" nomeavam controladores, como `--versions` no código
+(v2 = DQN estado v2; v3 = DQN estado v3). Os registros antigos ficam com essa
+numeração. As seções da v4 e o README usam a numeração do produto.
+
+## Fase de pedestres curta a cada ciclo (2026-10-13; produto v4)
 
 Status: branch `feat/fase-pedestres-curta` (`210686d`, `5b4dcd3`).
 
@@ -68,12 +90,12 @@ uma rua por fase, e quem precisa de duas espera a fase seguinte na esquina:
 `clearance_seconds: 11`, `widest_crossing_m: 13.0` (sai `longest_l_m`). A rede
 `.ped.net.xml` foi regenerada (`crossing_lengths` no gerador).
 
-**Escolha da variante** (percepção *ground truth*, seeds 201–203, v2 com
-`dqn-v2-sem-motos-best.pt` e o v3 antigo; espera média de veículos /
+**Escolha da variante** (percepção *ground truth*, seeds 201–203, DQN estado v2 com
+`dqn-v2-sem-motos-best.pt` e o DQN estado v3 antigo; espera média de veículos /
 pedestres). Referência: níveis de serviço do HCM 2000 para a espera de
 pedestre em semáforo (A < 10 s, B 10–20, C 20–30, D 30–40, E 40–60, F > 60 s).
 
-| Variante | Ciclo fixo | v2 |
+| Variante | Ciclo fixo | DQN estado v2 |
 |---|---|---|
 | A: 11 + 3 s, a cada 2 ciclos | 16,2 / 107 s | 7,9 / 38 s |
 | B: 7 + 11 s, a cada 2 ciclos | 17,1 / 112 s | 10,3 / 45 s |
@@ -86,38 +108,39 @@ C e D deixam os pedestres no nível C. Entre as duas, D é a única em que quem
 entra no fim do verde termina a travessia antes de os veículos voltarem
 (decisão do usuário).
 
-**v3 retreinado** com a fase nova: `dqn-v3-fase-curta-best.pt`, mesma
+**Experimento DQN estado v3 retreinado** com a fase nova: `dqn-v3-fase-curta-best.pt`, mesma
 receita (`calibrated_ped,original_ped`, w = 0,3, 100 episódios, seeds 51–150,
 ~30 min), melhor no episódio 99 (score −0,146). A referência de 1200 s do
-termo dos pedestres na recompensa não foi recalculada. A v2 não precisou de
-retreino: ela vê a fase de pedestres como all-red. Os resultados da fase
+termo dos pedestres na recompensa não foi recalculada. O DQN estado v2 não
+precisou de retreino: ele vê a fase de pedestres como all-red. Os resultados da fase
 antiga ganharam o sufixo `-fase-41s`.
 
-**Versões no `calibrated_ped`** (seeds 201–203, 300 s + 1800 s; visão: Unity,
+**Controladores no `calibrated_ped`** (seeds 201–203, 300 s + 1800 s; visão: Unity,
 **0 frames perdidos**; arquivos `versoes-calibrated_ped-{oracle,visual}.json`,
 log `results/logs/versoes-calibrated_ped-visual.log`). Espera dos veículos,
 por seed entre parênteses; pedestres: média (mediana / p90):
 
-| Versão | Veículos, *ground truth* | Veículos, visão | Fila média de inserção (GT / visão) | Pedestres, *ground truth* | Pedestres, visão | Trocas (GT / visão) |
+| Controlador | Veículos, *ground truth* | Veículos, visão | Fila média de inserção (GT / visão) | Pedestres, *ground truth* | Pedestres, visão | Trocas (GT / visão) |
 |---|---:|---:|---:|---|---|---:|
 | ciclo fixo | 20,8 s | 20,8 s (21,4 / 20,4 / 20,6) | 0,9 / 0,9 | 56,6 s (47 / 140) | 56,6 s (47 / 140) | 0 / 0 |
-| v1 | 25,3 s | 24,6 s (22,5 / 25,8 / 25,7) | 10,3 / 9,3 | 22,6 s (20 / 53) | 22,3 s (21 / 53) | 71 / 71 |
-| v2 | **14,2 s** | **14,1 s** (13,9 / 14,3 / 14,2) | 0,1 / 0,1 | 23,4 s (21 / 57) | 25,0 s (22 / 58) | 68 / 66 |
-| v3 | **14,2 s** | 14,7 s (14,2 / 14,6 / 15,2) | 0,1 / 0,1 | 26,6 s (26 / 60) | 27,4 s (25 / 60) | 62 / 62 |
+| Regra de fila (v1) | 25,3 s | 24,6 s (22,5 / 25,8 / 25,7) | 10,3 / 9,3 | 22,6 s (20 / 53) | 22,3 s (21 / 53) | 71 / 71 |
+| **DQN estado v2 (v4, atual)** | **14,2 s** | **14,1 s** (13,9 / 14,3 / 14,2) | 0,1 / 0,1 | 23,4 s (21 / 57) | 25,0 s (22 / 58) | 68 / 66 |
+| DQN estado v3 (experimento) | **14,2 s** | 14,7 s (14,2 / 14,6 / 15,2) | 0,1 / 0,1 | 26,6 s (26 / 60) | 27,4 s (25 / 60) | 62 / 62 |
 | max-pressure | 26,5 s | 21,0 s (19,7 / 22,9 / 20,4) | 12,2 / 1,9 | 22,3 s (20 / 51) | 24,2 s (23 / 57) | 73 / 68 |
 
-Chegadas de veículos (visão): 911–922 em todas as versões; pedestres
+Chegadas de veículos (visão): 911–922 em todos os controladores; pedestres
 159–161; 0 teleportes.
 
-- **v2 com a câmera reduz a espera dos veículos em 32%** em relação ao ciclo
+- **O DQN estado v2 com a câmera reduz a espera dos veículos em 32%** em relação ao ciclo
   fixo (20,8 → 14,1 s; com a fase antiga eram 13–17%) e a dos pedestres em
   56% (56,6 → 25,0 s; p90 140 → 58 s).
-- **A visão reproduz a percepção *ground truth*** na v2 (−0,1 s) e na v3
-  (+0,5 s). Nos pedestres, a diferença é de +0,8 a +1,6 s.
-- **v2 e v3 empatam nos veículos**; a v3 deixa os pedestres ~2–3 s a mais nas
-  duas percepções. Com a fase a cada ciclo, saber quantos verdes faltam até
-  ela já não ajuda: a resposta é sempre a mesma.
-- **v1 e max-pressure ficam piores que o ciclo fixo para os veículos.** Eles
+- **A visão reproduz a percepção *ground truth*** no DQN estado v2 (−0,1 s)
+  e no DQN estado v3 (+0,5 s). Nos pedestres, a diferença é de +0,8 a +1,6 s.
+- **Os dois DQN empatam nos veículos**; o DQN estado v3 deixa os pedestres
+  ~2–3 s a mais nas duas percepções. Com a fase a cada ciclo, saber quantos
+  verdes faltam até ela já não ajuda: a resposta é sempre a mesma. Por isso o
+  experimento não entrou no produto, e a v4 decide com o DQN estado v2.
+- **A regra de fila e o max-pressure ficam piores que o ciclo fixo para os veículos.** Eles
   trocam no verde mínimo sempre que a fila oposta é maior. Agora cada ciclo
   inclui 18 s de fase de pedestres, então cada troca a mais custa caro. Com a
   câmera, o max-pressure troca menos (68 × 73), porque a contagem visual
@@ -131,11 +154,11 @@ log `results/logs/preempcao-oracle-calibrated_ped-fase-curta.log`). Perda
 total sem → com preempção; espera do tráfego e dos pedestres (média, p90) com
 preempção:
 
-| Versão | Perda total (máx. com preempção) | Sem parar | Espera do tráfego | Pedestres |
+| Controlador | Perda total (máx. com preempção) | Sem parar | Espera do tráfego | Pedestres |
 |---|---:|---:|---:|---|
 | ciclo fixo | 35,3 → **1,7 s** (6,4 s) | 11% → 100% | 20,9 → 21,6 s | 56,2 s (138) |
-| v2 | 20,0 → 2,0 s (9,8 s) | 28% → 100% | 14,2 → 15,3 s | 25,6 s (59) |
-| v3 | 13,0 → 2,0 s (9,8 s) | 44% → 100% | 14,8 → 14,5 s | 29,1 s (68) |
+| DQN estado v2 | 20,0 → 2,0 s (9,8 s) | 28% → 100% | 14,2 → 15,3 s | 25,6 s (59) |
+| DQN estado v3 (experimento) | 13,0 → 2,0 s (9,8 s) | 44% → 100% | 14,8 → 14,5 s | 29,1 s (68) |
 | max-pressure | 45,3 → 6,2 s (31,2 s) | 22% → 100% | 27,0 → 24,3 s | 24,0 s (56) |
 
 - Com a preempção, todas as viaturas cruzam sem parar. A perda fica em
@@ -144,12 +167,12 @@ preempção:
 - O max-pressure é a exceção: a fila de inserção dele (24,7 veículos em média
   sem preempção) segura a viatura antes de entrar na rede (espera de entrada de
   5,1 s, máx. 31 s).
-- Sem preempção, a perda da v2 é maior com percepção *ground truth* do que
+- Sem preempção, a perda do DQN estado v2 é maior com percepção *ground truth* do que
   com visão (20,0 × 13,0 s). A agenda é a mesma; o que muda é em que fase
   cada viatura chega. Com 18 viaturas, isso varia de uma rodada para outra.
-- Pedestres: +0,6 a +2,0 s na média com a preempção; máxima até 101 s (v3).
+- Pedestres: +0,6 a +2,0 s na média com a preempção; máxima até 101 s (DQN estado v3).
 
-**Preempção com visão** (v2, `calibrated_ped`, mesma agenda de 18 viaturas,
+**Preempção com visão** (DQN estado v2, `calibrated_ped`, mesma agenda de 18 viaturas,
 seeds 201–203; perda total = espera de entrada + perda na rede; arquivo
 `results/evaluation/preempcao-calibrated_ped-visual.json`, log
 `results/logs/preempcao-visual-calibrated_ped.log`, **0 frames perdidos**;

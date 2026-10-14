@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TraffIQ — semáforos que se adaptam ao trânsito</title>
+    <meta name="description" content="TraffIQ: controle semafórico adaptativo que monitora o cruzamento por câmeras e utiliza inteligência artificial para definir o tempo de cada sinal. TCC do Instituto Mauá de Tecnologia.">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Menu lateral -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <img class="brand-icon" src="logo.svg" alt="" aria-hidden="true">
+            <div class="brand-text">
+                <span class="brand-name">Traff<span class="brand-iq">IQ</span></span>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-label">Navegação</span>
+            <a href="#home" class="nav-link active" data-page="home">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span>Início</span>
+            </a>
+            <a href="#simulation" class="nav-link" data-page="simulation">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                <span>Ao vivo</span>
+            </a>
+            <a href="#dashboard" class="nav-link" data-page="dashboard">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                <span>Resultados</span>
+            </a>
+        </div>
+
+        <div class="nav-section">
+            <span class="nav-label">Status</span>
+            <div class="system-status">
+                <div class="status-row">
+                    <span class="status-label">Painel</span>
+                    <span class="status-badge" id="api-status">
+                        <span class="status-dot offline" id="api-dot"></span>
+                        Desconectado
+                    </span>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">Câmeras</span>
+                    <span class="status-badge" id="unity-status">
+                        <span class="status-dot offline" id="unity-dot"></span>
+                        Aguardando
+                    </span>
+                </div>
+                <div class="status-row">
+                    <span class="status-label">Simulação</span>
+                    <span class="status-badge" id="sumo-status">
+                        <span class="status-dot offline" id="sumo-dot"></span>
+                        Parada
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <span class="footer-text">TCC · Instituto Mauá de Tecnologia</span>
+        </div>
+    </nav>
+
+    <main class="main-content" id="main-content">
+
+        <!-- ===== INÍCIO ===== -->
+        <div class="page active" id="page-home">
+            <section class="hero">
+                <div class="hero-content">
+                    <div class="hero-badge">Trabalho de Conclusão de Curso · Instituto Mauá de Tecnologia</div>
+                    <h1 class="hero-title">
+                        Aplicação de IA na otimização adaptativa de
+                        <span class="highlight">semáforos inteligentes</span>
+                    </h1>
+                    <p class="hero-subtitle">
+                        O <strong>TraffIQ</strong> monitora o cruzamento por câmeras e utiliza inteligência
+                        artificial para definir o momento de abrir e fechar cada sinal, com o objetivo de
+                        reduzir o tempo de espera dos veículos, priorizar ambulâncias e garantir a
+                        travessia de pedestres.
+                    </p>
+                    <div class="hero-actions">
+                        <a href="#simulation" class="btn btn-primary btn-lg">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            Demonstração ao vivo
+                        </a>
+                        <a href="#dashboard" class="btn btn-outline btn-lg">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                            Resultados
+                        </a>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="highlights">
+                        <div class="highlight-card">
+                            <span class="highlight-value">−67%</span>
+                            <span class="highlight-text">no tempo de espera dos veículos, em cenário sem pedestres</span>
+                        </div>
+                        <div class="highlight-card">
+                            <span class="highlight-value">−32%</span>
+                            <span class="highlight-text">no tempo de espera dos veículos, em cenário com fase de pedestres</span>
+                        </div>
+                        <div class="highlight-card">
+                            <span class="highlight-value" title="80,6%: 29 de 36 ambulâncias">~80%</span>
+                            <span class="highlight-text">das ambulâncias atravessam sem parar</span>
+                        </div>
+                        <p class="highlights-note">
+                            Simulação de um cruzamento real de São Paulo, com o TraffIQ decidindo somente com
+                            base nas imagens das câmeras. Tempos de espera comparados com o semáforo de tempo
+                            fixo; ambulâncias: média dos cenários com e sem pedestres.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Como funciona -->
+            <section class="section">
+                <div class="section-header">
+                    <h2>Como funciona</h2>
+                    <p class="section-subtitle">Da imagem da câmera à decisão do semáforo</p>
+                </div>
+                <div class="steps-grid">
+                    <div class="step-card">
+                        <div class="step-number">01</div>
+                        <div class="step-icon">📹</div>
+                        <h3>Captura das imagens</h3>
+                        <p>Três câmeras, uma em cada via de acesso ao cruzamento, registram os veículos que se aproximam do semáforo.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">02</div>
+                        <div class="step-icon">🔍</div>
+                        <h3>Detecção e rastreamento</h3>
+                        <p>A visão computacional identifica cada veículo na imagem e acompanha seu deslocamento, estimando, por faixa, quantos veículos chegam, quantos estão parados e há quanto tempo.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">03</div>
+                        <div class="step-icon">🧠</div>
+                        <h3>Decisão do sinal</h3>
+                        <p>A cada 5 segundos, a IA decide entre manter o verde ou transferi-lo para a outra via. O modelo foi treinado em milhares de situações simuladas, e o amarelo e os tempos mínimos de segurança são sempre respeitados.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">04</div>
+                        <div class="step-icon">🚑</div>
+                        <h3>Prioridade e travessia</h3>
+                        <p>As ambulâncias informam sua aproximação e também são reconhecidas pelas câmeras, recebendo o verde. A cada ciclo, há uma fase exclusiva para a travessia de pedestres.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Da rua para o simulador -->
+            <section class="section">
+                <div class="section-header">
+                    <h2>Da rua para o simulador</h2>
+                    <p class="section-subtitle">Por que as imagens exibidas vêm de um ambiente virtual</p>
+                </div>
+                <div class="steps-grid three">
+                    <div class="step-card">
+                        <div class="step-icon">🚁</div>
+                        <h3>Medição</h3>
+                        <p>O tráfego de um cruzamento real de São Paulo foi medido em vídeos de drone: volume de veículos por hora em cada via e seus destinos.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-icon">🚦</div>
+                        <h3>Simulação</h3>
+                        <p>Um simulador de tráfego reproduz esse movimento veículo a veículo, o que permite testar o semáforo em diversas situações sem interferir no trânsito real.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-icon">🎥</div>
+                        <h3>Ambiente 3D</h3>
+                        <p>Um motor gráfico reproduz o cruzamento em 3D e gera as imagens das câmeras. A IA recebe apenas essas imagens, como receberia de câmeras reais.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Evolução -->
+            <section class="section">
+                <div class="section-header">
+                    <h2>Como o TraffIQ evoluiu</h2>
+                    <p class="section-subtitle">Cada versão acrescentou uma funcionalidade ao semáforo</p>
+                </div>
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-tag">Ponto de partida</div>
+                            <h4>Semáforo de tempo fixo</h4>
+                            <p>Modelo adotado na maioria dos cruzamentos: cerca de 40 segundos de verde para cada via, independentemente da demanda. É a referência para a comparação dos resultados.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-tag">v1 · set/2026</div>
+                            <h4>Controle por câmera</h4>
+                            <p>As câmeras contam os veículos e uma regra fixa define a troca: o sinal muda quando a fila da outra via é maior.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-tag">v1.1 · set/2026</div>
+                            <h4>Primeira versão com IA</h4>
+                            <p>O primeiro modelo de IA passou a trocar o sinal sempre no tempo mínimo, independentemente do tráfego. O resultado orientou a definição das informações que o modelo precisava receber.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-tag">v2 · set/2026</div>
+                            <h4>IA com informações por faixa</h4>
+                            <p>O modelo passa a receber, para cada faixa, o número de veículos, os veículos parados e o tempo de espera. O tempo de espera dos veículos é 67% menor que no tempo fixo, em cenário sem pedestres.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-tag">v3 · out/2026</div>
+                            <h4>Prioridade para ambulâncias</h4>
+                            <p>A ambulância informa sua aproximação ao semáforo, e as câmeras passam a reconhecê-la. O sinal abre para a via dela, e todas as ambulâncias com aviso de aproximação atravessam sem parar.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item active">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-tag current">v4 · atual</div>
+                            <h4>Fase exclusiva para pedestres</h4>
+                            <p>A cada ciclo, todos os veículos param para a travessia de pedestres. Ainda assim, o tempo de espera dos veículos é 32% menor que no tempo fixo.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tecnologias -->
+            <section class="section">
+                <div class="section-header">
+                    <h2>Tecnologias</h2>
+                    <p class="section-subtitle">Ferramentas utilizadas no desenvolvimento do TraffIQ</p>
+                </div>
+                <div class="tech-grid">
+                    <div class="tech-card">
+                        <div class="tech-logo"><img src="logos/ultralytics.svg" alt="Logo da Ultralytics"></div>
+                        <div class="tech-name">YOLOv8</div>
+                        <div class="tech-role">Detecção de veículos e ambulâncias nas imagens</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-logo generic" aria-hidden="true">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="17" r="2"/><circle cx="12" cy="11" r="2"/><circle cx="19" cy="5" r="2"/><path d="M6.5 15.5l4-3M13.5 9.5l4-3" stroke-dasharray="2 2"/></svg>
+                        </div>
+                        <div class="tech-name">ByteTrack</div>
+                        <div class="tech-role">Rastreamento de cada veículo entre imagens consecutivas</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-logo"><img src="logos/pytorch.svg" alt="Logo do PyTorch"></div>
+                        <div class="tech-name">PyTorch</div>
+                        <div class="tech-role">Treinamento e execução do modelo de decisão</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-logo generic" aria-hidden="true">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="5"/><path d="M10 12l1.5 1.5L14.5 10"/></svg>
+                        </div>
+                        <div class="tech-name">Aprendizado por reforço (DQN)</div>
+                        <div class="tech-role">Método de treinamento por tentativa e erro</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-logo"><img src="logos/eclipse-sumo.svg" alt="Logo do Eclipse SUMO"></div>
+                        <div class="tech-name">Eclipse SUMO</div>
+                        <div class="tech-role">Simulação do tráfego, veículo a veículo</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-logo"><img src="logos/unity.svg" alt="Logo da Unity"></div>
+                        <div class="tech-name">Unity</div>
+                        <div class="tech-role">Ambiente 3D e geração das imagens das câmeras</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-logo"><img src="logos/opencv.png" alt="Logo do OpenCV"></div>
+                        <div class="tech-name">OpenCV</div>
+                        <div class="tech-role">Processamento das imagens das câmeras</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-logo"><img src="logos/python.svg" alt="Logo do Python"></div>
+                        <div class="tech-name">Python</div>
+                        <div class="tech-role">Integração entre os componentes do sistema</div>
+                    </div>
+                    <div class="tech-card">
+                        <div class="tech-logo"><img src="logos/fastapi.svg" alt="Logo do FastAPI"></div>
+                        <div class="tech-name">FastAPI</div>
+                        <div class="tech-role">Servidor deste painel</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ===== AO VIVO ===== -->
+        <div class="page" id="page-simulation">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Ao vivo</h1>
+                    <p class="page-subtitle">Selecione o cenário e acompanhe o TraffIQ no controle do cruzamento</p>
+                </div>
+                <div class="sim-time-display" title="Relógio da simulação">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span id="sim-clock">00:00:00</span>
+                </div>
+            </div>
+
+            <div class="sim-layout">
+                <div class="control-strip">
+                    <label class="control-field">
+                        <span class="policy-label">Cenário</span>
+                        <select id="sel-scenario" class="control-select">
+                            <option value="calibrated">Tráfego real (medido por drone)</option>
+                            <option value="calibrated_ped">Tráfego real com pedestres</option>
+                            <option value="original">Tráfego de teste (equilibrado)</option>
+                        </select>
+                    </label>
+                    <label class="control-field">
+                        <span class="policy-label">Algoritmo</span>
+                        <select id="sel-version" class="control-select"></select>
+                    </label>
+                    <label class="control-field">
+                        <span class="policy-label">Prioridade para ambulâncias</span>
+                        <select id="sel-preemption" class="control-select">
+                            <option value="both">V2I (GPS) + câmera</option>
+                            <option value="v2i">Somente V2I (GPS)</option>
+                            <option value="vision">Somente câmera</option>
+                            <option value="none">Desativada</option>
+                        </select>
+                    </label>
+                    <div class="control-divider"></div>
+                    <button id="btn-start" class="btn btn-start">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Iniciar
+                    </button>
+                    <button id="btn-stop" class="btn btn-stop" disabled>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                        Parar
+                    </button>
+                </div>
+
+                <div class="control-strip">
+                    <label class="control-field">
+                        <span class="policy-label">Sentido de origem</span>
+                        <select id="sel-approach" class="control-select">
+                            <option value="south">Sul</option>
+                            <option value="east">Leste</option>
+                            <option value="west">Oeste</option>
+                        </select>
+                    </label>
+                    <label class="control-field">
+                        <span class="policy-label">Destino</span>
+                        <select id="sel-exit" class="control-select">
+                            <option value="">Aleatório</option>
+                        </select>
+                    </label>
+                    <button id="btn-emergency" class="btn btn-emergency" disabled>
+                        🚑&nbsp; Acionar ambulância
+                    </button>
+                    <div class="control-divider"></div>
+                    <div class="phase-display">
+                        <span class="phase-label">Fase atual:</span>
+                        <span class="phase-value" id="phase-name">—</span>
+                    </div>
+                    <div class="phase-display">
+                        <span class="phase-label">Prioridade:</span>
+                        <span class="phase-value" id="preempt-name">—</span>
+                    </div>
+                </div>
+                <div class="control-message" id="control-message"></div>
+
+                <!-- Câmeras na ordem do mapa: Oeste, Sul, Leste -->
+                <div class="cameras-grid">
+                    <div class="camera-card" data-camera="west">
+                        <div class="camera-header">
+                            <span class="signal-light" id="signal-west" title="Sinal desta rua"></span>
+                            <span class="camera-name">Oeste</span>
+                            <span class="camera-alert" id="alert-west">🚑 prioridade</span>
+                            <span class="camera-count"><strong id="stopped-west">—</strong> parados</span>
+                        </div>
+                        <button class="camera-viewport" type="button" data-camera="west" title="Clique para ampliar">
+                            <img data-stream="/api/video/west" alt="Câmera da rua que chega pelo Oeste" id="cam-west">
+                            <div class="camera-overlay" id="overlay-west"><span>Aguardando imagens…</span></div>
+                        </button>
+                    </div>
+                    <div class="camera-card" data-camera="south">
+                        <div class="camera-header">
+                            <span class="signal-light" id="signal-south" title="Sinal desta rua"></span>
+                            <span class="camera-name">Sul</span>
+                            <span class="camera-alert" id="alert-south">🚑 prioridade</span>
+                            <span class="camera-count"><strong id="stopped-south">—</strong> parados</span>
+                        </div>
+                        <button class="camera-viewport" type="button" data-camera="south" title="Clique para ampliar">
+                            <img data-stream="/api/video/south" alt="Câmera da rua que chega pelo Sul" id="cam-south">
+                            <div class="camera-overlay" id="overlay-south"><span>Aguardando imagens…</span></div>
+                        </button>
+                    </div>
+                    <div class="camera-card" data-camera="east">
+                        <div class="camera-header">
+                            <span class="signal-light" id="signal-east" title="Sinal desta rua"></span>
+                            <span class="camera-name">Leste</span>
+                            <span class="camera-alert" id="alert-east">🚑 prioridade</span>
+                            <span class="camera-count"><strong id="stopped-east">—</strong> parados</span>
+                        </div>
+                        <button class="camera-viewport" type="button" data-camera="east" title="Clique para ampliar">
+                            <img data-stream="/api/video/east" alt="Câmera da rua que chega pelo Leste" id="cam-east">
+                            <div class="camera-overlay" id="overlay-east"><span>Aguardando imagens…</span></div>
+                        </button>
+                    </div>
+                </div>
+                <p class="cameras-hint">Os retângulos indicam os veículos detectados pela IA; a contagem de veículos parados é feita pela câmera. Clique em uma câmera para ampliá-la.</p>
+
+                <div class="metrics-strip">
+                    <div class="metric-tile">
+                        <div class="metric-icon east"></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Veículos parados no cruzamento</span>
+                            <span class="metric-number" id="val-halting">—</span>
+                        </div>
+                    </div>
+                    <div class="metric-tile highlight-metric">
+                        <div class="metric-icon wait"></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Tempo médio de espera</span>
+                            <span class="metric-number" id="val-wait">— s</span>
+                        </div>
+                    </div>
+                    <div class="metric-tile">
+                        <div class="metric-icon reward"></div>
+                        <div class="metric-info">
+                            <span class="metric-label">Ambulâncias acionadas</span>
+                            <span class="metric-number" id="val-dispatched">0</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="cameras-hint">Indicadores fornecidos pelo simulador, apenas para acompanhamento. A IA não tem acesso a eles: decide com base nas imagens das câmeras e, no caso das ambulâncias, no aviso de aproximação.</p>
+            </div>
+        </div>
+
+        <!-- ===== RESULTADOS ===== -->
+        <div class="page" id="page-dashboard">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Resultados da demonstração</h1>
+                    <p class="page-subtitle">Indicadores medidos pelo simulador desde o início da demonstração</p>
+                </div>
+                <div class="dash-controls">
+                    <button class="btn btn-sm btn-outline" id="btn-reset-charts">Limpar gráficos</button>
+                </div>
+            </div>
+
+            <div class="kpi-row">
+                <div class="kpi-card">
+                    <div class="kpi-value" id="kpi-total-steps">0:00</div>
+                    <div class="kpi-label">Tempo de simulação</div>
+                </div>
+                <div class="kpi-card accent-amber">
+                    <div class="kpi-value" id="kpi-avg-wait">0.0 s</div>
+                    <div class="kpi-label">Tempo médio de espera</div>
+                </div>
+                <div class="kpi-card accent-blue">
+                    <div class="kpi-value" id="kpi-halting">0</div>
+                    <div class="kpi-label">Veículos parados agora</div>
+                </div>
+                <div class="kpi-card accent-green">
+                    <div class="kpi-value" id="kpi-avg-reward">0.000</div>
+                    <div class="kpi-label">Pontuação da IA (quanto mais próxima de 0, melhor)</div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-card wide">
+                    <div class="chart-header">
+                        <h3>Tempo médio de espera (s)</h3>
+                        <span class="chart-badge live">AO VIVO</span>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="chart-waiting" width="800" height="260"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>Pontuação da IA</h3>
+                        <span class="chart-badge live">AO VIVO</span>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="chart-reward" width="400" height="260"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>Veículos parados no cruzamento</h3>
+                        <span class="chart-badge live">AO VIVO</span>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="chart-halting" width="400" height="240"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card wide">
+                    <div class="chart-header">
+                        <h3>Tempo acumulado por fase</h3>
+                    </div>
+                    <div class="chart-body">
+                        <div class="phase-bars" id="phase-distribution">
+                            <div class="phase-bar-container">
+                                <div class="phase-bar-label">Verde para o Sul</div>
+                                <div class="phase-bar-track"><div class="phase-bar-fill south-fill" id="phase-bar-south" style="width: 0%"></div></div>
+                                <span class="phase-bar-pct" id="phase-pct-south">0%</span>
+                            </div>
+                            <div class="phase-bar-container">
+                                <div class="phase-bar-label">Verde para Leste e Oeste</div>
+                                <div class="phase-bar-track"><div class="phase-bar-fill east-fill" id="phase-bar-east" style="width: 0%"></div></div>
+                                <span class="phase-bar-pct" id="phase-pct-east">0%</span>
+                            </div>
+                            <div class="phase-bar-container">
+                                <div class="phase-bar-label">Amarelo e vermelho geral</div>
+                                <div class="phase-bar-track"><div class="phase-bar-fill transition-fill" id="phase-bar-trans" style="width: 0%"></div></div>
+                                <span class="phase-bar-pct" id="phase-pct-trans">0%</span>
+                            </div>
+                            <div class="phase-bar-container">
+                                <div class="phase-bar-label">Travessia de pedestres</div>
+                                <div class="phase-bar-track"><div class="phase-bar-fill pedestrian-fill" id="phase-bar-ped" style="width: 0%"></div></div>
+                                <span class="phase-bar-pct" id="phase-pct-ped">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Câmera ampliada -->
+    <div class="camera-modal" id="camera-modal" hidden>
+        <div class="camera-modal-content" role="dialog" aria-modal="true" aria-labelledby="camera-modal-title">
+            <div class="camera-modal-header">
+                <span class="signal-light" id="modal-signal"></span>
+                <span id="camera-modal-title">Câmera</span>
+                <button class="btn btn-sm btn-outline" id="camera-modal-close" type="button">Fechar (Esc)</button>
+            </div>
+            <img id="camera-modal-img" alt="Câmera ampliada">
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

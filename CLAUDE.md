@@ -10,6 +10,17 @@ de São Paulo (cenário `sp`), integrando SUMO, Unity, YOLOv8, ByteTrack e DQN.
   `SUMO2UNITY_INTEGRATION.md`). `CODEX_HANDOFF.md` é só o retrato da migração
   do Codex: não o edite.
 
+## Versões do produto (TraffIQ)
+
+O produto se chama **TraffIQ** (TCC do Instituto Mauá de
+Tecnologia). Nos textos (README, `docs/`, painel, tese), "versão" é do
+**produto**: v1 regra de fila → v1.1 DQN estado v1 → v2 DQN estado v2 → v3
+prioridade para viaturas → **v4 (atual)** fase de pedestres; da v2 à v4 quem
+decide é o DQN estado v2. O **DQN estado v3** é experimento, nunca versão.
+Tabelas de resultado rotulam controladores pelo modelo ("DQN estado v2"). No
+código, `--versions baseline,v1,v1.1,v2,v3,max_pressure` e `state_version`
+nomeiam controladores e estados; não renomeie.
+
 ## Arquitetura
 
 ```text
@@ -68,6 +79,8 @@ python/                 código Python (rodar comandos a partir daqui)
                         traffic_controller.py (heurístico), policies.py, rewards.py,
                         decision_scheduler.py
   experiments/          entry points (python -m experiments.<nome>)
+  dashboard/            painel web FastAPI (app.py, telemetry.py); entrada experiments.api_server,
+                        páginas em python/static/
   tests/                unittest (test_*.py)
 sumo/sp/                rede, rotas e detectores do cenário SP (Cruzamento.*)
 unity/TrafficVisionUnity/   projeto Unity 6000.0.53f1 (Unity 6, URP, macOS/Metal)
@@ -392,6 +405,11 @@ Todos a partir de `python/`:
 
 # Preempção para emergências (mesma agenda de viaturas; só SUMO)
 ../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated
+
+# Painel web de demonstração (Unity em Play Mode; http://127.0.0.1:8000/). Mesmo
+# Environment.run e mesmas versões das avaliações; botão de viatura usa
+# EmergencyTraffic.dispatch. Não é avaliação: não use seus números em tabelas.
+../.venv/bin/python -m experiments.api_server
 
 # Estender ROIs de faixa a partir da borda próxima desenhada na calibração
 ../.venv/bin/python -m experiments.extend_lane_rois --length 60

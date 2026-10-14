@@ -70,6 +70,9 @@ runs/
 *.bmp
 *.tiff
 
+# Logos do painel web (origem em python/static/ASSETS.md)
+!python/static/logos/*.png
+
 # Keep placeholder files even inside ignored media/data dirs
 !.gitkeep
 
