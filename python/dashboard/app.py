@@ -37,10 +37,13 @@ from vision.visual_debug import VisualDebugger
 
 
 SCENARIOS = ("calibrated", "calibrated_ped", "original")
-VERSIONS = ("baseline", "v1", "v2", "v3", "max_pressure")
+# Controladores oferecidos no painel (nomes do código). O produto exibido é o
+# TraffIQ v4, que decide com o DQN estado v2; o DQN estado v3 é experimento e
+# não aparece aqui.
+VERSIONS = ("v2", "baseline", "v1", "max_pressure")
 PREEMPTION_SOURCES = ("none", *EMERGENCY_DETECTIONS)
-VERSION_LABELS = {"baseline": "Ciclo fixo 40/40", "v1": "v1 — heurística por fila", "v2": "v2 — DQN (41 entradas)",
-                  "v3": "v3 — DQN com pedestres (44 entradas)", "max_pressure": "Max-pressure (referência)"}
+VERSION_LABELS = {"v2": "TraffIQ (IA, v4)", "baseline": "Tempo fixo (como hoje)", "v1": "Regra de fila (v1)",
+                  "max_pressure": "Max-pressure (referência acadêmica)"}
 
 
 class StartRequest(BaseModel):
@@ -78,7 +81,7 @@ class EpisodeRunner:
         # é a heurística (sem checkpoint); o da v1.1 só é lido se ela for pedida,
         # e o painel não a oferece.
         self.v1_1_checkpoint = models / "visual-dqn-sp-best.pt"
-        self.checkpoints = {"v2": models / "dqn-v2-sem-motos-best.pt", "v3": models / "dqn-v3-fase-curta-best.pt"}
+        self.checkpoints = {"v2": models / "dqn-v2-sem-motos-best.pt"}
         self.announce_before_s = EmergencySettings.from_config(self.config).announce_before_s
         self.state: dict[str, Any] = {"is_running": False, "status": "parado", "request": None, "telemetry": None,
                                       "dispatched": [], "error": None, "last_summary": None}
@@ -98,8 +101,6 @@ class EpisodeRunner:
     def start(self, request: StartRequest) -> None:
         if request.scenario not in SCENARIOS or request.version not in VERSIONS or request.preemption not in PREEMPTION_SOURCES:
             raise ValueError("Cenário, versão ou fonte de preempção desconhecidos.")
-        if request.version == "v3" and request.scenario != "calibrated_ped":
-            raise ValueError("A v3 só roda no cenário com pedestres (calibrated_ped).")
         checkpoint = self.checkpoints.get(request.version)
         if checkpoint is not None and not checkpoint.exists():
             raise ValueError(f"Checkpoint não encontrado: {checkpoint}")
@@ -177,8 +178,7 @@ class EpisodeRunner:
             bridge.close()
 
     def _run_episode(self, request: StartRequest, bridge: UnityBridge) -> None:
-        version = build_version_policies(self.config, [request.version], self.v1_1_checkpoint, self.checkpoints["v2"],
-                                         self.checkpoints["v3"])[0]
+        version = build_version_policies(self.config, [request.version], self.v1_1_checkpoint, self.checkpoints["v2"])[0]
         environment = Environment(self.config, self.settings.base_dir, request.scenario,
                                   EpisodeSettings(self.settings.warmup_s, self.settings.control_s, version.decision_interval_s),
                                   state_version=version.state_version)

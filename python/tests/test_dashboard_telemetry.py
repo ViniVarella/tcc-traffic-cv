@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import unittest
 
-from dashboard.telemetry import approach_features, build_telemetry, ground_truth_metrics
+from dashboard.telemetry import approach_features, build_telemetry, ground_truth_metrics, signal_by_approach
 from vision.lane_features import LaneFeatures
 
 
@@ -32,12 +32,19 @@ class TelemetryTests(unittest.TestCase):
         empty = ground_truth_metrics({"halting_vehicles": 0, "waiting_time_s": 0.0, "pending_vehicles": 0})
         self.assertEqual(empty["mean_wait_per_stopped_s"], 0.0)
 
+    def test_signal_colors_follow_the_phase(self) -> None:
+        self.assertEqual(signal_by_approach("EAST_WEST_GREEN"), {"south": "red", "east": "green", "west": "green"})
+        self.assertEqual(signal_by_approach("SOUTH_YELLOW"), {"south": "yellow", "east": "red", "west": "red"})
+        for phase in ("ALL_RED", "PEDESTRIAN_GREEN", "PEDESTRIAN_CLEARANCE"):
+            self.assertEqual(set(signal_by_approach(phase).values()), {"red"})
+
     def test_telemetry_is_json_serializable(self) -> None:
         info = {"sim_time": 310.0, "phase": "SOUTH_GREEN", "phase_elapsed": 12.0, "reward": -0.2, "preempt_target": "SOUTH_GREEN",
                 "lane_features": FEATURES, "decision": object(),
                 "lane_metrics": {"halting_vehicles": 6, "waiting_time_s": 40.0, "pending_vehicles": 0, "pedestrian_waiting_s": 12.0}}
         telemetry = json.loads(json.dumps(build_telemetry(info)))
         self.assertEqual(telemetry["preempt_target"], "SOUTH_GREEN")
+        self.assertEqual(telemetry["signals"]["south"], "green")
         self.assertEqual(telemetry["vision"]["east"]["stopped"], 4)
         self.assertEqual(telemetry["ground_truth"]["pedestrian_waiting_s"], 12.0)
 

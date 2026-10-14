@@ -44,11 +44,27 @@ def ground_truth_metrics(lane_metrics: Mapping[str, float | int]) -> dict[str, f
     }
 
 
+# Cor do semáforo de cada aproximação por fase do PhaseManager. Leste e Oeste
+# andam juntos; all-red e as fases de pedestre deixam todos os veículos no vermelho.
+_SIGNALS = {
+    "EAST_WEST_GREEN": {"south": "red", "east": "green", "west": "green"},
+    "EAST_WEST_YELLOW": {"south": "red", "east": "yellow", "west": "yellow"},
+    "SOUTH_GREEN": {"south": "green", "east": "red", "west": "red"},
+    "SOUTH_YELLOW": {"south": "yellow", "east": "red", "west": "red"},
+}
+
+
+def signal_by_approach(phase: str) -> dict[str, str]:
+    """Cor do semáforo (green/yellow/red) de cada aproximação na fase dada."""
+    return dict(_SIGNALS.get(phase, {approach: "red" for approach in APPROACHES}))
+
+
 def build_telemetry(info: Mapping[str, Any]) -> dict[str, Any]:
     """Converte o dicionário do ``on_step`` em JSON para o painel."""
     return {
         "sim_time": float(info["sim_time"]),
         "phase": str(info["phase"]),
+        "signals": signal_by_approach(str(info["phase"])),
         "phase_elapsed": float(info.get("phase_elapsed", 0.0)),
         "reward": float(info["reward"]),
         # Verde que a preempção segura para a viatura (nome da fase), ou None.
