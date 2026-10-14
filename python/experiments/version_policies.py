@@ -1,5 +1,9 @@
 """Políticas de cada versão do projeto sobre o mesmo ambiente de avaliação.
 
+Aqui "versão" nomeia **controladores** (quem decide), não versões do produto
+TraffIQ: ``v2`` é o DQN estado v2, que decide da v2 à v4 do produto, e ``v3``
+é o experimento DQN estado v3. Nos textos, use a numeração do produto.
+
 Para que as versões sejam comparáveis, todas recebem a mesma percepção (as
 ``LaneFeatures`` do oráculo TraCI ou da visão), a mesma camada de segurança e o
 mesmo executor de episódios; muda só a lógica de decisão:

@@ -10,6 +10,17 @@ de São Paulo (cenário `sp`), integrando SUMO, Unity, YOLOv8, ByteTrack e DQN.
   `SUMO2UNITY_INTEGRATION.md`). `CODEX_HANDOFF.md` é só o retrato da migração
   do Codex: não o edite.
 
+## Versões do produto (TraffIQ)
+
+O produto se chama **TraffIQ** (TCC do Instituto Mauá de Tecnologia,
+CEUN-IMT). Nos textos (README, `docs/`, painel, tese), "versão" é do
+**produto**: v1 regra de fila → v1.1 DQN estado v1 → v2 DQN estado v2 → v3
+prioridade para viaturas → **v4 (atual)** fase de pedestres; da v2 à v4 quem
+decide é o DQN estado v2. O **DQN estado v3** é experimento, nunca versão.
+Tabelas de resultado rotulam controladores pelo modelo ("DQN estado v2"). No
+código, `--versions baseline,v1,v1.1,v2,v3,max_pressure` e `state_version`
+nomeiam controladores e estados; não renomeie.
+
 ## Arquitetura
 
 ```text
