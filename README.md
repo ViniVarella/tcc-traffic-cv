@@ -250,6 +250,12 @@ A visão detectou as 18 viaturas, sem alarme falso, mas só as vê nos últimos
 60 m (~5 s antes da linha, contra ~23 s do V2I). Sozinha, reduz a perda em
 65%; junto do V2I, serve de redundância.
 
+No cenário `original` (demanda equilibrada do netedit), também com
+percepção visual, v2 e 0 frames perdidos, a perda total cai de 11,2 s (sem
+preempção) para 2,9 s com V2I (*ground truth*: 2,9 s), 4,5 s só com visão e
+2,8 s com V2I + visão, com 100% sem parar nos modos com V2I. O custo para o
+tráfego é de +0,3 a +0,9 s.
+
 Com pedestres (`calibrated_ped`, fase de pedestres de 7 s + 11 s a cada
 ciclo), percepção visual, v2, 0 frames perdidos:
 

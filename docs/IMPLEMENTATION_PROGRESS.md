@@ -381,6 +381,33 @@ Chegadas 1471–1474 e fila de inserção final 0–1 nas adaptativas (ciclo fix
   diferenças da ordem de 0,3–0,6 s.
 - A v1.1 de novo é idêntica nas duas percepções (troca sempre no mínimo).
 
+**Preempção com visão** (v2, 18 viaturas; perda total = espera de entrada +
+perda na rede; arquivo `results/evaluation/preempcao-original-visual.json`,
+0 frames perdidos). "Nenhuma" e "visão" são de 2026-10-12. V2I e V2I + visão
+foram refeitos em 2026-10-13, depois da correção do aviso na inserção
+(`preempcao-original-visual-correcao.json`, log
+`results/logs/preempcao-visual-original-correcao.log`, juntados ao arquivo
+principal); os anteriores ficaram em
+`preempcao-original-visual-lacuna-insercao.json`.
+
+| Fonte do pedido | Perda total média | Máx. | Sem parar | Antecedência | Espera do tráfego |
+|---|---:|---:|---:|---:|---:|
+| nenhuma | 11,2 s | 21,8 s | 39% | — | 5,2 s |
+| V2I | 2,9 s | 6,6 s | 100% | ~24 s | 6,0 s |
+| visão | 4,5 s | 13,9 s | 94% | ~6 s | 5,5 s |
+| V2I + visão | **2,8 s** | 6,6 s | 100% | — | 6,1 s |
+
+Antes da correção: V2I e V2I + visão davam 3,7 s (máx. 15,9 s, 94% sem
+parar). A viatura que parava era a da seed 203: o DQN trocou o verde Sul no
+step da inserção.
+
+- A visão detectou as 18 viaturas em todos os modos, sem alarme falso.
+- V2I com a câmera dá o mesmo que com a percepção *ground truth* (2,9 s ×
+  2,9 s). A perda é maior que no calibrado (1,4 s) porque há mais fila de
+  inserção no `original` (espera de entrada de 1,8 s, contra 1,0 s).
+- A visão sozinha reduz a perda em 60% (11,2 → 4,5 s); no calibrado eram 65%.
+- Custo para o tráfego: +0,3 s (visão) a +0,9 s (V2I + visão).
+
 ### Avaliação visual com pedestres (Unity, 2026-10-09; fase antiga)
 
 Fase de pedestres antiga (41 s + 3 s a cada dois ciclos); com a fase
