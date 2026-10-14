@@ -1,7 +1,7 @@
 # TraffIQ
 
 **Aplicação de IA na otimização adaptativa de semáforos inteligentes** —
-Trabalho de Conclusão de Curso, Instituto Mauá de Tecnologia (CEUN-IMT).
+Trabalho de Conclusão de Curso, Instituto Mauá de Tecnologia.
 
 O TraffIQ é um sistema experimental de controle semafórico adaptativo baseado
 em visão computacional, avaliado em um cruzamento real de São Paulo (cenário
