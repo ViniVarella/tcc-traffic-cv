@@ -21,6 +21,12 @@ class PedestrianMetricsTests(unittest.TestCase):
         self.assertEqual(summary["pedestrian_mean_trip_s"], 3.0)
         self.assertEqual(summary["pedestrians_active_at_end"], 1)
 
+    def test_median_and_p90_of_the_waiting(self) -> None:
+        collector = PedestrianMetricsCollector()
+        collector.completed_waiting.extend([0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 300.0])
+        summary = collector.summary()
+        self.assertEqual((summary["pedestrian_median_waiting_s"], summary["pedestrian_p90_waiting_s"]), (50.0, 90.0))
+
     def test_pedestrians_from_the_warmup_are_not_counted(self) -> None:
         collector = PedestrianMetricsCollector(warmup_until_s=10.0)
         collector.observe(9, {"early": 0.0})

@@ -20,6 +20,17 @@ namespace TccTrafficVision
     }
 
     [Serializable]
+    public class PedestrianStateMessage
+    {
+        public string id;
+        public float x;
+        public float y;
+        public float z;
+        public float angle;
+        public float speed;
+    }
+
+    [Serializable]
     public class TrafficLightStateMessage
     {
         public string id;
@@ -35,6 +46,13 @@ namespace TccTrafficVision
         public float sim_time;
         public VehicleStateMessage[] vehicles;
         public TrafficLightStateMessage[] traffic_lights;
+        // Empty (or absent, from older senders) on the network without pedestrians.
+        public PedestrianStateMessage[] pedestrians;
+        // Large states (with pedestrians) exceed the macOS UDP datagram limit
+        // and arrive split: part 0..parts-1, each with a share of vehicles and
+        // pedestrians. Absent (0) in a state sent whole.
+        public int part;
+        public int parts;
     }
 
     public class PythonStateReceiver : MonoBehaviour
@@ -43,6 +61,7 @@ namespace TccTrafficVision
         [SerializeField] private int listenPort = 5004;
         [SerializeField] private VehicleManager vehicleManager;
         [SerializeField] private TrafficLightVisualController trafficLightVisualController;
+        [SerializeField] private PedestrianManager pedestrianManager;
 
         private UdpClient udpClient;
         private Thread receiveThread;
@@ -50,6 +69,8 @@ namespace TccTrafficVision
         private readonly object stateLock = new object();
         private readonly Queue<SimulationStateMessage> pendingStates = new Queue<SimulationStateMessage>();
         private int lastAppliedStep = -1;
+        private int assemblingStep = -1;
+        private readonly List<SimulationStateMessage> assemblingParts = new List<SimulationStateMessage>();
 
         /// <summary>
         /// Raised on the Unity main thread after all visual consumers received a
@@ -68,6 +89,11 @@ namespace TccTrafficVision
             if (trafficLightVisualController == null)
             {
                 trafficLightVisualController = FindFirstObjectByType<TrafficLightVisualController>();
+            }
+
+            if (pedestrianManager == null)
+            {
+                pedestrianManager = FindFirstObjectByType<PedestrianManager>();
             }
 
             udpClient = new UdpClient(listenPort);
@@ -97,11 +123,13 @@ namespace TccTrafficVision
             lastAppliedStep = stateToApply.step_id;
             Debug.Log(
                 $"Unity received state: step={stateToApply.step} step_id={stateToApply.step_id} " +
-                $"sim_time={stateToApply.sim_time:F2} vehicles={(stateToApply.vehicles == null ? 0 : stateToApply.vehicles.Length)}"
+                $"sim_time={stateToApply.sim_time:F2} vehicles={(stateToApply.vehicles == null ? 0 : stateToApply.vehicles.Length)} " +
+                $"pedestrians={(stateToApply.pedestrians == null ? 0 : stateToApply.pedestrians.Length)}"
             );
 
             vehicleManager?.ApplyState(stateToApply.vehicles);
             trafficLightVisualController?.ApplyState(stateToApply.traffic_lights);
+            pedestrianManager?.ApplyState(stateToApply.pedestrians);
             StateApplied?.Invoke(stateToApply);
         }
 
@@ -122,6 +150,12 @@ namespace TccTrafficVision
                         continue;
                     }
 
+                    state = AssembleParts(state);
+                    if (state == null)
+                    {
+                        continue;
+                    }
+
                     lock (stateLock)
                     {
                         pendingStates.Enqueue(state);
@@ -139,6 +173,61 @@ namespace TccTrafficVision
             {
                 Debug.LogError($"PythonStateReceiver failed: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Returns the complete state once every part of its step arrived, or null
+        /// while parts are missing. A part of a newer step drops the incomplete one.
+        /// Runs only on the receive thread.
+        /// </summary>
+        private SimulationStateMessage AssembleParts(SimulationStateMessage state)
+        {
+            if (state.parts <= 1)
+            {
+                return state;
+            }
+
+            if (state.step_id != assemblingStep)
+            {
+                if (assemblingParts.Count > 0)
+                {
+                    Debug.LogWarning(
+                        $"PythonStateReceiver dropped step_id={assemblingStep}: " +
+                        $"{assemblingParts.Count} of {assemblingParts[0].parts} parts received.");
+                }
+
+                assemblingStep = state.step_id;
+                assemblingParts.Clear();
+            }
+
+            assemblingParts.Add(state);
+            if (assemblingParts.Count < state.parts)
+            {
+                return null;
+            }
+
+            var vehicles = new List<VehicleStateMessage>();
+            var pedestrians = new List<PedestrianStateMessage>();
+            foreach (SimulationStateMessage part in assemblingParts)
+            {
+                if (part.vehicles != null)
+                {
+                    vehicles.AddRange(part.vehicles);
+                }
+
+                if (part.pedestrians != null)
+                {
+                    pedestrians.AddRange(part.pedestrians);
+                }
+            }
+
+            state.vehicles = vehicles.ToArray();
+            state.pedestrians = pedestrians.ToArray();
+            state.part = 0;
+            state.parts = 1;
+            assemblingParts.Clear();
+            assemblingStep = -1;
+            return state;
         }
 
         private void OnDestroy()

@@ -46,9 +46,9 @@ protótipos antigos.
 
 - A **política** observa apenas dados visuais. E2 e demais dados perfeitos do
   SUMO **não** entram na decisão.
-- A **recompensa de treino** usa verdade de terreno do TraCI (espera dos
+- A **recompensa de treino** usa *ground truth* do TraCI (espera dos
   veículos). Relatórios devem declarar isso; não chame o loop de "visão pura".
-- E2 serve apenas para avaliação offline visão × verdade de terreno
+- E2 serve apenas para avaliação offline visão × *ground truth*
   (`vision_evaluation.lane_detector_mapping` em `sp.yaml`,
   `vision/e2_evaluation.py`).
 
@@ -57,7 +57,7 @@ protótipos antigos.
 ```text
 python/                 código Python (rodar comandos a partir daqui)
   configs/sp.yaml       fonte de verdade do cenário SP
-  sumo/                 traci_client.py, scenarios.py, lane_feature_source.py (oráculo TraCI),
+  sumo/                 traci_client.py, scenarios.py, lane_feature_source.py (ground truth TraCI),
                         state_extractor.py, experiment_metrics.py, ground_truth.py
   bridge/               unity_comm.py (UDP/TCP), frame_bundle.py, protocol.py, serialization.py
   vision/               yolo_detector, byte_track_tracker, roi_counter, queue_estimator,
@@ -79,15 +79,24 @@ docs/                   guias de implementação e integração Sumo2Unity
 
 `optimization/SP/Cruzamento.{net,rou,add}.xml` são cópias de `sumo/sp/`; se
 alterar um, verifique o outro. Exceção deliberada: `sumo/sp/Cruzamento.calibrated.rou.xml`
-usa chegadas Poisson (`period="exp(...)"`) e inserção realista
-(`departLane="best" departSpeed="max"`), ao contrário da cópia em `optimization/SP`.
+usa chegadas Poisson (`period="exp(...)"`), inserção realista
+(`departLane="best" departSpeed="max"`) e a demanda sem motos, ao contrário da
+cópia em `optimization/SP` (que segue com a calibração antiga).
 
 ## Cenário SP (`python/configs/sp.yaml`)
 
 - SUMO: step 1 s, porta TraCI 8873. Cenários em `sumo.scenarios` (escolha com
   `--scenario`; padrão `sumo.default_scenario`):
-  - `calibrated` (padrão): demanda medida nos vídeos de drone — Leste
-    saturado (v/c≈1,0), Sul 0,39, Oeste 0,20. É o cenário principal.
+  - `calibrated` (padrão): demanda medida nos vídeos de drone **sem motos**
+    (andam no corredor e não formam fila; "triciclos" são motos mal
+    classificadas; rótulos de pedestre do SimJamCV não são confiáveis).
+    Pesados entram como carros. Leste 976 veíc/h (v/c≈0,58), Sul 727 (0,22),
+    Oeste 139 (0,17). Gerada por `experiments.build_calibrated_demand`; não
+    edite a rota à mão. É o cenário principal.
+  - `calibrated_motos`: **registro histórico** — a calibração anterior, que
+    contava motos como carros e saturava o Leste (v/c≈1,0, contra 6,6 s de
+    atraso, nível A, medidos pelo drone). Resultados com ela (até 2026-10-07)
+    não entram em tabelas novas.
   - `original`: demanda equilibrada do netedit (v/c≈0,5); o tempo de verde
     quase não muda o resultado. Mantido para comparar com resultados antigos.
 - Unity: estado UDP `127.0.0.1:5004`, frames TCP `127.0.0.1:5005`.
@@ -124,7 +133,8 @@ usa chegadas Poisson (`period="exp(...)"`) e inserção realista
 
 - `sumo/emergency.py` insere viaturas (tipo `emergency`, sem `bluelight`, então
   obedecem ao semáforo) numa agenda reproduzível pela seed, depois do
-  aquecimento, e emite o aviso V2I (`EmergencyRequest`: aproximação e tempo
+  aquecimento, e emite o aviso V2I (*vehicle-to-infrastructure*, veículo → controlador do
+  semáforo; `EmergencyRequest`: aproximação e tempo
   até a linha de retenção) desde `announce_before_s` antes de entrarem.
 - `controller/preemption.py` atende uma viatura por vez (menor tempo estimado,
   dentro de `activation_eta_s`) até ela cruzar a linha;
@@ -137,6 +147,11 @@ usa chegadas Poisson (`period="exp(...)"`) e inserção realista
   frames): classe `emergency` dentro de uma ROI em `confirm_frames` frames
   seguidos; sem vê-la, o pedido segue pelo tempo estimado até a linha +
   `hold_margin_s`. Uma viatura por aproximação de cada vez.
+- Agenda: uma viatura a cada ~5 min (`interval_s` = 300; até 2026-10 era
+  180 s, resultados antigos têm o sufixo `-viaturas-3min`). A perda dentro da
+  rede (`mean_time_loss_at_crossing_s`) não vê a espera na fila de inserção,
+  que no Leste saturado chega a minutos: use `mean_total_loss_at_crossing_s`
+  (inserção + perda na rede).
 - Parâmetros em `emergency:` no `sp.yaml`; avaliação em
   `experiments.evaluate_preemption` (mesma agenda para todas as políticas;
   `--perception visual` com Unity compara `v2i`, `vision` e `both`).
@@ -157,16 +172,37 @@ usa chegadas Poisson (`period="exp(...)"`) e inserção realista
   pedestre; o gerador põe `contPos="0"` nessas conexões, senão os dois pontos
   de espera internos cedem um ao outro (deadlock e teleportes).
 - Fase exclusiva de pedestres (fases 5 e 6 do programa; bloco `pedestrians:`
-  do `sp.yaml`): todos os veículos no vermelho, a cada `every_cycles` = 2
-  ciclos (L/O → Sul → L/O → Sul → pedestres), verde de 41 s (maior "L" da
-  rede, 48,05 m, a 1,2 m/s) + 3 s de liberação. É obrigatória como o
+  do `sp.yaml`): todos os veículos no vermelho depois de todo verde Sul
+  (`every_cycles` = 1: L/O → Sul → pedestres), 7 s de verde + 11 s de
+  liberação em vermelho total (travessia mais larga, 13,0 m, a 1,2 m/s: quem
+  entra no fim do verde termina antes dos veículos). Quem atravessa duas ruas
+  espera a fase seguinte na esquina. Até 2026-10-13 eram 41 s (maior "L") +
+  3 s a cada 2 ciclos; resultados e checkpoints v3 com essa regra não se
+  comparam com os atuais (v3 atual: `dqn-v3-fase-curta-best.pt`). É obrigatória como o
   amarelo: a política não a encerra, e a preempção espera o fim dela (uma
-  fase de pedestres ainda não iniciada é adiada pela viatura).
+  fase de pedestres ainda não iniciada é adiada pela viatura e vem no
+  all-red seguinte, logo depois do verde dela; o ciclo retoma pelo verde que
+  viria). Esperar mais um verde Sul deixava pedestres até 7 min parados.
 - `Environment` detecta a rede com pedestres pelo semáforo
   (`pedestrian_link_count`) e liga a fase e as métricas de pedestre
   (`sumo/pedestrian_metrics.py`).
-- Escopo atual: só SUMO. A Unity ainda não renderiza pedestres nem sinais de
-  pedestre.
+- Recompensa nos cenários com pedestres: `(1 − w)·veículos − w·pedestres`
+  (`pedestrians.reward_weight` = 0,3, referência 1200 s). Sem o termo, o v3
+  aprendeu a segurar o verde para espaçar a fase de pedestres.
+- Unity: a mensagem de estado leva `pedestrians` (vazia na rede sem
+  pedestres) e o `PedestrianManager` os renderiza (modelos Quaternius CC0,
+  versão *Smooth*, escala de importação 0,36; menu *Traffic Vision >
+  Pedestrians > Configure SP Pedestrians* recria clipes em loop, controllers e
+  prefabs). Faixas zebradas e cantos de espera vêm de
+  `Cruzamento.ped.net.xml` (menu *Build SP Crosswalks and Corners*, raiz
+  `SP Pedestrian Infrastructure`; rode depois de *Configure SP Visuals*,
+  pois os cantos se juntam às calçadas geradas). O mesmo menu cria os 8
+  sinais de pedestre (`PedestrianSignalHead`, link 10–13 da faixa, verde só
+  com `G`/`g`), atualizados pelo `TrafficLightVisualController`. O YOLO de duas
+  classes não detecta os pedestres; v1–v3 já foram avaliadas com visão no
+  `calibrated_ped`. Com pedestres o estado pode passar do limite UDP do
+  macOS (9216 bytes): `serialize_state_datagrams` o divide em partes
+  (`part`/`parts`) que o `PythonStateReceiver` junta pelo `step_id`.
 
 ## Contrato do DQN
 
@@ -189,7 +225,7 @@ carregam como v1):
   - As features vêm de `ApproachKinematicsTracker` (`vision/lane_features.py`),
     alimentado por duas fontes com o mesmo contrato: `VisualLaneFeatureSource`
     (base das bboxes → homografia da ROI) e `TraciLaneFeatureSource`
-    (posições reais no intervalo da ROI — oráculo do pré-treino). Um teste de
+    (posições reais no intervalo da ROI — fonte *ground truth* do pré-treino). Um teste de
     paridade garante features idênticas para a mesma trajetória.
   - "Parado" = < 1,39 m/s por ≥ 1 s (padrão do E2). A Unity põe o pivô do
     modelo na posição da frente do veículo no SUMO; `lane_state.visual_ground_offset_m`
@@ -209,8 +245,11 @@ carregam como v1):
 - Checkpoints (`DqnAgent.save`) guardam `config` e `metadata` (versão, nomes
   das features, fonte, cenário). Se a dimensão ou a semântica do estado mudar,
   pesos antigos não são reaproveitáveis: crie uma nova versão de estado.
-- **Nunca** use o oráculo TraCI para controlar em uma avaliação "visual" sem
-  rotulá-la como percepção oráculo.
+- Nos textos (README, `docs/`, tese) a percepção com features do TraCI
+  chama-se **percepção *ground truth***, nunca "oráculo". No código ela
+  continua `oracle` (`--perception oracle`, `*-oracle.json`); não renomeie.
+- **Nunca** use a percepção *ground truth* (TraCI) para controlar em uma avaliação "visual" sem
+  rotulá-la como percepção *ground truth*.
 - **Compare versões só no mesmo ambiente**: mesmo cenário, seeds, aquecimento,
   duração, camada de segurança, métricas e percepção; muda só a decisão. Use
   `experiments.compare_versions` (regras das versões em
@@ -317,10 +356,15 @@ Todos a partir de `python/`:
   --baseline <a.json> --visual-adaptive <b.json> --output <saida.json>
 
 # Pré-treino do DQN v2 só com SUMO. Use os dois cenários: treinada só no
-# calibrado, a v2 especializa e piora com demanda equilibrada.
-../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated,original
+# calibrado, a v2 especializa e piora com demanda equilibrada. Referência
+# (demanda sem motos): dqn-v2-sem-motos-best.pt, padrão dos scripts v2.
+../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated,original \
+  --checkpoint-output ../results/models/dqn-v2-sem-motos-last.pt --best-checkpoint-output ../results/models/dqn-v2-sem-motos-best.pt
 
-# Avaliar ciclo fixo, max-pressure e checkpoints v2 com percepção oráculo (só SUMO)
+# Gerar a demanda calibrada (sem motos) a partir dos dados do drone
+../.venv/bin/python -m experiments.build_calibrated_demand
+
+# Avaliar ciclo fixo, max-pressure e checkpoints v2 com percepção ground truth (só SUMO)
 ../.venv/bin/python -m experiments.evaluate_policies_sumo --scenario calibrated \
   --dqn-model ../results/models/dqn-v2-pretrain-best.pt --output ../results/evaluation/policies-sumo-oracle-calibrated.json
 
@@ -328,7 +372,7 @@ Todos a partir de `python/`:
 ../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception oracle   # só SUMO
 ../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception visual   # Unity em Play Mode
 
-# Política v2 com visão (Unity em Play Mode) + log visão × oráculo por step
+# Política v2 com visão (Unity em Play Mode) + log visão × ground truth por step
 ../.venv/bin/python -m experiments.run_visual_policy --policy dqn --dqn-model <checkpoint-v2> --seeds 1001
 ../.venv/bin/python -m experiments.evaluate_lane_features --step-log <log.jsonl> --dqn-model <checkpoint-v2>
 
@@ -338,11 +382,12 @@ Todos a partir de `python/`:
 # Rede com pedestres (regenera os arquivos .ped do cenário SP)
 ../.venv/bin/python -m experiments.build_pedestrian_network
 
-# Pré-treino do DQN v3 (com pedestres)
+# Pré-treino do DQN v3 (com pedestres; referência: w = 0,3, 100 episódios, seeds 51–150)
 ../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated_ped,original_ped --state-version 3 \
-  --checkpoint-output ../results/models/dqn-v3-ped-pretrain-last.pt --best-checkpoint-output ../results/models/dqn-v3-ped-pretrain-best.pt
+  --episodes 100 --seed-start 51 --pedestrian-reward-weight 0.3 \
+  --checkpoint-output ../results/models/dqn-v3-fase-curta-last.pt --best-checkpoint-output ../results/models/dqn-v3-fase-curta-best.pt
 
-# Versões com pedestres (oráculo); v3 só entra se pedido
+# Versões com pedestres (ground truth); v3 só entra se pedido
 ../.venv/bin/python -m experiments.compare_versions --scenario calibrated_ped --perception oracle --versions baseline,v1,v2,v3,max_pressure
 
 # Preempção para emergências (mesma agenda de viaturas; só SUMO)
@@ -377,3 +422,7 @@ os fluxos `perHour` são equiespaçados e a seed quase não muda a demanda; no
 - Commits em português no estilo Conventional Commits (`feat:`, `docs:`, `fix:`).
   Não reescreva histórico já publicado; trabalhe em branch nova para mudanças
   de contrato.
+- Ao criar uma branch, ajuste o upstream para a branch de mesmo nome no
+  remoto (`git push -u origin <branch>`), nunca para `origin/main`
+  (`git checkout -b x origin/main` faz a branch rastrear a `main`). Confira com
+  `git rev-parse --abbrev-ref <branch>@{upstream}`.

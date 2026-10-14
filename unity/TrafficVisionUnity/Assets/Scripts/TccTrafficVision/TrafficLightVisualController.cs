@@ -6,6 +6,10 @@ namespace TccTrafficVision
     {
         [SerializeField] private Renderer targetRenderer;
 
+        // Built by Traffic Vision > Pedestrians > Build SP Crosswalks and
+        // Corners; looked up once, since the scene never adds heads at runtime.
+        private PedestrianSignalHead[] pedestrianSignals;
+
         public void ApplyState(TrafficLightStateMessage[] trafficLights)
         {
             if (trafficLights == null || trafficLights.Length == 0 || trafficLights[0] == null)
@@ -14,6 +18,7 @@ namespace TccTrafficVision
             }
 
             string state = trafficLights[0].state;
+            ApplyPedestrianSignals(state);
             // Link indices are defined by Cruzamento.net.xml. E2 (East) owns
             // 0-2, E3 (South) owns 3-8, and E6 (West) owns index 9.
             bool appliedToPosts = ApplyPost("Signal Post East", state, 0, 2)
@@ -31,6 +36,18 @@ namespace TccTrafficVision
             }
 
             targetRenderer.material.color = ResolveColor(state);
+        }
+
+        private void ApplyPedestrianSignals(string state)
+        {
+            pedestrianSignals ??= FindObjectsByType<PedestrianSignalHead>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            foreach (PedestrianSignalHead head in pedestrianSignals)
+            {
+                if (head != null)
+                {
+                    head.ApplyState(state);
+                }
+            }
         }
 
         private bool ApplyPost(string postName, string state, int firstLinkIndex, int lastLinkIndex)

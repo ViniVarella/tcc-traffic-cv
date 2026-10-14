@@ -96,8 +96,8 @@
         <phase duration="1" state="rrrrrrrrrrrrrr" />
         <phase duration="41" state="rrrGgGGGGrrrrr" />
         <phase duration="3" state="rrryyyyyyrrrrr" />
-        <phase duration="30" state="rrrrrrrrrrGGGG" />
-        <phase duration="3" state="rrrrrrrrrrrrrr" />
+        <phase duration="7" state="rrrrrrrrrrGGGG" />
+        <phase duration="11" state="rrrrrrrrrrrrrr" />
     </tlLogic>
     <junction id="J1" type="dead_end" x="-12.79" y="96.78" incLanes="E0_0 E0_1 E0_2" intLanes="" shape="1.20,97.30 -12.79,96.78" />
     <junction id="J15" type="dead_end" x="-97.20" y="22.43" incLanes="E5_0 E5_1 E5_2" intLanes="" shape="-97.20,22.43 -94.29,32.00 -97.20,22.43" />

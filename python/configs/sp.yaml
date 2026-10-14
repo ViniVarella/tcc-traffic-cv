@@ -3,11 +3,16 @@ experiment:
   seed: 42
 
 sumo:
-  # calibrated: demanda medida nos vídeos de drone (Leste saturado, v/c ~1,0).
+  # calibrated: demanda medida nos vídeos de drone sem motos (andam no corredor),
+  # gerada por experiments.build_calibrated_demand: Leste v/c ~0,58, Sul 0,22,
+  # Oeste 0,17 com o plano fixo.
   # original: demanda do netedit, equilibrada entre as fases (v/c ~0,5).
+  # calibrated_motos: REGISTRO HISTÓRICO — a calibração anterior, que contava
+  # motos como carros e saturava o Leste (v/c ~1,0). Não use em resultados novos.
   scenarios:
     calibrated: "../sumo/sp/Cruzamento.calibrated.sumocfg"
     original: "../sumo/sp/Cruzamento.sumocfg"
+    calibrated_motos: "../sumo/sp/Cruzamento.calibrated-motos.sumocfg"
     # Mesmas demandas de veículos + pedestres (rede Cruzamento.ped.net.xml com
     # calçadas e faixas de pedestre; gerada por experiments.build_pedestrian_network).
     calibrated_ped: "../sumo/sp/Cruzamento.calibrated.ped.sumocfg"
@@ -40,16 +45,18 @@ traffic_light:
 
 # Fase exclusiva de pedestres (só nos cenários *_ped): todos os veículos no
 # vermelho e todas as faixas de pedestre no verde, a cada every_cycles ciclos
-# (L/O → Sul → L/O → Sul → pedestres). O verde cobre o maior percurso em "L"
-# (travessia + esquina + travessia vizinha = 48,05 m, esquina Sudoeste) a
-# 1,2 m/s; a liberação é vermelho total. Valores de
-# experiments.build_pedestrian_network.
+# (L/O → Sul → pedestres). Verde curto para começar a travessia e liberação em
+# vermelho total (o "vermelho intermitente") que cobre a travessia mais larga
+# (Leste, 13,0 m) a 1,2 m/s: quem entra no último segundo do verde termina antes
+# de os veículos voltarem. Quem atravessa duas ruas espera a fase seguinte na
+# esquina. Até 2026-10-13 a fase era a cada 2 ciclos, com 41 s de verde (maior
+# "L", 48,05 m) + 3 s. Comprimentos de experiments.build_pedestrian_network.
 pedestrians:
-  every_cycles: 2
+  every_cycles: 1
   walking_speed_mps: 1.2
-  longest_l_m: 48.05
-  green_seconds: 41
-  clearance_seconds: 3
+  widest_crossing_m: 13.0
+  green_seconds: 7
+  clearance_seconds: 11
   # Recompensa de treino nos cenários *_ped: (1 − w)·veículos − w·pedestres,
   # com pedestres = min(1, soma da espera atual dos pedestres parados / ref.).
   # Sem este termo, o v3 aprendeu a segurar o verde para espaçar a fase de
@@ -133,7 +140,7 @@ lane_state:
 # estimado até a linha de retenção fica abaixo de activation_eta_s; pode
 # encurtar o verde mínimo, mas nunca pula amarelo nem all-red.
 emergency:
-  interval_s: 180
+  interval_s: 300
   jitter_s: 60
   first_after_s: 30
   announce_before_s: 15

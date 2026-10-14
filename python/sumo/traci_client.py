@@ -195,6 +195,21 @@ class SumoClient:
         self._ensure_started()
         return {str(person_id): float(traci.person.getSpeed(person_id)) for person_id in traci.person.getIDList()}
 
+    def get_pedestrian_state(self) -> list[dict[str, Any]]:
+        """Snapshot serializavel dos pedestres (vazio na rede sem pedestres)."""
+        self._ensure_started()
+        pedestrians: list[dict[str, Any]] = []
+        for person_id in traci.person.getIDList():
+            x_pos, y_pos = traci.person.getPosition(person_id)
+            pedestrians.append({
+                "id": str(person_id),
+                "x": float(x_pos),
+                "y": float(y_pos),
+                "angle": float(traci.person.getAngle(person_id)),
+                "speed": float(traci.person.getSpeed(person_id)),
+            })
+        return pedestrians
+
     def get_pedestrian_waiting_s(self) -> float:
         """Soma da espera atual (consecutiva, parado) dos pedestres na rede."""
         self._ensure_started()
