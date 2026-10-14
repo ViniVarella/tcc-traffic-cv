@@ -1,3 +1,20 @@
+/* Fontes locais (sem internet na feira); origem e licença em ASSETS.md. */
+@font-face {
+    font-family: 'Inter';
+    src: url('fonts/inter-latin-wght.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('fonts/jetbrains-mono-latin-wght.woff2') format('woff2');
+    font-weight: 100 800;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* ============================================
    Traffic CV — Design System
    ============================================ */
