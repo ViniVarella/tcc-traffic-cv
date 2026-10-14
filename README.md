@@ -222,7 +222,8 @@ devem ser comparados com a v2.
 
 ## Prioridade para veículos de emergência
 
-Viaturas de emergência avisam sua aproximação por V2I (como no despacho por
+Viaturas de emergência avisam sua aproximação por V2I (*vehicle-to-infrastructure*,
+comunicação entre o veículo e o controlador do semáforo; como no despacho por
 GPS dos sistemas reais), e o semáforo abre para o sentido de onde elas vêm:
 
 - se o verde já é delas, é mantido, até além do verde máximo;

@@ -28,7 +28,7 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - DQN v2 (features por faixa, pré-treino só SUMO e avaliação visual):
   concluído em 2026-09-29 — seção **DQN v2** abaixo.
 - Câmeras reposicionadas, ROIs de 60 m e preempção para veículos de
-  emergência por aviso V2I: concluídos em 2026-09-30 — seção **Ambiente com
+  emergência por aviso V2I (*vehicle-to-infrastructure*): concluídos em 2026-09-30 — seção **Ambiente com
   ROIs de 60 m e preempção** abaixo.
 - YOLO de duas classes, detecção visual das viaturas, correção do filtro da
   ROI e avaliações visuais do ambiente de 60 m: concluídos em 2026-10-04.
@@ -676,6 +676,13 @@ Correção: `filter_detections_to_roi(..., anchor="bottom_center")` no
 o pedido passa a sair a ~55–60 m da linha, em vez de ~40 m.
 
 ### Preempção por aviso V2I
+
+V2I (*vehicle-to-infrastructure*, "veículo para infraestrutura"):
+comunicação direta entre o veículo e equipamentos da via, aqui o controlador
+do semáforo. Na prática, a viatura informa a aproximação de onde vem e o tempo
+estimado até a linha de retenção, a partir do GPS dela ou do despacho da
+central. No SUMO o aviso é simulado por `sumo/emergency.py`
+(`EmergencyRequest`).
 
 - Viaturas de emergência entram a cada ~5 min, sorteadas entre Sul, Leste e
   Oeste, obedecendo ao semáforo.
