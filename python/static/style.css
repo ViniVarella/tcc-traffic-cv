@@ -571,11 +571,11 @@ body {
 }
 
 .highlight-value {
-    /* Número à direita, separado do texto por uma linha. */
+    /* Número centralizado na coluna, separado do texto por uma linha. */
     flex: 0 0 165px;
     padding-right: 20px;
     border-right: 1px solid var(--border-subtle);
-    text-align: right;
+    text-align: center;
     font-size: 44px;
     font-weight: 800;
     letter-spacing: -1px;
