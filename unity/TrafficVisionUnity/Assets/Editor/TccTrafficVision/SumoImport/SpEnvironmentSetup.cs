@@ -22,7 +22,6 @@ namespace TccTrafficVision.Editor.SumoImport
         private const string House08Path = "Assets/Art/TrafficModels/Models/Buildings/Residential House 08/Residential House 08.fbx";
         private const string MaplePath = "Assets/Art/TrafficModels/Models/Trees/Maple/Maple.fbx";
         private const string PinePath = "Assets/Art/TrafficModels/Models/Trees/Pine/Pine.fbx";
-        private const string StreetLampPath = "Assets/Art/TrafficModels/Models/StreetObjects/Street Lamps/Street Lamp 02.fbx";
 
         [MenuItem("Traffic Vision/SUMO/Build SP Presentation Environment")]
         public static void Build()
@@ -53,7 +52,6 @@ namespace TccTrafficVision.Editor.SumoImport
             CreateGround(root.transform, grass);
             CreateBuildings(root.transform);
             CreateVegetation(root.transform);
-            CreateStreetFurniture(root.transform);
             ConfigureLighting();
 
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
@@ -95,7 +93,7 @@ namespace TccTrafficVision.Editor.SumoImport
                 new Vector3(-72f, 0f, 70f), new Vector3(-63f, 0f, 60f), new Vector3(-50f, 0f, 72f), new Vector3(-39f, 0f, 65f), new Vector3(-63f, 0f, 33f),
                 new Vector3(15f, 0f, 72f), new Vector3(35f, 0f, 70f), new Vector3(55f, 0f, 63f), new Vector3(70f, 0f, 55f), new Vector3(70f, 0f, 25f),
                 new Vector3(-75f, 0f, -55f), new Vector3(-65f, 0f, -70f), new Vector3(-50f, 0f, -72f), new Vector3(-62f, 0f, -35f), new Vector3(-35f, 0f, -72f),
-                new Vector3(15f, 0f, -72f), new Vector3(38f, 0f, -71f), new Vector3(59f, 0f, -62f), new Vector3(72f, 0f, -50f), new Vector3(72f, 0f, -25f)
+                new Vector3(19.7f, 0f, -73.7f), new Vector3(38f, 0f, -71f), new Vector3(59f, 0f, -62f), new Vector3(72f, 0f, -50f), new Vector3(77.5f, 0f, -10f)
             };
             for (int index = 0; index < maplePositions.Length; index++)
             {
@@ -105,24 +103,44 @@ namespace TccTrafficVision.Editor.SumoImport
             Vector3[] pinePositions =
             {
                 new Vector3(-88f, 0f, 72f), new Vector3(-82f, 0f, 42f), new Vector3(80f, 0f, 62f), new Vector3(83f, 0f, 28f),
-                new Vector3(-86f, 0f, -60f), new Vector3(-65f, 0f, -84f), new Vector3(58f, 0f, -78f), new Vector3(83f, 0f, -46f)
+                new Vector3(-86f, 0f, -60f), new Vector3(-65f, 0f, -84f), new Vector3(58f, 0f, -78f), new Vector3(81.1f, 0f, -50.1f)
             };
             for (int index = 0; index < pinePositions.Length; index++)
             {
                 PlaceModel(PinePath, $"Pine {index + 1:00}", root, pinePositions[index], index * 47f, 10f);
             }
-        }
 
-        private static void CreateStreetFurniture(Transform root)
-        {
-            Vector3[] positions =
+            // Extra trees sampled outside the road network: at least 9 m from
+            // any lane, sidewalk or junction of Cruzamento.ped.net.xml (and from
+            // each road's extension past the map edge, which the cameras see in
+            // the background), 14 m from the houses and 9 m from other trees.
+            Vector3[] extraMaplePositions =
             {
-                new Vector3(-25f, 0f, 19f), new Vector3(16f, 0f, 15f), new Vector3(-29f, 0f, -27f), new Vector3(21f, 0f, -27f),
-                new Vector3(-50f, 0f, 21f), new Vector3(42f, 0f, 15f), new Vector3(-49f, 0f, -31f), new Vector3(44f, 0f, -29f)
+                new Vector3(48.9f, 0f, 97.5f), new Vector3(31.1f, 0f, 92.8f), new Vector3(12.3f, 0f, 92.2f), new Vector3(-44.2f, 0f, 88.9f),
+                new Vector3(55.7f, 0f, 88.5f), new Vector3(12.8f, 0f, 56.8f), new Vector3(44.3f, 0f, 56.4f), new Vector3(-91.3f, 0f, 52.0f),
+                new Vector3(-101.5f, 0f, 42.6f), new Vector3(75.6f, 0f, 42.5f), new Vector3(34.6f, 0f, 37.1f), new Vector3(48.5f, 0f, 19.8f),
+                new Vector3(28.3f, 0f, 19.2f), new Vector3(91.0f, 0f, 13.6f), new Vector3(60.9f, 0f, 10.6f), new Vector3(-106.5f, 0f, 0.3f),
+                new Vector3(-86.5f, 0f, -1.5f), new Vector3(59.2f, 0f, -1.6f), new Vector3(86.2f, 0f, -6.5f), new Vector3(-49.5f, 0f, -11.3f),
+                new Vector3(-56.7f, 0f, -19.4f), new Vector3(-46.5f, 0f, -21.2f), new Vector3(-101.0f, 0f, -35.4f), new Vector3(-78.9f, 0f, -42.7f),
+                new Vector3(31.3f, 0f, -43.9f), new Vector3(-41.9f, 0f, -44.8f), new Vector3(-26.6f, 0f, -68.4f), new Vector3(42.2f, 0f, -81.6f),
+                new Vector3(-42.2f, 0f, -84.5f), new Vector3(33.2f, 0f, -95.8f)
             };
-            for (int index = 0; index < positions.Length; index++)
+            for (int index = 0; index < extraMaplePositions.Length; index++)
             {
-                PlaceModel(StreetLampPath, $"Street Lamp {index + 1:00}", root, positions[index], index % 2 == 0 ? 0f : 180f, 7f);
+                int number = maplePositions.Length + index + 1;
+                PlaceModel(MaplePath, $"Maple {number:00}", root, extraMaplePositions[index], number * 29f, 7f);
+            }
+
+            Vector3[] extraPinePositions =
+            {
+                new Vector3(60.3f, 0f, 106.9f), new Vector3(86.9f, 0f, 104.2f), new Vector3(97.7f, 0f, 91.6f), new Vector3(-89.3f, 0f, 82.5f),
+                new Vector3(95.0f, 0f, 72.7f), new Vector3(-94.2f, 0f, 62.0f), new Vector3(77.8f, 0f, -88.6f), new Vector3(-54.4f, 0f, -103.8f),
+                new Vector3(-69.9f, 0f, -107.9f), new Vector3(-109.0f, 0f, -111.0f)
+            };
+            for (int index = 0; index < extraPinePositions.Length; index++)
+            {
+                int number = pinePositions.Length + index + 1;
+                PlaceModel(PinePath, $"Pine {number:00}", root, extraPinePositions[index], number * 47f, 10f);
             }
         }
 
@@ -130,7 +148,8 @@ namespace TccTrafficVision.Editor.SumoImport
         {
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.70f, 0.75f, 0.80f);
-            RenderSettings.fog = true;
+            // No fog: the approved scene keeps it off, and it washes out the camera backgrounds.
+            RenderSettings.fog = false;
             RenderSettings.fogColor = new Color(0.68f, 0.77f, 0.82f);
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogStartDistance = 85f;
@@ -145,9 +164,17 @@ namespace TccTrafficVision.Editor.SumoImport
             }
         }
 
+        /// <summary>
+        /// Turns the model around the vertical axis only. Some FBX roots carry
+        /// their own rotation (Maple and Pine: trunk node at 90 degrees in X);
+        /// replacing it with the yaw laid the trees on their side, so the yaw
+        /// is composed with the imported root rotation instead.
+        /// </summary>
         private static void PlaceModel(string assetPath, string objectName, Transform parent, Vector3 position, float yaw, float targetHeight)
         {
-            PlaceModel(assetPath, objectName, parent, position, Quaternion.Euler(0f, yaw, 0f), targetHeight);
+            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+            Quaternion rootRotation = model != null ? model.transform.localRotation : Quaternion.identity;
+            PlaceModel(assetPath, objectName, parent, position, Quaternion.Euler(0f, yaw, 0f) * rootRotation, targetHeight);
         }
 
         private static void PlaceModel(string assetPath, string objectName, Transform parent, Vector3 position, Quaternion rotation, float targetHeight)
