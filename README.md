@@ -1,23 +1,24 @@
-# TCC Traffic CV
+# TraffIQ
 
-Sistema experimental de controle semafórico adaptativo baseado em visão
-computacional, avaliado em um cruzamento real de São Paulo (cenário `sp`).
+**Aplicação de IA na otimização adaptativa de semáforos inteligentes** —
+Trabalho de Conclusão de Curso, Instituto Mauá de Tecnologia (CEUN-IMT).
 
-O SUMO gera a dinâmica do tráfego, a Unity renderiza a cena 3D e três câmeras
-virtuais, o YOLO detecta os veículos nos frames, o ByteTrack os associa entre
-frames e um DQN decide, a partir dessas estimativas visuais, quando manter ou
-trocar o verde. **A política de controle não usa sensores perfeitos do SUMO**:
-os dados internos do SUMO servem para renderização, sincronização, recompensa
-de treino e avaliação.
+O TraffIQ é um sistema experimental de controle semafórico adaptativo baseado
+em visão computacional, avaliado em um cruzamento real de São Paulo (cenário
+`sp`). O SUMO gera a dinâmica do tráfego, a Unity renderiza a cena 3D e três
+câmeras virtuais, o YOLO detecta os veículos nos frames, o ByteTrack os
+associa entre frames e um DQN decide, a partir dessas estimativas visuais,
+quando manter ou trocar o verde. **A política de controle não usa sensores
+perfeitos do SUMO**: os dados internos do SUMO servem para renderização,
+sincronização, recompensa de treino e avaliação.
 
-**Versão atual: v2** — DQN com cinco features visuais por faixa, pré-treinado
-só no SUMO e executado com a câmera. No cenário calibrado (demanda medida por
-drone, sem motos), reduz a espera do ciclo fixo de 13,0 para 4,3 s pela
-câmera, a 0,16 s do resultado com percepção *ground truth*; sem saturação, empata
-com a heurística v1. Com a fase exclusiva de pedestres, a v2 reduz pela
-câmera a espera dos veículos em 32% e a dos pedestres em 56% em relação ao
-ciclo fixo; a **v3** (estado com as fases de pedestre) empata com ela, e são
-as únicas versões que superam o ciclo fixo para os veículos (ver
+**Versão atual: v4** — o controle é o DQN estado v2 (cinco features visuais
+por faixa, pré-treinado só no SUMO e executado com a câmera), com prioridade
+para viaturas (v3) e fase exclusiva de pedestres (v4). No cenário calibrado
+(demanda medida por drone), reduz a espera do ciclo fixo de 13,0 para 4,3 s
+pela câmera, a 0,16 s do resultado com percepção *ground truth*. Com a fase de
+pedestres a cada ciclo, reduz pela câmera a espera dos veículos em 32% e a dos
+pedestres em 56%. Com o aviso V2I, todas as viaturas cruzam sem parar (ver
 [Comparação no mesmo ambiente](#comparação-no-mesmo-ambiente)).
 
 ## Arquitetura
@@ -46,15 +47,27 @@ SUMO ──TraCI──> Python ──UDP/JSON (estado)──> Unity (veículos, 
 
 ## Evolução por versão
 
-| Versão | Período | Política | Entrada da política | O que mudou |
-|---|---|---|---|---|
-| Linha de base | — | Ciclo fixo 40/40 | — | Referência: nunca pede troca; o verde máximo alterna as fases |
-| **v1** | 2026-09-02 | Heurística por fila visual | Contagem por faixa | Primeiro controle em malha fechada pela câmera |
-| **v1.1** | 2026-09-04 | DQN (estado v1, 13 entradas) | Contagem por faixa + fase | Troca a regra fixa por uma política aprendida |
-| **v2** | 2026-09-29 | DQN (estado v2, 41 entradas) | Contagem, parados, ocupação, velocidade e espera por faixa + fase | Features cinemáticas, pré-treino só no SUMO, decisões só quando têm efeito, cenário calibrado |
-| **v3** | 2026-10-05 | DQN (estado v3, 44 entradas) | Estado v2 + fases de pedestre + verdes até a fase de pedestres | Só nos cenários com pedestres; a recompensa inclui a espera dos pedestres |
+As versões são do **produto**: cada uma acrescenta uma capacidade, e o modelo
+que decide pode ser o mesmo de uma versão para a outra. Treinar um modelo não
+cria uma versão; modelos que não entraram no produto ficam como experimentos.
 
-### v1 — Controle visual heurístico
+| Versão | Período | O que acrescenta | Quem decide |
+|---|---|---|---|
+| Linha de base | — | Referência: ciclo fixo 40/40 (nunca pede troca; o verde máximo alterna as fases) | — |
+| **v1** | 2026-09-02 | Primeiro controle em malha fechada pela câmera | Regra de fila (contagem por faixa) |
+| **v1.1** | 2026-09-04 | Primeira política aprendida (colapsou em "trocar sempre") | DQN estado v1 (13 entradas) |
+| **v2** | 2026-09-29 | Features cinemáticas por faixa, pré-treino só no SUMO, decisões só quando têm efeito, cenário calibrado | DQN estado v2 (41 entradas) |
+| **v3** | 2026-09-30 a 10-04 | Prioridade para viaturas: aviso V2I e detecção da viatura pela câmera | DQN estado v2 |
+| **v4** (atual) | 2026-10-05 a 10-13 | Pedestres: fase exclusiva de 7 s + 11 s a cada ciclo | DQN estado v2 |
+
+**Experimento: DQN estado v3** (44 entradas: estado v2 + fases de pedestre +
+verdes até a fase de pedestres; recompensa com a espera dos pedestres).
+Treinado para a v4, empatou com o DQN estado v2 nos veículos e deixou os
+pedestres esperando 2–3 s a mais, então não entrou no produto. No código, ele é
+a "versão" `v3` de `--versions` e `state_version=3`; ali "versão" nomeia
+controladores.
+
+### v1 — Controle visual heurístico (regra de fila)
 
 `TrafficController` soma as contagens visuais de `South` e de `East + West` e
 troca o verde quando a fila oposta supera a atual por uma margem de 1 veículo,
@@ -76,7 +89,7 @@ mínimo permite". A análise posterior encontrou as causas:
 - A recompensa ficava positiva quando um veículo com espera saía da rede.
 - As transições eram gravadas mesmo quando a ação era ignorada.
 
-### v2 — DQN visual por faixa, estado v2
+### v2 — DQN visual por faixa, estado v2 (decide até a v4)
 
 - **Estado v2 (41 entradas).** Para cada faixa: contagem, parados (< 1,39 m/s
   por ≥ 1 s), ocupação, velocidade média e espera, normalizados pela
@@ -120,7 +133,9 @@ mesmo vetor de estado; a diferença entre elas é o custo da visão. A
 recompensa de treino usa sempre o *ground truth*. No código, a percepção
 *ground truth* se chama `oracle` (`--perception oracle`, arquivos `*-oracle.json`).
 
-Só a lógica de decisão muda. As regras de cada versão estão em
+Só a lógica de decisão muda. As tabelas comparam **controladores** (quem
+decide), rotulados pelo modelo: a regra de fila é a da v1, o DQN estado v1 é o
+da v1.1 e o DQN estado v2 é o da v2 à v4. As regras de cada controlador estão em
 `python/experiments/version_policies.py`, e o comparador é
 `python -m experiments.compare_versions`.
 
@@ -132,49 +147,51 @@ faziam originalmente.
 ### Ambiente atual, cenário calibrado (demanda sem motos)
 
 Demanda medida pelo drone sem motos (andam no corredor e não formam fila):
-Leste 976 veíc/h (v/c 0,58), Sul 727, Oeste 139. Checkpoint da v2:
+Leste 976 veíc/h (v/c 0,58), Sul 727, Oeste 139. Checkpoint do DQN estado v2:
 `dqn-v2-sem-motos-best.pt`. Seeds 201–203, 300 s de aquecimento + 1800 s,
 0 frames perdidos na percepção visual.
 
-| Versão | Espera (visual) | Espera (*ground truth*) | Chegadas (visual) | Fila de inserção |
+| Controlador | Espera (visual) | Espera (*ground truth*) | Chegadas (visual) | Fila de inserção |
 |---|---:|---:|---:|---:|
 | Linha de base (ciclo fixo) | 13,0 s | 13,0 s | 918 | 0 |
-| v1 (heurística) | **4,3 s** | 4,4 s | 915 | 0 |
-| v1.1 (DQN estado v1) | 5,7 s | 5,7 s | 916 | 0 |
-| v2 (DQN estado v2) | **4,3 s** | **4,1 s** | 916 | 0 |
+| Regra de fila (v1) | **4,3 s** | 4,4 s | 915 | 0 |
+| DQN estado v1 (v1.1) | 5,7 s | 5,7 s | 916 | 0 |
+| DQN estado v2 (v2–v4) | **4,3 s** | **4,1 s** | 916 | 0 |
 | max-pressure (referência) | 4,8 s | 4,7 s | 916 | 0 |
 
-Pela câmera, as versões adaptativas reduzem a espera do ciclo fixo em 56–67%,
-e a visão custa no máximo 0,16 s em relação à percepção *ground truth*. Sem o Leste
-saturado, v1 e v2 empatam com visão (4,27 × 4,31 s, dentro da variação entre
-seeds); com a percepção *ground truth*, a v2 é a melhor. A v1.1 dá o mesmo número nas duas
+Pela câmera, os controladores adaptativos reduzem a espera do ciclo fixo em
+56–67%, e a visão custa no máximo 0,16 s em relação à percepção *ground truth*.
+Sem o Leste saturado, a regra de fila e o DQN estado v2 empatam com visão
+(4,27 × 4,31 s, dentro da variação entre seeds); com a percepção *ground
+truth*, o DQN estado v2 é o melhor. O DQN estado v1 dá o mesmo número nas duas
 percepções porque troca sempre no verde mínimo (129 trocas em 30 min) e não
 depende do que vê.
 
-### Ambiente atual com pedestres (cenário `calibrated_ped`)
+### Ambiente atual com pedestres (cenário `calibrated_ped`, v4)
 
 Mesma demanda e protocolo, com a fase exclusiva de pedestres a cada ciclo
 (L/O → Sul → pedestres): todos os veículos no vermelho, 7 s de verde para
 começar a travessia + 11 s de liberação, o tempo de cruzar a rua mais larga
 (13,0 m) a 1,2 m/s. Quem atravessa duas ruas espera a fase seguinte na
-esquina. Pedestres renderizados na Unity. Checkpoint da v3:
+esquina. Pedestres renderizados na Unity. O experimento DQN estado v3 usa
 `dqn-v3-fase-curta-best.pt`, treinado com esta fase. 0 frames perdidos na
 percepção visual.
 
-| Versão | Espera veículos (visual) | Espera veículos (*ground truth*) | Espera pedestres (visual, mediana / p90) | Fila média de inserção (visual) |
+| Controlador | Espera veículos (visual) | Espera veículos (*ground truth*) | Espera pedestres (visual, mediana / p90) | Fila média de inserção (visual) |
 |---|---:|---:|---|---:|
 | Linha de base (ciclo fixo) | 20,8 s | 20,8 s | 56,6 s (47 / 140 s) | 0,9 |
-| v1 (heurística) | 24,6 s | 25,3 s | 22,3 s (21 / 53 s) | 9,3 |
-| v2 (DQN estado v2) | **14,1 s** | **14,2 s** | 25,0 s (22 / 58 s) | 0,1 |
-| v3 (DQN estado v3, com pedestres) | 14,7 s | **14,2 s** | 27,4 s (25 / 60 s) | 0,1 |
+| Regra de fila (v1) | 24,6 s | 25,3 s | 22,3 s (21 / 53 s) | 9,3 |
+| **DQN estado v2 (v4, atual)** | **14,1 s** | **14,2 s** | 25,0 s (22 / 58 s) | 0,1 |
+| DQN estado v3 (experimento) | 14,7 s | **14,2 s** | 27,4 s (25 / 60 s) | 0,1 |
 | max-pressure (referência) | 21,0 s | 26,5 s | 24,2 s (23 / 57 s) | 1,9 |
 
-Os pedestres na imagem não atrapalham a visão: o YOLO não os detecta, e a v2
-e a v3 ficam a até 0,5 s da percepção *ground truth*. A v2 reduz a espera dos
-veículos de 20,8 para 14,1 s (−32%) e a dos pedestres de 56,6 para 25,0 s
-(p90 140 → 58 s). A v3 empata com ela nos veículos e deixa os pedestres 2–3 s
-a mais: com a fase a cada ciclo, saber quantos verdes faltam até ela não
-acrescenta nada. A v1 e o max-pressure trocam no verde mínimo sempre que a
+Os pedestres na imagem não atrapalham a visão: o YOLO não os detecta, e os
+dois DQN ficam a até 0,5 s da percepção *ground truth*. O DQN estado v2 reduz a
+espera dos veículos de 20,8 para 14,1 s (−32%) e a dos pedestres de 56,6 para
+25,0 s (p90 140 → 58 s). O experimento DQN estado v3 empata com ele nos
+veículos e deixa os pedestres 2–3 s a mais: com a fase a cada ciclo, saber
+quantos verdes faltam até ela não acrescenta nada. A regra de fila e o
+max-pressure trocam no verde mínimo sempre que a
 fila oposta é maior, e cada ciclo a mais traz outra fase de pedestres de 18 s,
 com todos os veículos parados. Por isso ficam iguais ao ciclo fixo ou piores
 para os veículos. Com a câmera, o max-pressure troca menos, porque a contagem
@@ -183,19 +200,20 @@ visual demora a mostrar a fila oposta, e chega a empatar com o ciclo fixo.
 ### Ambiente atual, cenário original (demanda equilibrada do netedit)
 
 Mesmo protocolo e mesmos checkpoints. A demanda não tem motos e não mudou;
-mudou o checkpoint da v2. Percepção visual com 0 frames perdidos.
+mudou o checkpoint do DQN estado v2. Percepção visual com 0 frames perdidos.
 
-| Versão | Espera (*ground truth*) | Espera (visão) | Chegadas (visão) | Fila de inserção final (visão) |
+| Controlador | Espera (*ground truth*) | Espera (visão) | Chegadas (visão) | Fila de inserção final (visão) |
 |---|---:|---:|---:|---:|
 | Linha de base (ciclo fixo) | 14,9 s | 14,9 s | 1431 | 37 |
-| v1 (heurística) | 4,7 s | **4,6 s** | 1472 | 0 |
-| v1.1 (DQN estado v1) | 4,6 s | **4,6 s** | 1474 | 0 |
-| v2 (DQN estado v2) | **4,5 s** | 5,2 s | 1474 | 0 |
+| Regra de fila (v1) | 4,7 s | **4,6 s** | 1472 | 0 |
+| DQN estado v1 (v1.1) | 4,6 s | **4,6 s** | 1474 | 0 |
+| DQN estado v2 (v2–v4) | **4,5 s** | 5,2 s | 1474 | 0 |
 | max-pressure (referência) | 4,6 s | 6,1 s | 1471 | 0 |
 
 Com demanda equilibrada, alternar rápido já é quase ótimo: com a percepção
-*ground truth*, as versões adaptativas reduzem a espera do ciclo fixo em ~70%
-e ficam a 0,2 s umas das outras. Com a câmera, a v2 e o max-pressure trocam
+*ground truth*, os controladores adaptativos reduzem a espera do ciclo fixo
+em ~70% e ficam a 0,2 s uns dos outros. Com a câmera, o DQN estado v2 e o
+max-pressure trocam
 menos de fase (110 e 97 trocas, contra 128 e 129) e perdem 0,7 s e 1,5 s;
 ainda assim ficam 59–65% abaixo do ciclo fixo. Aqui a visão custa mais que no
 cenário calibrado (≤ 0,16 s), porque o ganho de cada decisão é pequeno e
@@ -218,9 +236,9 @@ Os resultados originais da v1 e da v1.1, obtidos em protocolos diferentes
 (100 s, antes da correção das fases), estão preservados como registro
 histórico em
 [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md). Eles não
-devem ser comparados com a v2.
+devem ser comparados com os desta seção.
 
-## Prioridade para veículos de emergência
+## Prioridade para veículos de emergência (v3)
 
 Viaturas de emergência avisam sua aproximação por V2I (*vehicle-to-infrastructure*,
 comunicação entre o veículo e o controlador do semáforo; como no despacho por
@@ -233,11 +251,11 @@ GPS dos sistemas reais), e o semáforo abre para o sentido de onde elas vêm:
 Cenário calibrado sem motos, ROIs de 60 m, seeds 201–203, uma viatura a
 cada ~5 min (18 por política). A perda total soma a espera para entrar na
 rede e a perda até a linha de retenção. Com percepção *ground truth*, ela cai de
-16,6 s (ciclo fixo), 8,0 s (v2) e 7,9 s (max-pressure) para 1,3–1,4 s, e todas
+16,6 s (ciclo fixo), 8,0 s (DQN estado v2) e 7,9 s (max-pressure) para 1,3–1,4 s, e todas
 cruzam sem parar. O custo é de até +0,6 s na espera do restante do
 tráfego. A câmera também detecta as viaturas (classe `emergency` do YOLO
 dentro das ROIs) e serve como segunda fonte. Em malha fechada com percepção
-visual (v2, 0 frames perdidos):
+visual (DQN estado v2, 0 frames perdidos):
 
 | Fonte do pedido | Perda total média (máx.) | Sem parar | Espera do tráfego |
 |---|---|---|---|
@@ -251,13 +269,13 @@ A visão detectou as 18 viaturas, sem alarme falso, mas só as vê nos últimos
 65%; junto do V2I, serve de redundância.
 
 No cenário `original` (demanda equilibrada do netedit), também com
-percepção visual, v2 e 0 frames perdidos, a perda total cai de 11,2 s (sem
+percepção visual, DQN estado v2 e 0 frames perdidos, a perda total cai de 11,2 s (sem
 preempção) para 2,9 s com V2I (*ground truth*: 2,9 s), 4,5 s só com visão e
 2,8 s com V2I + visão, com 100% sem parar nos modos com V2I. O custo para o
 tráfego é de +0,3 a +0,9 s.
 
 Com pedestres (`calibrated_ped`, fase de pedestres de 7 s + 11 s a cada
-ciclo), percepção visual, v2, 0 frames perdidos:
+ciclo; v4), percepção visual, DQN estado v2, 0 frames perdidos:
 
 | Fonte do pedido | Perda total média (máx.) | Sem parar | Espera do tráfego | Espera dos pedestres |
 |---|---|---|---|---|
@@ -267,7 +285,7 @@ ciclo), percepção visual, v2, 0 frames perdidos:
 | V2I + visão | 2,4 s (10,6 s) | 100% | 15,3 s | 28,0 s |
 
 Com percepção *ground truth* e V2I, a perda fica em 1,7–2,0 s no ciclo
-fixo, na v2 e na v3 (100% sem parar). No max-pressure ela é de 6,2 s, porque
+fixo, no DQN estado v2 e no experimento DQN estado v3 (100% sem parar). No max-pressure ela é de 6,2 s, porque
 a fila de inserção segura a viatura antes de ela entrar na rede. A fase de
 pedestres é obrigatória: a viatura que chega durante ela espera até o fim, no
 máximo ~10 s com V2I. A visão detectou as 18 viaturas sem alarme
@@ -276,8 +294,8 @@ O custo é de +0,5 a +1,0 s para os outros veículos e de até +3 s para os
 pedestres.
 
 As tabelas desta seção usam o ambiente atual: câmeras de 60 m, YOLO de duas
-classes, demanda sem motos, v2 `dqn-v2-sem-motos-best.pt` e, com pedestres,
-v3 `dqn-v3-fase-curta-best.pt`.
+classes, demanda sem motos, DQN estado v2 `dqn-v2-sem-motos-best.pt` e, no
+experimento com pedestres, DQN estado v3 `dqn-v3-fase-curta-best.pt`.
 
 ## Como reproduzir
 
@@ -362,6 +380,8 @@ Sem o modelo, as viaturas de emergência aparecem como blocos vermelhos.
   homografia das ROIs, features por faixa e encoders de estado v1/v2.
 - `python/controller`: DQN, camada de segurança de fases, política
   heurística, ciclo fixo, max-pressure, recompensa e pontos de decisão.
+- `python/dashboard` e `python/static`: painel web TraffIQ (FastAPI) da
+  demonstração ao vivo.
 - `python/experiments`: scripts de execução, treino e avaliação
   (`python -m experiments.<nome>`).
 - `sumo/sp`: rede, demandas (original e calibrada) e detectores do cenário SP.
