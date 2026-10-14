@@ -7,6 +7,7 @@ Todos ficam locais para o painel funcionar sem internet (feira de TCCs).
 | Arquivo | Fonte | Licença |
 |---|---|---|
 | `inter-latin-wght.woff2` | Inter (Rasmus Andersson), pacote `@fontsource-variable/inter@5.2.5` | SIL OFL 1.1 (`OFL-Inter.txt`) |
+| `sora-latin-wght.woff2` | Sora (The Sora Project Authors), pacote `@fontsource-variable/sora@5.2.5`; só no nome TraffIQ | SIL OFL 1.1 (`OFL-Sora.txt`) |
 | `jetbrains-mono-latin-wght.woff2` | JetBrains Mono (JetBrains), pacote `@fontsource-variable/jetbrains-mono@5.2.5` | SIL OFL 1.1 (`OFL-JetBrainsMono.txt`) |
 
 ## Logos (`logos/`)
