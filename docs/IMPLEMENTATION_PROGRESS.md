@@ -47,7 +47,7 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   (`dqn-v3-fase-curta-best.pt`); versões com pedestres refeitas com
   percepção *ground truth* e visual; preempção refeita com as duas
   percepções.
-- Versões do produto TraffIQ (v1 a v4) e painel web para a feira:
+- Versões do produto TraffIQ (v1 a v4) e painel web para o Eureka:
   2026-10-14 — seção **Versões do produto** abaixo.
 
 ## Versões do produto TraffIQ (2026-10-14)

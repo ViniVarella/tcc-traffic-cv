@@ -1,6 +1,6 @@
 # Arquivos de terceiros do painel
 
-Todos ficam locais para o painel funcionar sem internet (feira de TCCs).
+Todos ficam locais para o painel funcionar sem internet (Eureka, a feira de TCCs do Instituto Mauá).
 
 ## Fontes (`fonts/`)
 
