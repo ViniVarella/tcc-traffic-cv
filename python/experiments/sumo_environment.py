@@ -50,6 +50,9 @@ class Environment:
         self.tls_id = str(config["traffic_light"]["id"])
         # Aproximação (câmera) -> edge SUMO de entrada, a partir das lanes das ROIs.
         self.approach_edges = {camera: geometry.sumo_lane.rsplit("_", 1)[0] for (camera, _), geometry in self.geometries.items()}
+        # Tráfego de emergência do episódio em andamento (None fora de run() ou sem
+        # ``emergency``): o painel web despacha viaturas extras por ele no ``on_step``.
+        self.emergency_traffic: EmergencyTraffic | None = None
 
     def oracle_source(self, seed: int) -> TraciLaneFeatureSource:
         return TraciLaneFeatureSource(self.geometries, self.parameters, self.noise, seed=seed)
@@ -97,8 +100,6 @@ class Environment:
             traffic = None if emergency is None else EmergencyTraffic(
                 emergency, self.approach_edges, seed, self.settings.warmup_s, self.settings.warmup_s + self.settings.control_s)
             preempt = None if preemption is None else EmergencyPreemption(preemption)
-            # Exposto para quem roda o episódio em outra camada (painel web) poder
-            # despachar viaturas extras pelo ``on_step``, na thread do episódio.
             self.emergency_traffic = traffic
 
             def emergency_step(sim_time: float) -> str | None:
@@ -118,5 +119,6 @@ class Environment:
             if traffic is not None:
                 outcome.metrics["emergency"] = {**traffic.summary(), "detection": emergency_detection}
         finally:
+            self.emergency_traffic = None
             client.close()
         return outcome, client.scenario

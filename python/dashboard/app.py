@@ -74,9 +74,12 @@ class EpisodeRunner:
         self.settings = settings
         self.config: dict[str, Any] = yaml.safe_load((settings.base_dir / "configs" / "sp.yaml").read_text(encoding="utf-8"))
         models = settings.base_dir.parent / "results" / "models"
-        # Mesmos checkpoints padrão de compare_versions/evaluate_preemption.
-        self.checkpoints = {"v1": models / "visual-dqn-sp-best.pt", "v2": models / "dqn-v2-sem-motos-best.pt",
-                            "v3": models / "dqn-v3-fase-curta-best.pt"}
+        # Mesmos checkpoints padrão de compare_versions/evaluate_preemption. A v1
+        # é a heurística (sem checkpoint); o da v1.1 só é lido se ela for pedida,
+        # e o painel não a oferece.
+        self.v1_1_checkpoint = models / "visual-dqn-sp-best.pt"
+        self.checkpoints = {"v2": models / "dqn-v2-sem-motos-best.pt", "v3": models / "dqn-v3-fase-curta-best.pt"}
+        self.announce_before_s = EmergencySettings.from_config(self.config).announce_before_s
         self.state: dict[str, Any] = {"is_running": False, "status": "parado", "request": None, "telemetry": None,
                                       "dispatched": [], "error": None, "last_summary": None}
         self.frames: dict[str, bytes | None] = {camera: None for camera in APPROACHES}
@@ -86,6 +89,10 @@ class EpisodeRunner:
         self._shutdown = threading.Event()
         self._thread: threading.Thread | None = None
         self._debugger: VisualDebugger | None = None
+        # Um só observador para o processo: o step_id dele cresce entre episódios,
+        # e frames atrasados de um episódio nunca casam com um step do seguinte.
+        self._observer: Any = None
+        self._bridge_ready = threading.Event()
 
     # ---- controle (chamado pela API) ----
     def start(self, request: StartRequest) -> None:
@@ -96,8 +103,12 @@ class EpisodeRunner:
         checkpoint = self.checkpoints.get(request.version)
         if checkpoint is not None and not checkpoint.exists():
             raise ValueError(f"Checkpoint não encontrado: {checkpoint}")
+        if self._thread is None or not self._thread.is_alive() or not self._bridge_ready.is_set():
+            raise ValueError(self.state["error"] or "A conexão com a Unity (porta de frames) não está pronta.")
         if self.state["is_running"] or not self._pending.empty():
             raise ValueError("Já há um episódio rodando; pare antes de iniciar outro.")
+        self._clear_dispatches()
+        self.frames = {camera: None for camera in APPROACHES}
         self._stop_episode.clear()
         self._pending.put(request)
         self.state = {**self.state, "is_running": True, "status": "iniciando", "request": request.model_dump(),
@@ -105,6 +116,10 @@ class EpisodeRunner:
 
     def stop(self) -> None:
         self._stop_episode.set()
+
+    def _clear_dispatches(self) -> None:
+        while not self._dispatch.empty():
+            self._dispatch.get_nowait()
 
     def emergency_routes(self) -> dict[str, list[str]]:
         """Saídas possíveis por aproximação, pelas rotas de ``emergency.routes`` do sp.yaml."""
@@ -125,17 +140,26 @@ class EpisodeRunner:
         self._thread = threading.Thread(target=self._loop, name="episodio-painel", daemon=True)
         self._thread.start()
 
-    def shutdown(self) -> None:
+    def shutdown(self, timeout_s: float = 15.0) -> None:
+        """Para o episódio e espera a thread fechar o TraCI e os sockets."""
         self._shutdown.set()
         self._stop_episode.set()
+        if self._thread is not None:
+            self._thread.join(timeout=timeout_s)
 
     # ---- thread do episódio ----
     def _loop(self) -> None:
-        # Só anota os frames (não grava nada nesse diretório).
+        # O VisualDebugger cria o diretório, mas o painel só usa o annotate (nada é gravado).
         self._debugger = VisualDebugger(str(self.settings.base_dir.parent / "results" / "vision" / "painel"))
-        bridge = UnityBridge.from_config(self.config)
         try:
+            bridge = UnityBridge.from_config(self.config)
             bridge.start_frame_server()
+        except Exception as error:  # noqa: BLE001 - ex.: porta de frames já em uso por outro script
+            traceback.print_exc()
+            self.state = {**self.state, "error": f"Falha ao abrir a conexão com a Unity: {error}"}
+            return
+        self._bridge_ready.set()
+        try:
             while not self._shutdown.is_set():
                 try:
                     request = self._pending.get(timeout=0.5)
@@ -147,24 +171,28 @@ class EpisodeRunner:
                     traceback.print_exc()
                     self.state = {**self.state, "error": str(error)}
                 finally:
+                    self._clear_dispatches()
                     self.state = {**self.state, "is_running": False, "status": "parado"}
         finally:
             bridge.close()
 
     def _run_episode(self, request: StartRequest, bridge: UnityBridge) -> None:
-        version = build_version_policies(self.config, [request.version], self.checkpoints["v1"], self.checkpoints["v2"],
+        version = build_version_policies(self.config, [request.version], self.v1_1_checkpoint, self.checkpoints["v2"],
                                          self.checkpoints["v3"])[0]
         environment = Environment(self.config, self.settings.base_dir, request.scenario,
                                   EpisodeSettings(self.settings.warmup_s, self.settings.control_s, version.decision_interval_s),
                                   state_version=version.state_version)
-        observer = build_unity_observer(self.config, self.settings.base_dir, self.settings.vision_args, environment, bridge)
+        if self._observer is None:
+            # Geometrias, semáforo e aquecimento vêm do sp.yaml e do painel: iguais em todos os cenários.
+            self._observer = build_unity_observer(self.config, self.settings.base_dir, self.settings.vision_args, environment, bridge)
+        observer = self._observer
         preemption = None if request.preemption == "none" else PreemptionSettings.from_config(self.config)
         last_results: list[Any] = [None]
 
         def on_step(info: dict[str, Any]) -> None:
             if self._stop_episode.is_set():
                 raise InterruptedError("Episódio interrompido pelo painel.")
-            traffic = getattr(environment, "emergency_traffic", None)
+            traffic = environment.emergency_traffic
             while traffic is not None and not self._dispatch.empty():
                 approach, exit_name = self._dispatch.get_nowait()
                 to_edge = None if exit_name is None else EXIT_EDGES[exit_name]
@@ -227,7 +255,7 @@ def create_app(settings: PanelSettings) -> FastAPI:
     async def options() -> dict[str, Any]:
         return {"scenarios": list(SCENARIOS), "versions": [{"id": key, "label": VERSION_LABELS[key]} for key in VERSIONS],
                 "preemption": list(PREEMPTION_SOURCES), "approaches": list(APPROACHES),
-                "emergency_routes": runner.emergency_routes()}
+                "emergency_routes": runner.emergency_routes(), "announce_before_s": runner.announce_before_s}
 
     @app.get("/api/state")
     async def state() -> dict[str, Any]:
@@ -265,9 +293,12 @@ def create_app(settings: PanelSettings) -> FastAPI:
             return
 
     async def frames(camera_id: str):
+        sent = None
         while True:
             frame = runner.frames.get(camera_id)
-            if frame:
+            # Os frames mudam ~1 vez por step: só reenvia quando há um novo.
+            if frame and frame is not sent:
+                sent = frame
                 yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
             await asyncio.sleep(0.1)
 

@@ -104,6 +104,7 @@ const PHASE_LABELS = {
 const APPROACH_LABELS = { south: 'Sul', east: 'Leste', west: 'Oeste' };
 const EXIT_LABELS = { north: 'Norte', east: 'Leste', west: 'Oeste' };
 let emergencyRoutes = {};
+let announceBeforeS = null;
 
 function setBadge(dot, cls, text) {
     dot.className = 'status-dot ' + cls;
@@ -225,6 +226,7 @@ async function loadOptions() {
         selVersion.value = 'v2';
         syncVersionOptions();
         emergencyRoutes = options.emergency_routes || {};
+        announceBeforeS = options.announce_before_s;
         syncExitOptions();
     } catch (e) {
         showMessage('Não foi possível ler as opções da API.');
@@ -277,7 +279,8 @@ btnEmergency.addEventListener('click', async () => {
         const exit = selExit.value || null;
         await post('/api/emergency', { approach: selApproach.value, exit });
         const route = APPROACH_LABELS[selApproach.value] + (exit ? ' → ' + EXIT_LABELS[exit] : '');
-        showMessage(`Viatura despachada (${route}): aviso V2I agora, entra na rede em 15 s.`);
+        const delay = announceBeforeS == null ? '' : `, entra na rede em ${announceBeforeS} s`;
+        showMessage(`Viatura despachada (${route}): aviso V2I agora${delay}.`);
     } catch (e) {
         showMessage(e.message);
     }
@@ -313,7 +316,8 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
 
     ctx.clearRect(0, 0, W, H);
 
-    if (!data || data.length === 0) {
+    // Com um ponto só não há reta (e as divisões por length − 1 dariam NaN).
+    if (!data || data.length < 2) {
         ctx.fillStyle = '#5c6578';
         ctx.font = '13px Inter, sans-serif';
         ctx.textAlign = 'center';
