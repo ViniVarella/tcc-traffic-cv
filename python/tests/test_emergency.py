@@ -65,6 +65,22 @@ class EmergencyTrafficTests(unittest.TestCase):
         settings = EmergencySettings(interval_s=500, jitter_s=0, first_after_s=20, announce_before_s=5)
         return EmergencyTraffic(settings, EDGES, seed=1, start_s=0, end_s=100)
 
+    def test_dispatch_announces_now_and_inserts_after_the_notice(self) -> None:
+        traffic, client = self._traffic(), FakeClient()
+        for time in range(0, 10):
+            traffic.step(client, float(time))
+        vehicle_id = traffic.dispatch("west", 10.0)
+        self.assertEqual(vehicle_id, "emergency_manual_0")
+        requests = {time: traffic.step(client, float(time)) for time in range(10, 16)}
+        self.assertEqual([request.vehicle_id for request in requests[10]], [vehicle_id])
+        self.assertEqual(requests[10][0].approach, "west")
+        self.assertEqual(client.added, [vehicle_id])  # entra 5 s depois, antes da agendada (t = 20)
+        self.assertEqual(traffic.summary()["scheduled"], 2)
+
+    def test_dispatch_rejects_unknown_approach(self) -> None:
+        with self.assertRaises(ValueError):
+            self._traffic().dispatch("north", 0.0)
+
     def test_v2i_announces_before_insertion_then_reports_eta_until_the_stop_line(self) -> None:
         traffic, client = self._traffic(), FakeClient()
         requests = {time: traffic.step(client, float(time)) for time in range(10, 40)}

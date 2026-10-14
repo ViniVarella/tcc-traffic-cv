@@ -97,6 +97,9 @@ class Environment:
             traffic = None if emergency is None else EmergencyTraffic(
                 emergency, self.approach_edges, seed, self.settings.warmup_s, self.settings.warmup_s + self.settings.control_s)
             preempt = None if preemption is None else EmergencyPreemption(preemption)
+            # Exposto para quem roda o episódio em outra camada (painel web) poder
+            # despachar viaturas extras pelo ``on_step``, na thread do episódio.
+            self.emergency_traffic = traffic
 
             def emergency_step(sim_time: float) -> str | None:
                 v2i = traffic.step(client, sim_time)

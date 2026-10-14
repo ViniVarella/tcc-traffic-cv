@@ -109,6 +109,23 @@ class EmergencyTraffic:
         self._vehicles = [_Tracked(plan) for plan in build_schedule(settings, seed, start_s, end_s)]
         self._type_ready = False
         self._visual_events: dict[str, bool] = {}
+        self._manual_rng = random.Random(f"emergency-manual-{seed}")
+        self._manual_count = 0
+
+    def dispatch(self, approach: str, sim_time: float) -> str:
+        """Agenda uma viatura extra na aproximação, fora da agenda (ex.: botão do painel).
+
+        Ela é anunciada por V2I já neste step e entra ``announce_before_s``
+        depois, como as agendadas; a rota é sorteada entre as da aproximação.
+        """
+        if approach not in self.settings.routes:
+            raise ValueError(f"Aproximação desconhecida: {approach}. Use {sorted(self.settings.routes)}.")
+        from_edge, to_edge = self._manual_rng.choice(self.settings.routes[approach])
+        vehicle_id = f"emergency_manual_{self._manual_count}"
+        self._manual_count += 1
+        self._vehicles.append(_Tracked(ScheduledEmergency(vehicle_id, sim_time + self.settings.announce_before_s, approach,
+                                                          from_edge, to_edge)))
+        return vehicle_id
 
     def step(self, client: EmergencyClient, sim_time: float) -> list[EmergencyRequest]:
         if not self._type_ready:
