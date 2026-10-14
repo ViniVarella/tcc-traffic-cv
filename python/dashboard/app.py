@@ -42,7 +42,7 @@ SCENARIOS = ("calibrated", "calibrated_ped", "original")
 # não aparece aqui.
 VERSIONS = ("v2", "baseline", "v1", "max_pressure")
 PREEMPTION_SOURCES = ("none", *EMERGENCY_DETECTIONS)
-VERSION_LABELS = {"v2": "TraffIQ (IA, v4)", "baseline": "Tempo fixo (como hoje)", "v1": "Regra de fila (v1)",
+VERSION_LABELS = {"v2": "TraffIQ (IA, v4)", "baseline": "Tempo fixo (convencional)", "v1": "Regra de fila (v1)",
                   "max_pressure": "Max-pressure (referência acadêmica)"}
 
 
@@ -107,7 +107,7 @@ class EpisodeRunner:
         if self._thread is None or not self._thread.is_alive() or not self._bridge_ready.is_set():
             raise ValueError(self.state["error"] or "A conexão com a Unity (porta de frames) não está pronta.")
         if self.state["is_running"] or not self._pending.empty():
-            raise ValueError("Já há um episódio rodando; pare antes de iniciar outro.")
+            raise ValueError("Já há uma demonstração em execução; encerre-a antes de iniciar outra.")
         self._clear_dispatches()
         self.frames = {camera: None for camera in APPROACHES}
         self._stop_episode.clear()
@@ -134,7 +134,7 @@ class EpisodeRunner:
         if exit_name is not None and exit_name not in self.emergency_routes()[approach]:
             raise ValueError(f"Sem rota de {approach} para {exit_name}.")
         if not self.state["is_running"]:
-            raise ValueError("Inicie um episódio antes de despachar uma viatura.")
+            raise ValueError("Inicie a demonstração antes de acionar uma ambulância.")
         self._dispatch.put((approach, exit_name))
 
     def launch(self) -> None:
@@ -243,7 +243,7 @@ def create_app(settings: PanelSettings) -> FastAPI:
         yield
         runner.shutdown()
 
-    app = FastAPI(title="Traffic CV — painel", lifespan=lifespan)
+    app = FastAPI(title="TraffIQ — painel", lifespan=lifespan)
     app.state.runner = runner
     app.mount("/dashboard", StaticFiles(directory=settings.base_dir / "static", html=True), name="static")
 

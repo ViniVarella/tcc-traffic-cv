@@ -87,7 +87,7 @@ const APPROACHES = ['west', 'south', 'east'];
 const PHASE_LABELS = {
     EAST_WEST_GREEN: 'Verde para Leste e Oeste', EAST_WEST_YELLOW: 'Amarelo para Leste e Oeste',
     ALL_RED: 'Vermelho geral', SOUTH_GREEN: 'Verde para o Sul', SOUTH_YELLOW: 'Amarelo para o Sul',
-    PEDESTRIAN_GREEN: 'Travessia de pedestres', PEDESTRIAN_CLEARANCE: 'Pedestres terminando a travessia'
+    PEDESTRIAN_GREEN: 'Travessia de pedestres', PEDESTRIAN_CLEARANCE: 'Liberação da travessia'
 };
 // Verde que a prioridade segura → ruas atendidas.
 const PRIORITY_APPROACHES = { EAST_WEST_GREEN: ['east', 'west'], SOUTH_GREEN: ['south'] };
@@ -124,7 +124,7 @@ function updateTelemetry(data) {
     const running = data.is_running === true;
     const t = data.telemetry;
 
-    if (running) setBadge(sumoDot, 'online', data.status === 'rodando' ? 'Rodando' : 'Iniciando');
+    if (running) setBadge(sumoDot, 'online', data.status === 'rodando' ? 'Em execução' : 'Iniciando');
     else setBadge(sumoDot, 'warning', 'Parada');
     if (t && t.vision) setBadge(unityDot, 'online', 'Recebendo imagens');
     else if (running && t) setBadge(unityDot, 'warning', 'Sem imagens');
@@ -149,7 +149,7 @@ function updateTelemetry(data) {
     document.getElementById('phase-name').textContent = PHASE_LABELS[t.phase] || t.phase;
     const priority = PRIORITY_APPROACHES[t.preempt_target];
     document.getElementById('preempt-name').textContent = priority
-        ? '🚑 abrindo para ' + priority.map(a => APPROACH_LABELS[a]).join(' e ') : '—';
+        ? '🚑 verde para ' + priority.map(a => APPROACH_LABELS[a]).join(' e ') : '—';
 
     if (running) document.querySelectorAll('.camera-overlay').forEach(el => el.classList.add('hidden'));
 
@@ -191,7 +191,7 @@ let modalCamera = null;
 
 function openCamera(approach) {
     modalCamera = approach;
-    document.getElementById('camera-modal-title').textContent = 'Vindo do ' + APPROACH_LABELS[approach];
+    document.getElementById('camera-modal-title').textContent = 'Acesso ' + APPROACH_LABELS[approach];
     modalImg.src = '/api/video/' + approach;
     modal.hidden = false;
 }
@@ -230,7 +230,7 @@ const selExit = document.getElementById('sel-exit');
 // Só as saídas que existem para a rua escolhida (rotas do sp.yaml).
 function syncExitOptions() {
     const exits = emergencyRoutes[selApproach.value] || [];
-    selExit.innerHTML = '<option value="">Qualquer saída</option>' +
+    selExit.innerHTML = '<option value="">Qualquer destino</option>' +
         exits.map(name => `<option value="${name}">${EXIT_LABELS[name] || name}</option>`).join('');
 }
 selApproach.addEventListener('change', syncExitOptions);
@@ -254,7 +254,7 @@ async function loadOptions() {
         announceBeforeS = options.announce_before_s;
         syncExitOptions();
     } catch (e) {
-        showMessage('Não foi possível falar com o servidor do painel.');
+        showMessage('Não foi possível conectar ao servidor do painel.');
     }
 }
 
@@ -284,7 +284,7 @@ btnStart.addEventListener('click', async () => {
     try {
         await post('/api/start', { scenario: selScenario.value, version: selVersion.value, preemption: selPreemption.value });
         resetCharts();
-        showMessage('Preparando o trânsito… as imagens aparecem em alguns segundos.');
+        showMessage('Iniciando a simulação. As imagens serão exibidas em alguns segundos.');
         isRunning = true;
         updateButtons();
     } catch (e) {
@@ -294,7 +294,7 @@ btnStart.addEventListener('click', async () => {
 
 btnStop.addEventListener('click', async () => {
     await post('/api/stop').catch(e => showMessage(e.message));
-    showMessage('Demonstração parada.');
+    showMessage('Demonstração encerrada.');
     document.querySelectorAll('.camera-overlay').forEach(el => el.classList.remove('hidden'));
 });
 
@@ -302,9 +302,9 @@ btnEmergency.addEventListener('click', async () => {
     try {
         const exit = selExit.value || null;
         await post('/api/emergency', { approach: selApproach.value, exit });
-        const route = 'vindo do ' + APPROACH_LABELS[selApproach.value] + (exit ? ', indo para o ' + EXIT_LABELS[exit] : '');
-        const delay = announceBeforeS == null ? '' : ` Ela aparece na rua em ${announceBeforeS} s.`;
-        showMessage(`🚑 Ambulância chamada (${route}): ela já avisou o semáforo.${delay}`);
+        const route = 'origem: ' + APPROACH_LABELS[selApproach.value] + (exit ? ', destino: ' + EXIT_LABELS[exit] : '');
+        const delay = announceBeforeS == null ? '' : ` Entrada na via em ${announceBeforeS} s.`;
+        showMessage(`🚑 Ambulância acionada (${route}). Aviso de aproximação enviado ao semáforo.${delay}`);
     } catch (e) {
         showMessage(e.message);
     }

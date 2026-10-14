@@ -545,21 +545,22 @@ body {
 /* Destaques do início */
 .highlights {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
+    grid-template-columns: 1fr;
+    gap: 12px;
 }
 
 .highlight-card {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 22px 20px;
+    align-items: center;
+    gap: 20px;
+    padding: 18px 22px;
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
 }
 
 .highlight-value {
+    flex: 0 0 120px;
     font-size: 34px;
     font-weight: 800;
     letter-spacing: -1px;
@@ -570,7 +571,7 @@ body {
 }
 
 .highlight-text {
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.5;
     color: var(--text-secondary);
 }
