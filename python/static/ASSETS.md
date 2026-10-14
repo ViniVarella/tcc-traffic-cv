@@ -7,7 +7,7 @@ Todos ficam locais para o painel funcionar sem internet (feira de TCCs).
 | Arquivo | Fonte | Licença |
 |---|---|---|
 | `inter-latin-wght.woff2` | Inter (Rasmus Andersson), pacote `@fontsource-variable/inter@5.2.5` | SIL OFL 1.1 (`OFL-Inter.txt`) |
-| `space-grotesk-latin-wght.woff2` | Space Grotesk (Florian Karsten), pacote `@fontsource-variable/space-grotesk@5.2.5`; só no nome TraffIQ | SIL OFL 1.1 (`OFL-SpaceGrotesk.txt`) |
+| `michroma-latin-400.woff2` | Michroma (Vernon Adams), pacote `@fontsource/michroma@5.2.5`; só no nome TraffIQ | SIL OFL 1.1 (`OFL-Michroma.txt`) |
 | `jetbrains-mono-latin-wght.woff2` | JetBrains Mono (JetBrains), pacote `@fontsource-variable/jetbrains-mono@5.2.5` | SIL OFL 1.1 (`OFL-JetBrainsMono.txt`) |
 
 ## Logos (`logos/`)
