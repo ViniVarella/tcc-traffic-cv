@@ -83,7 +83,9 @@ connectWS();
 // ============================================
 //  Telemetry State
 // ============================================
+// Câmera (vision) = o que a política vê; ground_truth = TraCI, só para mostrar.
 let isRunning = false;
+let lastSimTime = null;
 let chartData = {
     timestamps: [],
     waitingTimes: [],
@@ -92,100 +94,87 @@ let chartData = {
     phaseCounters: {}
 };
 const MAX_CHART_POINTS = 300;
+const unityDot = document.getElementById('unity-dot');
+
+const PHASE_LABELS = {
+    EAST_WEST_GREEN: 'Verde Leste/Oeste', EAST_WEST_YELLOW: 'Amarelo Leste/Oeste', ALL_RED: 'Vermelho total',
+    SOUTH_GREEN: 'Verde Sul', SOUTH_YELLOW: 'Amarelo Sul', PEDESTRIAN_GREEN: 'Verde pedestres',
+    PEDESTRIAN_CLEARANCE: 'Liberação pedestres'
+};
+const APPROACH_LABELS = { south: 'Sul', east: 'Leste', west: 'Oeste' };
+
+function setBadge(dot, cls, text) {
+    dot.className = 'status-dot ' + cls;
+    dot.parentElement.lastChild.textContent = ' ' + text;
+}
 
 function updateTelemetry(data) {
     const running = data.is_running === true;
+    const t = data.telemetry;
 
-    // Update SUMO status
-    if (running) {
-        sumoDot.className = 'status-dot online';
-        sumoDot.parentElement.lastChild.textContent = ' Rodando';
-    } else {
-        sumoDot.className = 'status-dot warning';
-        sumoDot.parentElement.lastChild.textContent = ' Parado';
-    }
+    if (running) setBadge(sumoDot, 'online', data.status === 'rodando' ? 'Rodando' : 'Iniciando');
+    else setBadge(sumoDot, 'warning', 'Parado');
+    if (t && t.vision) setBadge(unityDot, 'online', 'Frames OK');
+    else if (running && t) setBadge(unityDot, 'warning', 'Sem frames');
+    else setBadge(unityDot, 'offline', 'Aguardando');
 
-    // Update running state + buttons
     if (running !== isRunning) {
         isRunning = running;
         updateButtons();
     }
+    showMessage(data.error ? 'Erro: ' + data.error : '');
+    if (!t) return;
 
-    // Simulation clock
-    const simTime = data.sim_time || 0;
+    const simTime = t.sim_time || 0;
     const hours = Math.floor(simTime / 3600);
     const mins = Math.floor((simTime % 3600) / 60);
     const secs = Math.floor(simTime % 60);
     document.getElementById('sim-clock').textContent =
         `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 
-    // Metrics on Simulation page
-    updateMetricValue('val-south', data.south_queue, 0);
-    updateMetricValue('val-east', data.east_queue, 0);
-    updateMetricValue('val-west', data.west_queue, 0);
+    // Parados por aproximação vistos pela câmera (— em step sem frames).
+    for (const approach of ['south', 'east', 'west']) {
+        const value = t.vision ? t.vision[approach].stopped : '—';
+        document.getElementById('val-' + approach).textContent = value;
+    }
+    const gt = t.ground_truth;
+    document.getElementById('val-wait').textContent = gt.mean_wait_per_stopped_s.toFixed(1) + ' s';
+    document.getElementById('val-reward').textContent = t.reward.toFixed(3);
+    document.getElementById('phase-name').textContent = PHASE_LABELS[t.phase] || t.phase;
+    document.getElementById('preempt-name').textContent =
+        t.preempt_target ? '🚨 ' + (PHASE_LABELS[t.preempt_target] || t.preempt_target) : '—';
 
-    const waitVal = data.avg_waiting_time != null ? data.avg_waiting_time.toFixed(1) + ' s' : '— s';
-    document.getElementById('val-wait').textContent = waitVal;
-
-    const rewardVal = data.reward != null ? data.reward.toFixed(3) : '—';
-    document.getElementById('val-reward').textContent = rewardVal;
-
-    // Policy & Phase
-    const policyMap = { 'dqn': 'DQN (IA)', 'fixed': 'Ciclo Fixo', 'max_pressure': 'Max Pressure' };
-    document.getElementById('policy-name').textContent = policyMap[data.current_policy] || data.current_policy || '—';
-    document.getElementById('phase-name').textContent = data.phase || '—';
-
-    // Camera overlays
-    if (running && simTime > 0) {
+    if (running) {
         document.querySelectorAll('.camera-overlay').forEach(el => el.classList.add('hidden'));
         document.querySelectorAll('.camera-rec').forEach(el => el.classList.add('active'));
     }
 
-    // Accumulate chart data
-    if (running && simTime > 0) {
-        chartData.timestamps.push(simTime);
-        chartData.waitingTimes.push(data.avg_waiting_time || 0);
-        chartData.rewards.push(data.reward || 0);
-        chartData.haltingVehicles.push(data.south_queue || 0);
+    // Um ponto por step novo (a telemetria chega a cada 0,5 s, o step pode repetir).
+    if (simTime === lastSimTime) return;
+    lastSimTime = simTime;
+    chartData.timestamps.push(simTime);
+    chartData.waitingTimes.push(gt.mean_wait_per_stopped_s);
+    chartData.rewards.push(t.reward);
+    chartData.haltingVehicles.push(gt.halting_vehicles);
+    chartData.phaseCounters[t.phase] = (chartData.phaseCounters[t.phase] || 0) + 1;
 
-        // Phase counting
-        const phase = data.phase || 'unknown';
-        chartData.phaseCounters[phase] = (chartData.phaseCounters[phase] || 0) + 1;
-
-        // Trim to max points
-        if (chartData.timestamps.length > MAX_CHART_POINTS) {
-            chartData.timestamps.shift();
-            chartData.waitingTimes.shift();
-            chartData.rewards.shift();
-            chartData.haltingVehicles.shift();
-        }
-
-        // Dashboard KPIs
-        const totalSteps = chartData.timestamps.length;
-        document.getElementById('kpi-total-steps').textContent = totalSteps;
-
-        const avgReward = chartData.rewards.reduce((a, b) => a + b, 0) / totalSteps;
-        document.getElementById('kpi-avg-reward').textContent = avgReward.toFixed(3);
-        const rewardEl = document.getElementById('kpi-trend-reward');
-        rewardEl.textContent = avgReward >= -0.3 ? '↑ Bom' : '↓ Melhorar';
-        rewardEl.className = 'kpi-trend ' + (avgReward >= -0.3 ? 'up' : 'down');
-
-        const avgWait = chartData.waitingTimes.reduce((a, b) => a + b, 0) / totalSteps;
-        document.getElementById('kpi-avg-wait').textContent = avgWait.toFixed(1) + 's';
-
-        document.getElementById('kpi-halting').textContent = data.south_queue || 0;
-
-        // Update charts (throttled)
-        requestAnimationFrame(renderCharts);
-
-        // Update phase distribution
-        updatePhaseDistribution();
+    if (chartData.timestamps.length > MAX_CHART_POINTS) {
+        chartData.timestamps.shift();
+        chartData.waitingTimes.shift();
+        chartData.rewards.shift();
+        chartData.haltingVehicles.shift();
     }
-}
 
-function updateMetricValue(id, value, fallback) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = value != null ? value : fallback;
+    const totalSteps = chartData.timestamps.length;
+    document.getElementById('kpi-total-steps').textContent = totalSteps;
+    const avgReward = chartData.rewards.reduce((a, b) => a + b, 0) / totalSteps;
+    document.getElementById('kpi-avg-reward').textContent = avgReward.toFixed(3);
+    const avgWait = chartData.waitingTimes.reduce((a, b) => a + b, 0) / totalSteps;
+    document.getElementById('kpi-avg-wait').textContent = avgWait.toFixed(1) + 's';
+    document.getElementById('kpi-halting').textContent = gt.halting_vehicles;
+
+    requestAnimationFrame(renderCharts);
+    updatePhaseDistribution();
 }
 
 // ============================================
@@ -194,44 +183,94 @@ function updateMetricValue(id, value, fallback) {
 const btnStart = document.getElementById('btn-start');
 const btnStop = document.getElementById('btn-stop');
 const btnEmergency = document.getElementById('btn-emergency');
+const selScenario = document.getElementById('sel-scenario');
+const selVersion = document.getElementById('sel-version');
+const selPreemption = document.getElementById('sel-preemption');
+const selApproach = document.getElementById('sel-approach');
+
+function showMessage(text) {
+    document.getElementById('control-message').textContent = text;
+}
 
 function updateButtons() {
     btnStart.disabled = isRunning;
     btnStop.disabled = !isRunning;
     btnEmergency.disabled = !isRunning;
+    [selScenario, selVersion, selPreemption].forEach(el => { el.disabled = isRunning; });
 }
 
-btnStart.addEventListener('click', () => {
-    fetch('/api/control/start', { method: 'POST' });
-    // Optimistic update
-    isRunning = true;
-    updateButtons();
-});
+// A v3 só existe no cenário com pedestres.
+function syncVersionOptions() {
+    const v3 = selVersion.querySelector('option[value="v3"]');
+    if (!v3) return;
+    v3.disabled = selScenario.value !== 'calibrated_ped';
+    if (v3.disabled && selVersion.value === 'v3') selVersion.value = 'v2';
+}
 
-btnStop.addEventListener('click', () => {
-    fetch('/api/control/stop', { method: 'POST' });
-    isRunning = false;
-    updateButtons();
-    document.querySelectorAll('.camera-overlay').forEach(el => el.classList.remove('hidden'));
-    document.querySelectorAll('.camera-rec').forEach(el => el.classList.remove('active'));
-});
+async function loadOptions() {
+    try {
+        const options = await (await fetch('/api/options')).json();
+        selVersion.innerHTML = options.versions.map(v => `<option value="${v.id}">${v.label}</option>`).join('');
+        selVersion.value = 'v2';
+        syncVersionOptions();
+    } catch (e) {
+        showMessage('Não foi possível ler as opções da API.');
+    }
+}
+selScenario.addEventListener('change', syncVersionOptions);
 
-btnEmergency.addEventListener('click', () => {
-    fetch('/api/control/inject_emergency', { method: 'POST' });
-    btnEmergency.style.background = 'rgba(240, 176, 69, 0.25)';
-    setTimeout(() => { btnEmergency.style.background = ''; }, 800);
-});
+async function post(url, body) {
+    const response = await fetch(url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body)
+    });
+    if (!response.ok) {
+        const detail = (await response.json().catch(() => ({}))).detail;
+        throw new Error(detail || response.statusText);
+    }
+}
 
-document.getElementById('btn-reset-charts').addEventListener('click', () => {
+function resetCharts() {
     chartData = { timestamps: [], waitingTimes: [], rewards: [], haltingVehicles: [], phaseCounters: {} };
+    lastSimTime = null;
     renderCharts();
     updatePhaseDistribution();
     document.getElementById('kpi-total-steps').textContent = '0';
     document.getElementById('kpi-avg-reward').textContent = '0.000';
     document.getElementById('kpi-avg-wait').textContent = '0.0s';
     document.getElementById('kpi-halting').textContent = '0';
+}
+
+btnStart.addEventListener('click', async () => {
+    try {
+        await post('/api/start', { scenario: selScenario.value, version: selVersion.value, preemption: selPreemption.value });
+        resetCharts();
+        showMessage('Iniciando: aquecimento do SUMO e depois a Unity (mantenha o Play Mode ligado).');
+        isRunning = true;
+        updateButtons();
+    } catch (e) {
+        showMessage(e.message);
+    }
 });
 
+btnStop.addEventListener('click', async () => {
+    await post('/api/stop').catch(e => showMessage(e.message));
+    document.querySelectorAll('.camera-overlay').forEach(el => el.classList.remove('hidden'));
+    document.querySelectorAll('.camera-rec').forEach(el => el.classList.remove('active'));
+});
+
+btnEmergency.addEventListener('click', async () => {
+    try {
+        await post('/api/emergency', { approach: selApproach.value });
+        showMessage(`Viatura despachada (${APPROACH_LABELS[selApproach.value]}): aviso V2I agora, entra na rede em 15 s.`);
+    } catch (e) {
+        showMessage(e.message);
+    }
+});
+
+document.getElementById('btn-reset-charts').addEventListener('click', resetCharts);
+
+loadOptions();
 updateButtons();
 
 // ============================================
@@ -364,30 +403,17 @@ function renderCharts() {
 function updatePhaseDistribution() {
     const counters = chartData.phaseCounters;
     const total = Object.values(counters).reduce((a, b) => a + b, 0) || 1;
-
-    // Group into South / East+West / Transition
-    let southCount = 0, eastCount = 0, transCount = 0;
-    for (const [phase, count] of Object.entries(counters)) {
-        const lower = phase.toLowerCase();
-        if (lower.includes('south') || lower.includes('sul')) {
-            southCount += count;
-        } else if (lower.includes('east') || lower.includes('west') || lower.includes('leste') || lower.includes('oeste')) {
-            eastCount += count;
-        } else {
-            transCount += count;
-        }
+    const share = names => names.reduce((sum, name) => sum + (counters[name] || 0), 0) / total * 100;
+    const groups = {
+        south: share(['SOUTH_GREEN']),
+        east: share(['EAST_WEST_GREEN']),
+        trans: share(['EAST_WEST_YELLOW', 'SOUTH_YELLOW', 'ALL_RED']),
+        ped: share(['PEDESTRIAN_GREEN', 'PEDESTRIAN_CLEARANCE'])
+    };
+    for (const [key, pct] of Object.entries(groups)) {
+        document.getElementById('phase-bar-' + key).style.width = pct.toFixed(0) + '%';
+        document.getElementById('phase-pct-' + key).textContent = pct.toFixed(0) + '%';
     }
-
-    const sPct = (southCount / total * 100).toFixed(0);
-    const ePct = (eastCount / total * 100).toFixed(0);
-    const tPct = (transCount / total * 100).toFixed(0);
-
-    document.getElementById('phase-bar-south').style.width = sPct + '%';
-    document.getElementById('phase-pct-south').textContent = sPct + '%';
-    document.getElementById('phase-bar-east').style.width = ePct + '%';
-    document.getElementById('phase-pct-east').textContent = ePct + '%';
-    document.getElementById('phase-bar-trans').style.width = tPct + '%';
-    document.getElementById('phase-pct-trans').textContent = tPct + '%';
 }
 
 // Render empty charts on load

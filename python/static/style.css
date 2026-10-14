@@ -684,6 +684,7 @@ body {
 /* Control Strip */
 .control-strip {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
     padding: 12px 16px;
@@ -708,6 +709,33 @@ body {
 
 .policy-label, .phase-label {
     color: var(--text-muted);
+}
+
+.control-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.control-select {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: 6px 8px;
+    font: inherit;
+    font-size: 13px;
+}
+
+.control-select:disabled {
+    opacity: 0.5;
+}
+
+.control-message {
+    min-height: 18px;
+    font-size: 13px;
+    color: var(--amber);
 }
 
 .policy-value {

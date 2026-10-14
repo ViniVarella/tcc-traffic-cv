@@ -241,7 +241,23 @@
                         <div class="timeline-content">
                             <div class="timeline-tag current">v2 — Atual</div>
                             <h4>DQN por Faixa (Estado v2)</h4>
-                            <p>41 features cinemáticas, pré-treino no SUMO, decisões condicionais. Única versão que prioriza corretamente o Leste saturado, zerando a fila de entrada.</p>
+                            <p>Cinco features por faixa vistas pela câmera (contagem, parados, ocupação, velocidade e espera), pré-treino no SUMO e decisão a cada 5 s. No cenário calibrado, reduz a espera do ciclo fixo de 13,0 para 4,3 s.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-tag">v3 — Out 2026</div>
+                            <h4>DQN com Pedestres (Estado v3)</h4>
+                            <p>Fase exclusiva de pedestres a cada ciclo (7 s + 11 s). A v2 reduz a espera dos veículos em 32% e a dos pedestres em 56% em relação ao ciclo fixo; a v3, que vê as fases de pedestre, empata com ela.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-tag">Out 2026</div>
+                            <h4>Preempção para Viaturas</h4>
+                            <p>A viatura avisa por V2I (veículo → semáforo) e a câmera também a reconhece. Com V2I, todas cruzam sem parar, com perda média de 1,4–2,9 s.</p>
                         </div>
                     </div>
                 </div>
@@ -273,19 +289,48 @@
                         Parar
                     </button>
                     <div class="control-divider"></div>
-                    <button id="btn-emergency" class="btn btn-emergency" disabled>
-                        🚨 Injetar Viatura
+                    <div class="control-divider"></div>
+                    <label class="control-field">
+                        <span class="policy-label">Cenário</span>
+                        <select id="sel-scenario" class="control-select">
+                            <option value="calibrated">Calibrado (drone)</option>
+                            <option value="calibrated_ped">Calibrado + pedestres</option>
+                            <option value="original">Original (netedit)</option>
+                        </select>
+                    </label>
+                    <label class="control-field">
+                        <span class="policy-label">Versão</span>
+                        <select id="sel-version" class="control-select"></select>
+                    </label>
+                    <label class="control-field">
+                        <span class="policy-label">Preempção</span>
+                        <select id="sel-preemption" class="control-select">
+                            <option value="v2i">V2I</option>
+                            <option value="vision">Visão</option>
+                            <option value="both">V2I + visão</option>
+                            <option value="none">Nenhuma</option>
+                        </select>
+                    </label>
+                    <div class="control-divider"></div>
+                    <select id="sel-approach" class="control-select" title="Aproximação da viatura">
+                        <option value="south">Sul</option>
+                        <option value="east">Leste</option>
+                        <option value="west">Oeste</option>
+                    </select>
+                    <button id="btn-emergency" class="btn btn-emergency" disabled title="Anunciada por V2I agora; entra na rede 15 s depois">
+                        🚨 Despachar viatura
                     </button>
                     <div class="control-divider"></div>
-                    <div class="policy-display">
-                        <span class="policy-label">Política:</span>
-                        <span class="policy-value" id="policy-name">—</span>
-                    </div>
                     <div class="phase-display">
                         <span class="phase-label">Fase:</span>
                         <span class="phase-value" id="phase-name">—</span>
                     </div>
+                    <div class="phase-display">
+                        <span class="phase-label">Preempção:</span>
+                        <span class="phase-value" id="preempt-name">—</span>
+                    </div>
                 </div>
+                <div class="control-message" id="control-message"></div>
 
                 <!-- Camera Grid -->
                 <div class="cameras-section">
@@ -337,28 +382,28 @@
                     <div class="metric-tile">
                         <div class="metric-icon south"></div>
                         <div class="metric-info">
-                            <span class="metric-label">Fila Sul</span>
+                            <span class="metric-label">Parados Sul (câmera)</span>
                             <span class="metric-number" id="val-south">—</span>
                         </div>
                     </div>
                     <div class="metric-tile">
                         <div class="metric-icon east"></div>
                         <div class="metric-info">
-                            <span class="metric-label">Fila Leste</span>
+                            <span class="metric-label">Parados Leste (câmera)</span>
                             <span class="metric-number" id="val-east">—</span>
                         </div>
                     </div>
                     <div class="metric-tile">
                         <div class="metric-icon west"></div>
                         <div class="metric-info">
-                            <span class="metric-label">Fila Oeste</span>
+                            <span class="metric-label">Parados Oeste (câmera)</span>
                             <span class="metric-number" id="val-west">—</span>
                         </div>
                     </div>
                     <div class="metric-tile highlight-metric">
                         <div class="metric-icon wait"></div>
                         <div class="metric-info">
-                            <span class="metric-label">Espera Média</span>
+                            <span class="metric-label">Espera por veículo parado (<em>ground truth</em>)</span>
                             <span class="metric-number" id="val-wait">— s</span>
                         </div>
                     </div>
@@ -378,7 +423,7 @@
             <div class="page-header">
                 <div>
                     <h1 class="page-title">Dashboard de Performance</h1>
-                    <p class="page-subtitle">Métricas acumuladas e gráficos de eficiência da simulação</p>
+                    <p class="page-subtitle">Métricas do TraCI (<em>ground truth</em>): a política não as vê, decide só pela câmera</p>
                 </div>
                 <div class="dash-controls">
                     <button class="btn btn-sm btn-outline" id="btn-reset-charts">Limpar Gráficos</button>
@@ -399,12 +444,12 @@
                 </div>
                 <div class="kpi-card accent-amber">
                     <div class="kpi-value" id="kpi-avg-wait">0.0s</div>
-                    <div class="kpi-label">Espera Média</div>
+                    <div class="kpi-label">Espera média por veículo parado (<em>ground truth</em>)</div>
                     <div class="kpi-trend" id="kpi-trend-wait">—</div>
                 </div>
                 <div class="kpi-card accent-blue">
                     <div class="kpi-value" id="kpi-halting">0</div>
-                    <div class="kpi-label">Veículos Parados</div>
+                    <div class="kpi-label">Veículos parados agora (<em>ground truth</em>)</div>
                     <div class="kpi-trend" id="kpi-trend-halting">—</div>
                 </div>
             </div>
@@ -413,7 +458,7 @@
             <div class="charts-row">
                 <div class="chart-card wide">
                     <div class="chart-header">
-                        <h3>Tempo de Espera ao Longo do Tempo</h3>
+                        <h3>Espera por veículo parado (<em>ground truth</em>, s)</h3>
                         <span class="chart-badge live">LIVE</span>
                     </div>
                     <div class="chart-body">
@@ -434,7 +479,7 @@
             <div class="charts-row">
                 <div class="chart-card">
                     <div class="chart-header">
-                        <h3>Veículos Parados</h3>
+                        <h3>Veículos parados (<em>ground truth</em>)</h3>
                         <span class="chart-badge live">LIVE</span>
                     </div>
                     <div class="chart-body">
@@ -462,11 +507,18 @@
                                 <span class="phase-bar-pct" id="phase-pct-east">50%</span>
                             </div>
                             <div class="phase-bar-container">
-                                <div class="phase-bar-label">Transição (Amarelo / All-Red)</div>
+                                <div class="phase-bar-label">Transição (amarelo / all-red)</div>
                                 <div class="phase-bar-track">
                                     <div class="phase-bar-fill transition-fill" id="phase-bar-trans" style="width: 0%"></div>
                                 </div>
                                 <span class="phase-bar-pct" id="phase-pct-trans">0%</span>
+                            </div>
+                            <div class="phase-bar-container">
+                                <div class="phase-bar-label">Pedestres (verde + liberação)</div>
+                                <div class="phase-bar-track">
+                                    <div class="phase-bar-fill transition-fill" id="phase-bar-ped" style="width: 0%"></div>
+                                </div>
+                                <span class="phase-bar-pct" id="phase-pct-ped">0%</span>
                             </div>
                         </div>
                     </div>
