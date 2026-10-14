@@ -488,8 +488,32 @@ body {
 /* Tech Grid */
 .tech-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 12px;
+}
+
+/* Logos sobre fundo claro: vários têm texto escuro. */
+.tech-logo {
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f7fa;
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    margin-bottom: 14px;
+}
+
+/* Altura igual para todos; os logos largos (wordmarks) param na largura máxima. */
+.tech-logo img {
+    height: 48px;
+    max-width: 70%;
+    object-fit: contain;
+}
+
+.tech-logo.generic {
+    background: var(--bg-elevated);
+    color: var(--accent);
 }
 
 .tech-card {
@@ -513,8 +537,53 @@ body {
 }
 
 .tech-role {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+/* Destaques do início */
+.highlights {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.highlight-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 22px 20px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.highlight-value {
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--accent), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.highlight-text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.highlights-note {
+    grid-column: 1 / -1;
     font-size: 12px;
     color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.steps-grid.three {
+    grid-template-columns: repeat(3, 1fr);
 }
 
 /* Timeline */
@@ -766,33 +835,27 @@ body {
     color: var(--green);
 }
 
-/* Camera Grid */
-.cameras-section {
+/* Mosaico das câmeras: três quadros iguais, na ordem do mapa (Oeste, Sul, Leste) */
+.cameras-grid {
     display: grid;
-    grid-template-columns: 1.6fr 1fr;
-    gap: 16px;
-    min-height: 420px;
-}
-
-.camera-secondary {
-    display: flex;
-    flex-direction: column;
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
 }
 
 .camera-card {
     background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
+    border: 2px solid var(--border-subtle);
     border-radius: var(--radius-md);
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    flex: 1;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.camera-card.featured {
-    border-color: rgba(79, 143, 247, 0.15);
-}
+.camera-card.signal-green { border-color: rgba(45, 212, 160, 0.7); box-shadow: 0 0 18px rgba(45, 212, 160, 0.15); }
+.camera-card.signal-yellow { border-color: rgba(240, 176, 69, 0.7); }
+.camera-card.signal-red { border-color: rgba(240, 101, 101, 0.45); }
+.camera-card.priority { box-shadow: 0 0 0 3px rgba(240, 176, 69, 0.6), 0 0 24px rgba(240, 176, 69, 0.3); }
 
 .camera-header {
     display: flex;
@@ -803,55 +866,62 @@ body {
     font-size: 13px;
 }
 
-.camera-tag {
-    font-size: 9px;
+.camera-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.camera-count {
+    margin-left: auto;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.camera-count strong {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-primary);
+}
+
+.camera-alert {
+    display: none;
+    font-size: 11px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--accent);
-    background: var(--accent-soft);
-    padding: 3px 8px;
+    color: var(--amber);
+    background: var(--amber-soft);
+    padding: 2px 8px;
     border-radius: var(--radius-sm);
 }
 
-.camera-name {
-    font-weight: 600;
-    color: var(--text-secondary);
+.camera-card.priority .camera-alert { display: inline-block; }
+
+.signal-light {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
 }
 
-.camera-rec {
-    margin-left: auto;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--red);
-    opacity: 0;
-    transition: var(--transition-fast);
-}
+.signal-light.green { background: var(--green); box-shadow: 0 0 8px rgba(45, 212, 160, 0.7); }
+.signal-light.yellow { background: var(--amber); box-shadow: 0 0 8px rgba(240, 176, 69, 0.7); }
+.signal-light.red { background: var(--red); box-shadow: 0 0 8px rgba(240, 101, 101, 0.6); }
 
-.camera-rec.active {
-    opacity: 1;
-    animation: blink 1.5s infinite;
-}
-
-@keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0.3; }
-}
-
+/* As capturas da Unity são 1280×720: quadro fixo em 16:9. */
 .camera-viewport {
-    flex: 1;
     position: relative;
+    aspect-ratio: 16 / 9;
     background: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 180px;
+    border: 0;
+    padding: 0;
+    cursor: zoom-in;
+    display: block;
+    width: 100%;
 }
 
 .camera-viewport img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
 }
 
@@ -868,8 +938,7 @@ body {
 
 .camera-overlay span {
     font-size: 13px;
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--text-muted);
+    color: var(--text-secondary);
 }
 
 .camera-overlay.hidden {
@@ -877,10 +946,55 @@ body {
     pointer-events: none;
 }
 
+.cameras-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: -8px;
+}
+
+/* Câmera ampliada */
+.camera-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(5, 7, 12, 0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.camera-modal[hidden] { display: none; }
+
+.camera-modal-content {
+    width: min(100%, calc((100vh - 120px) * 16 / 9));
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.camera-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.camera-modal-header .btn { margin-left: auto; }
+
+.camera-modal-content img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
+    background: #000;
+    border-radius: var(--radius-md);
+}
+
 /* Metrics Strip */
 .metrics-strip {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 12px;
 }
 
@@ -1077,6 +1191,7 @@ body {
 .south-fill { background: linear-gradient(90deg, #4f8ff7, #6ea8ff); }
 .east-fill { background: linear-gradient(90deg, #2dd4a0, #4ae5b8); }
 .transition-fill { background: linear-gradient(90deg, #f0b045, #f5c76a); }
+.pedestrian-fill { background: linear-gradient(90deg, #a78bfa, #c4b0ff); }
 
 .phase-bar-pct {
     font-family: 'JetBrains Mono', monospace;
@@ -1106,18 +1221,18 @@ body {
         grid-template-columns: repeat(2, 1fr);
     }
     .tech-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-    .cameras-section {
-        grid-template-columns: 1fr;
-    }
-    .metrics-strip {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
     }
     .kpi-row {
         grid-template-columns: repeat(2, 1fr);
     }
     .charts-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 900px) {
+    .cameras-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -1147,10 +1262,7 @@ body {
     .page {
         padding: 20px 16px;
     }
-    .steps-grid, .tech-grid {
+    .steps-grid, .steps-grid.three, .tech-grid, .highlights, .metrics-strip {
         grid-template-columns: 1fr;
-    }
-    .metrics-strip {
-        grid-template-columns: 1fr 1fr;
     }
 }

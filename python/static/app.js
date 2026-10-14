@@ -1,6 +1,6 @@
 /**
- * Traffic CV — Frontend Application
- * Single-page app with WebSocket telemetry, chart rendering, and page routing.
+ * TraffIQ — painel web
+ * Página única: telemetria por WebSocket, câmeras, gráficos e navegação por âncora.
  */
 
 // ============================================
@@ -43,72 +43,81 @@ window.addEventListener('hashchange', handleHash);
 handleHash();
 
 // ============================================
-//  WebSocket Connection
+//  Conexão com o servidor (telemetria a cada 0,5 s)
 // ============================================
 let ws = null;
 let reconnectTimer = null;
 const apiDot = document.getElementById('api-dot');
 const sumoDot = document.getElementById('sumo-dot');
+const unityDot = document.getElementById('unity-dot');
+
+function setBadge(dot, cls, text) {
+    dot.className = 'status-dot ' + cls;
+    dot.parentElement.lastChild.textContent = ' ' + text;
+}
 
 function connectWS() {
     ws = new WebSocket(`ws://${window.location.host}/ws/telemetry`);
-
     ws.onopen = () => {
-        apiDot.className = 'status-dot online';
-        apiDot.parentElement.lastChild.textContent = ' Online';
+        setBadge(apiDot, 'online', 'Conectado');
         clearTimeout(reconnectTimer);
     };
-
     ws.onclose = () => {
-        apiDot.className = 'status-dot offline';
-        apiDot.parentElement.lastChild.textContent = ' Offline';
-        sumoDot.className = 'status-dot offline';
-        sumoDot.parentElement.lastChild.textContent = ' Parado';
-        // Auto-reconnect
+        setBadge(apiDot, 'offline', 'Desconectado');
+        setBadge(sumoDot, 'offline', 'Parada');
         reconnectTimer = setTimeout(connectWS, 3000);
     };
-
-    ws.onerror = () => {
-        ws.close();
-    };
-
-    ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        updateTelemetry(data);
-    };
+    ws.onerror = () => ws.close();
+    ws.onmessage = (event) => updateTelemetry(JSON.parse(event.data));
 }
 
 connectWS();
 
 // ============================================
-//  Telemetry State
+//  Telemetria
 // ============================================
-// Câmera (vision) = o que a política vê; ground_truth = TraCI, só para mostrar.
+// vision = o que a IA vê pelas câmeras; ground_truth = medido pelo simulador, só para mostrar.
 let isRunning = false;
 let lastSimTime = null;
-let chartData = {
-    timestamps: [],
-    waitingTimes: [],
-    rewards: [],
-    haltingVehicles: [],
-    phaseCounters: {}
-};
+let lastError = null;
+let chartData = { timestamps: [], waitingTimes: [], rewards: [], haltingVehicles: [], phaseCounters: {} };
 const MAX_CHART_POINTS = 300;
-const unityDot = document.getElementById('unity-dot');
+const APPROACHES = ['west', 'south', 'east'];
 
 const PHASE_LABELS = {
-    EAST_WEST_GREEN: 'Verde Leste/Oeste', EAST_WEST_YELLOW: 'Amarelo Leste/Oeste', ALL_RED: 'Vermelho total',
-    SOUTH_GREEN: 'Verde Sul', SOUTH_YELLOW: 'Amarelo Sul', PEDESTRIAN_GREEN: 'Verde pedestres',
-    PEDESTRIAN_CLEARANCE: 'Liberação pedestres'
+    EAST_WEST_GREEN: 'Verde para Leste e Oeste', EAST_WEST_YELLOW: 'Amarelo para Leste e Oeste',
+    ALL_RED: 'Vermelho geral', SOUTH_GREEN: 'Verde para o Sul', SOUTH_YELLOW: 'Amarelo para o Sul',
+    PEDESTRIAN_GREEN: 'Travessia de pedestres', PEDESTRIAN_CLEARANCE: 'Pedestres terminando a travessia'
 };
+// Verde que a prioridade segura → ruas atendidas.
+const PRIORITY_APPROACHES = { EAST_WEST_GREEN: ['east', 'west'], SOUTH_GREEN: ['south'] };
 const APPROACH_LABELS = { south: 'Sul', east: 'Leste', west: 'Oeste' };
 const EXIT_LABELS = { north: 'Norte', east: 'Leste', west: 'Oeste' };
 let emergencyRoutes = {};
 let announceBeforeS = null;
 
-function setBadge(dot, cls, text) {
-    dot.className = 'status-dot ' + cls;
-    dot.parentElement.lastChild.textContent = ' ' + text;
+function formatClock(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function updateCameras(t) {
+    const priority = PRIORITY_APPROACHES[t.preempt_target] || [];
+    for (const approach of APPROACHES) {
+        const color = t.signals ? t.signals[approach] : '';
+        const card = document.querySelector(`.camera-card[data-camera="${approach}"]`);
+        card.classList.remove('signal-green', 'signal-yellow', 'signal-red');
+        if (color) card.classList.add('signal-' + color);
+        card.classList.toggle('priority', priority.includes(approach));
+        document.getElementById('signal-' + approach).className = 'signal-light ' + (color || '');
+        // Parados vistos pela câmera ("—" num instante sem imagem).
+        document.getElementById('stopped-' + approach).textContent = t.vision ? t.vision[approach].stopped : '—';
+    }
+    if (modalCamera && t.signals) {
+        document.getElementById('modal-signal').className = 'signal-light ' + t.signals[modalCamera];
+    }
 }
 
 function updateTelemetry(data) {
@@ -116,51 +125,42 @@ function updateTelemetry(data) {
     const t = data.telemetry;
 
     if (running) setBadge(sumoDot, 'online', data.status === 'rodando' ? 'Rodando' : 'Iniciando');
-    else setBadge(sumoDot, 'warning', 'Parado');
-    if (t && t.vision) setBadge(unityDot, 'online', 'Frames OK');
-    else if (running && t) setBadge(unityDot, 'warning', 'Sem frames');
+    else setBadge(sumoDot, 'warning', 'Parada');
+    if (t && t.vision) setBadge(unityDot, 'online', 'Recebendo imagens');
+    else if (running && t) setBadge(unityDot, 'warning', 'Sem imagens');
     else setBadge(unityDot, 'offline', 'Aguardando');
 
     if (running !== isRunning) {
         isRunning = running;
         updateButtons();
     }
-    showMessage(data.error ? 'Erro: ' + data.error : '');
+    if (data.error !== lastError) {
+        lastError = data.error;
+        if (data.error) showMessage('Erro: ' + data.error);
+    }
+    document.getElementById('val-dispatched').textContent = (data.dispatched || []).length;
     if (!t) return;
 
-    const simTime = t.sim_time || 0;
-    const hours = Math.floor(simTime / 3600);
-    const mins = Math.floor((simTime % 3600) / 60);
-    const secs = Math.floor(simTime % 60);
-    document.getElementById('sim-clock').textContent =
-        `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-
-    // Parados por aproximação vistos pela câmera (— em step sem frames).
-    for (const approach of ['south', 'east', 'west']) {
-        const value = t.vision ? t.vision[approach].stopped : '—';
-        document.getElementById('val-' + approach).textContent = value;
-    }
+    document.getElementById('sim-clock').textContent = formatClock(t.sim_time || 0);
+    updateCameras(t);
     const gt = t.ground_truth;
+    document.getElementById('val-halting').textContent = gt.halting_vehicles;
     document.getElementById('val-wait').textContent = gt.mean_wait_per_stopped_s.toFixed(1) + ' s';
-    document.getElementById('val-reward').textContent = t.reward.toFixed(3);
     document.getElementById('phase-name').textContent = PHASE_LABELS[t.phase] || t.phase;
-    document.getElementById('preempt-name').textContent =
-        t.preempt_target ? '🚨 ' + (PHASE_LABELS[t.preempt_target] || t.preempt_target) : '—';
+    const priority = PRIORITY_APPROACHES[t.preempt_target];
+    document.getElementById('preempt-name').textContent = priority
+        ? '🚑 abrindo para ' + priority.map(a => APPROACH_LABELS[a]).join(' e ') : '—';
 
-    if (running) {
-        document.querySelectorAll('.camera-overlay').forEach(el => el.classList.add('hidden'));
-        document.querySelectorAll('.camera-rec').forEach(el => el.classList.add('active'));
-    }
+    if (running) document.querySelectorAll('.camera-overlay').forEach(el => el.classList.add('hidden'));
 
-    // Um ponto por step novo (a telemetria chega a cada 0,5 s, o step pode repetir).
-    if (simTime === lastSimTime) return;
-    lastSimTime = simTime;
-    chartData.timestamps.push(simTime);
+    // Um ponto por instante novo da simulação (a telemetria pode repetir o mesmo).
+    if (t.sim_time === lastSimTime) return;
+    lastSimTime = t.sim_time;
+    chartData.timestamps.push(t.sim_time);
     chartData.waitingTimes.push(gt.mean_wait_per_stopped_s);
     chartData.rewards.push(t.reward);
     chartData.haltingVehicles.push(gt.halting_vehicles);
     chartData.phaseCounters[t.phase] = (chartData.phaseCounters[t.phase] || 0) + 1;
-
     if (chartData.timestamps.length > MAX_CHART_POINTS) {
         chartData.timestamps.shift();
         chartData.waitingTimes.shift();
@@ -168,12 +168,14 @@ function updateTelemetry(data) {
         chartData.haltingVehicles.shift();
     }
 
-    const totalSteps = chartData.timestamps.length;
-    document.getElementById('kpi-total-steps').textContent = totalSteps;
-    const avgReward = chartData.rewards.reduce((a, b) => a + b, 0) / totalSteps;
+    const points = chartData.timestamps.length;
+    const followed = chartData.timestamps[points - 1] - chartData.timestamps[0];
+    document.getElementById('kpi-total-steps').textContent =
+        `${Math.floor(followed / 60)}:${String(Math.floor(followed % 60)).padStart(2, '0')}`;
+    const avgReward = chartData.rewards.reduce((a, b) => a + b, 0) / points;
     document.getElementById('kpi-avg-reward').textContent = avgReward.toFixed(3);
-    const avgWait = chartData.waitingTimes.reduce((a, b) => a + b, 0) / totalSteps;
-    document.getElementById('kpi-avg-wait').textContent = avgWait.toFixed(1) + 's';
+    const avgWait = chartData.waitingTimes.reduce((a, b) => a + b, 0) / points;
+    document.getElementById('kpi-avg-wait').textContent = avgWait.toFixed(1) + ' s';
     document.getElementById('kpi-halting').textContent = gt.halting_vehicles;
 
     requestAnimationFrame(renderCharts);
@@ -181,7 +183,40 @@ function updateTelemetry(data) {
 }
 
 // ============================================
-//  Controls
+//  Câmera ampliada
+// ============================================
+const modal = document.getElementById('camera-modal');
+const modalImg = document.getElementById('camera-modal-img');
+let modalCamera = null;
+
+function openCamera(approach) {
+    modalCamera = approach;
+    document.getElementById('camera-modal-title').textContent = 'Vindo do ' + APPROACH_LABELS[approach];
+    modalImg.src = '/api/video/' + approach;
+    modal.hidden = false;
+}
+
+function closeCamera() {
+    modal.hidden = true;
+    modalImg.removeAttribute('src');  // encerra o stream extra
+    modalCamera = null;
+}
+
+// Sem servidor de vídeo, esconde o ícone de imagem quebrada atrás do aviso.
+document.querySelectorAll('.camera-viewport img').forEach(img => {
+    img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+    img.addEventListener('load', () => { img.style.visibility = 'visible'; });
+});
+
+document.querySelectorAll('.camera-viewport').forEach(el => {
+    el.addEventListener('click', () => openCamera(el.dataset.camera));
+});
+document.getElementById('camera-modal-close').addEventListener('click', closeCamera);
+modal.addEventListener('click', (e) => { if (e.target === modal) closeCamera(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.hidden) closeCamera(); });
+
+// ============================================
+//  Controles
 // ============================================
 const btnStart = document.getElementById('btn-start');
 const btnStop = document.getElementById('btn-stop');
@@ -192,10 +227,10 @@ const selPreemption = document.getElementById('sel-preemption');
 const selApproach = document.getElementById('sel-approach');
 const selExit = document.getElementById('sel-exit');
 
-// Só as saídas que existem para a aproximação escolhida (rotas do sp.yaml).
+// Só as saídas que existem para a rua escolhida (rotas do sp.yaml).
 function syncExitOptions() {
     const exits = emergencyRoutes[selApproach.value] || [];
-    selExit.innerHTML = '<option value="">Sorteio</option>' +
+    selExit.innerHTML = '<option value="">Qualquer saída</option>' +
         exits.map(name => `<option value="${name}">${EXIT_LABELS[name] || name}</option>`).join('');
 }
 selApproach.addEventListener('change', syncExitOptions);
@@ -211,28 +246,17 @@ function updateButtons() {
     [selScenario, selVersion, selPreemption].forEach(el => { el.disabled = isRunning; });
 }
 
-// A v3 só existe no cenário com pedestres.
-function syncVersionOptions() {
-    const v3 = selVersion.querySelector('option[value="v3"]');
-    if (!v3) return;
-    v3.disabled = selScenario.value !== 'calibrated_ped';
-    if (v3.disabled && selVersion.value === 'v3') selVersion.value = 'v2';
-}
-
 async function loadOptions() {
     try {
         const options = await (await fetch('/api/options')).json();
         selVersion.innerHTML = options.versions.map(v => `<option value="${v.id}">${v.label}</option>`).join('');
-        selVersion.value = 'v2';
-        syncVersionOptions();
         emergencyRoutes = options.emergency_routes || {};
         announceBeforeS = options.announce_before_s;
         syncExitOptions();
     } catch (e) {
-        showMessage('Não foi possível ler as opções da API.');
+        showMessage('Não foi possível falar com o servidor do painel.');
     }
 }
-selScenario.addEventListener('change', syncVersionOptions);
 
 async function post(url, body) {
     const response = await fetch(url, {
@@ -250,9 +274,9 @@ function resetCharts() {
     lastSimTime = null;
     renderCharts();
     updatePhaseDistribution();
-    document.getElementById('kpi-total-steps').textContent = '0';
+    document.getElementById('kpi-total-steps').textContent = '0:00';
     document.getElementById('kpi-avg-reward').textContent = '0.000';
-    document.getElementById('kpi-avg-wait').textContent = '0.0s';
+    document.getElementById('kpi-avg-wait').textContent = '0.0 s';
     document.getElementById('kpi-halting').textContent = '0';
 }
 
@@ -260,7 +284,7 @@ btnStart.addEventListener('click', async () => {
     try {
         await post('/api/start', { scenario: selScenario.value, version: selVersion.value, preemption: selPreemption.value });
         resetCharts();
-        showMessage('Iniciando: aquecimento do SUMO e depois a Unity (mantenha o Play Mode ligado).');
+        showMessage('Preparando o trânsito… as imagens aparecem em alguns segundos.');
         isRunning = true;
         updateButtons();
     } catch (e) {
@@ -270,17 +294,17 @@ btnStart.addEventListener('click', async () => {
 
 btnStop.addEventListener('click', async () => {
     await post('/api/stop').catch(e => showMessage(e.message));
+    showMessage('Demonstração parada.');
     document.querySelectorAll('.camera-overlay').forEach(el => el.classList.remove('hidden'));
-    document.querySelectorAll('.camera-rec').forEach(el => el.classList.remove('active'));
 });
 
 btnEmergency.addEventListener('click', async () => {
     try {
         const exit = selExit.value || null;
         await post('/api/emergency', { approach: selApproach.value, exit });
-        const route = APPROACH_LABELS[selApproach.value] + (exit ? ' → ' + EXIT_LABELS[exit] : '');
-        const delay = announceBeforeS == null ? '' : `, entra na rede em ${announceBeforeS} s`;
-        showMessage(`Viatura despachada (${route}): aviso V2I agora${delay}.`);
+        const route = 'vindo do ' + APPROACH_LABELS[selApproach.value] + (exit ? ', indo para o ' + EXIT_LABELS[exit] : '');
+        const delay = announceBeforeS == null ? '' : ` Ela aparece na rua em ${announceBeforeS} s.`;
+        showMessage(`🚑 Ambulância chamada (${route}): ela já avisou o semáforo.${delay}`);
     } catch (e) {
         showMessage(e.message);
     }
@@ -321,7 +345,7 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
         ctx.fillStyle = '#5c6578';
         ctx.font = '13px Inter, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('Aguardando dados...', W / 2, H / 2);
+        ctx.fillText('Aguardando dados…', W / 2, H / 2);
         return;
     }
 
