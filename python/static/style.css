@@ -571,8 +571,12 @@ body {
 }
 
 .highlight-value {
-    flex: 0 0 120px;
-    font-size: 34px;
+    /* Número à direita, separado do texto por uma linha. */
+    flex: 0 0 165px;
+    padding-right: 20px;
+    border-right: 1px solid var(--border-subtle);
+    text-align: right;
+    font-size: 44px;
     font-weight: 800;
     letter-spacing: -1px;
     background: linear-gradient(135deg, var(--accent), var(--green));
