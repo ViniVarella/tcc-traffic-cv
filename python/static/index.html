@@ -312,11 +312,20 @@
                         </select>
                     </label>
                     <div class="control-divider"></div>
-                    <select id="sel-approach" class="control-select" title="Aproximação da viatura">
-                        <option value="south">Sul</option>
-                        <option value="east">Leste</option>
-                        <option value="west">Oeste</option>
-                    </select>
+                    <label class="control-field">
+                        <span class="policy-label">Viatura de</span>
+                        <select id="sel-approach" class="control-select" title="Aproximação por onde a viatura chega">
+                            <option value="south">Sul</option>
+                            <option value="east">Leste</option>
+                            <option value="west">Oeste</option>
+                        </select>
+                    </label>
+                    <label class="control-field">
+                        <span class="policy-label">para</span>
+                        <select id="sel-exit" class="control-select" title="Saída depois do cruzamento">
+                            <option value="">Sorteio</option>
+                        </select>
+                    </label>
                     <button id="btn-emergency" class="btn btn-emergency" disabled title="Anunciada por V2I agora; entra na rede 15 s depois">
                         🚨 Despachar viatura
                     </button>

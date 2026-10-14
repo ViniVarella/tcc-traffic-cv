@@ -102,6 +102,8 @@ const PHASE_LABELS = {
     PEDESTRIAN_CLEARANCE: 'Liberação pedestres'
 };
 const APPROACH_LABELS = { south: 'Sul', east: 'Leste', west: 'Oeste' };
+const EXIT_LABELS = { north: 'Norte', east: 'Leste', west: 'Oeste' };
+let emergencyRoutes = {};
 
 function setBadge(dot, cls, text) {
     dot.className = 'status-dot ' + cls;
@@ -187,6 +189,15 @@ const selScenario = document.getElementById('sel-scenario');
 const selVersion = document.getElementById('sel-version');
 const selPreemption = document.getElementById('sel-preemption');
 const selApproach = document.getElementById('sel-approach');
+const selExit = document.getElementById('sel-exit');
+
+// Só as saídas que existem para a aproximação escolhida (rotas do sp.yaml).
+function syncExitOptions() {
+    const exits = emergencyRoutes[selApproach.value] || [];
+    selExit.innerHTML = '<option value="">Sorteio</option>' +
+        exits.map(name => `<option value="${name}">${EXIT_LABELS[name] || name}</option>`).join('');
+}
+selApproach.addEventListener('change', syncExitOptions);
 
 function showMessage(text) {
     document.getElementById('control-message').textContent = text;
@@ -213,6 +224,8 @@ async function loadOptions() {
         selVersion.innerHTML = options.versions.map(v => `<option value="${v.id}">${v.label}</option>`).join('');
         selVersion.value = 'v2';
         syncVersionOptions();
+        emergencyRoutes = options.emergency_routes || {};
+        syncExitOptions();
     } catch (e) {
         showMessage('Não foi possível ler as opções da API.');
     }
@@ -261,8 +274,10 @@ btnStop.addEventListener('click', async () => {
 
 btnEmergency.addEventListener('click', async () => {
     try {
-        await post('/api/emergency', { approach: selApproach.value });
-        showMessage(`Viatura despachada (${APPROACH_LABELS[selApproach.value]}): aviso V2I agora, entra na rede em 15 s.`);
+        const exit = selExit.value || null;
+        await post('/api/emergency', { approach: selApproach.value, exit });
+        const route = APPROACH_LABELS[selApproach.value] + (exit ? ' → ' + EXIT_LABELS[exit] : '');
+        showMessage(`Viatura despachada (${route}): aviso V2I agora, entra na rede em 15 s.`);
     } catch (e) {
         showMessage(e.message);
     }

@@ -81,6 +81,14 @@ class EmergencyTrafficTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._traffic().dispatch("north", 0.0)
 
+    def test_dispatch_uses_the_chosen_exit(self) -> None:
+        traffic = self._traffic()
+        traffic.dispatch("south", 0.0, to_edge="E5")
+        plan = traffic._vehicles[-1].plan
+        self.assertEqual((plan.from_edge, plan.to_edge), ("E3", "E5"))
+        with self.assertRaises(ValueError):
+            traffic.dispatch("west", 0.0, to_edge="E0")  # Oeste só segue para o Leste (E1)
+
     def test_v2i_announces_before_insertion_then_reports_eta_until_the_stop_line(self) -> None:
         traffic, client = self._traffic(), FakeClient()
         requests = {time: traffic.step(client, float(time)) for time in range(10, 40)}

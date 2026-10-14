@@ -39,8 +39,14 @@ class EpisodeRunnerValidationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.runner.start(StartRequest())
         self.runner.dispatch_emergency("east")
-        with self.assertRaises(ValueError):
-            self.runner.dispatch_emergency("north")
+        self.runner.dispatch_emergency("south", "west")
+        for approach, exit_name in (("north", None), ("west", "north"), ("east", "east")):
+            with self.assertRaises(ValueError):
+                self.runner.dispatch_emergency(approach, exit_name)
+
+    def test_emergency_routes_follow_the_config(self) -> None:
+        self.assertEqual(self.runner.emergency_routes(),
+                         {"south": ["east", "north", "west"], "east": ["north", "west"], "west": ["east"]})
 
 
 if __name__ == "__main__":

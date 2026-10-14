@@ -52,6 +52,11 @@ class StartRequest(BaseModel):
 
 class EmergencyRequestBody(BaseModel):
     approach: str
+    exit: str | None = None  # None: sorteia entre as saídas da aproximação
+
+
+# Saídas da rede SP (Cruzamento.net.xml): E0 vai ao Norte, E1 ao Leste, E5 ao Oeste.
+EXIT_EDGES = {"north": "E0", "east": "E1", "west": "E5"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,7 +81,7 @@ class EpisodeRunner:
                                       "dispatched": [], "error": None, "last_summary": None}
         self.frames: dict[str, bytes | None] = {camera: None for camera in APPROACHES}
         self._pending: queue.Queue[StartRequest] = queue.Queue(maxsize=1)
-        self._dispatch: queue.Queue[str] = queue.Queue()
+        self._dispatch: queue.Queue[tuple[str, str | None]] = queue.Queue()
         self._stop_episode = threading.Event()
         self._shutdown = threading.Event()
         self._thread: threading.Thread | None = None
@@ -101,12 +106,20 @@ class EpisodeRunner:
     def stop(self) -> None:
         self._stop_episode.set()
 
-    def dispatch_emergency(self, approach: str) -> None:
+    def emergency_routes(self) -> dict[str, list[str]]:
+        """Saídas possíveis por aproximação, pelas rotas de ``emergency.routes`` do sp.yaml."""
+        names = {edge: name for name, edge in EXIT_EDGES.items()}
+        routes = EmergencySettings.from_config(self.config).routes
+        return {approach: [names[to_edge] for _, to_edge in routes[approach]] for approach in APPROACHES}
+
+    def dispatch_emergency(self, approach: str, exit_name: str | None = None) -> None:
         if approach not in APPROACHES:
             raise ValueError(f"Aproximação desconhecida: {approach}.")
+        if exit_name is not None and exit_name not in self.emergency_routes()[approach]:
+            raise ValueError(f"Sem rota de {approach} para {exit_name}.")
         if not self.state["is_running"]:
             raise ValueError("Inicie um episódio antes de despachar uma viatura.")
-        self._dispatch.put(approach)
+        self._dispatch.put((approach, exit_name))
 
     def launch(self) -> None:
         self._thread = threading.Thread(target=self._loop, name="episodio-painel", daemon=True)
@@ -153,10 +166,11 @@ class EpisodeRunner:
                 raise InterruptedError("Episódio interrompido pelo painel.")
             traffic = getattr(environment, "emergency_traffic", None)
             while traffic is not None and not self._dispatch.empty():
-                approach = self._dispatch.get_nowait()
-                vehicle_id = traffic.dispatch(approach, float(info["sim_time"]))
-                self.state = {**self.state, "dispatched": [*self.state["dispatched"],
-                                                           {"id": vehicle_id, "approach": approach, "sim_time": info["sim_time"]}]}
+                approach, exit_name = self._dispatch.get_nowait()
+                to_edge = None if exit_name is None else EXIT_EDGES[exit_name]
+                vehicle_id = traffic.dispatch(approach, float(info["sim_time"]), to_edge=to_edge)
+                self.state = {**self.state, "dispatched": [*self.state["dispatched"], {
+                    "id": vehicle_id, "approach": approach, "exit": exit_name, "sim_time": info["sim_time"]}]}
             self.state = {**self.state, "status": "rodando", "telemetry": build_telemetry(info)}
             results = getattr(observer, "last_results", None)
             if results is not None and results is not last_results[0]:
@@ -212,7 +226,8 @@ def create_app(settings: PanelSettings) -> FastAPI:
     @app.get("/api/options")
     async def options() -> dict[str, Any]:
         return {"scenarios": list(SCENARIOS), "versions": [{"id": key, "label": VERSION_LABELS[key]} for key in VERSIONS],
-                "preemption": list(PREEMPTION_SOURCES), "approaches": list(APPROACHES)}
+                "preemption": list(PREEMPTION_SOURCES), "approaches": list(APPROACHES),
+                "emergency_routes": runner.emergency_routes()}
 
     @app.get("/api/state")
     async def state() -> dict[str, Any]:
@@ -234,7 +249,7 @@ def create_app(settings: PanelSettings) -> FastAPI:
     @app.post("/api/emergency")
     async def emergency(body: EmergencyRequestBody) -> dict[str, Any]:
         try:
-            runner.dispatch_emergency(body.approach)
+            runner.dispatch_emergency(body.approach, body.exit)
         except ValueError as error:
             raise HTTPException(status_code=400, detail=str(error)) from error
         return {"status": "ok"}
