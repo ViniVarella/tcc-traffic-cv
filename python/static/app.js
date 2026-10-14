@@ -132,7 +132,10 @@ function updateCameras(t) {
         card.classList.toggle('priority', priority.includes(approach));
         document.getElementById('signal-' + approach).className = 'signal-light ' + (color || '');
         // Parados vistos pela câmera ("—" num instante sem imagem).
-        document.getElementById('stopped-' + approach).textContent = t.vision ? t.vision[approach].stopped : '—';
+        const stopped = t.vision ? t.vision[approach].stopped : null;
+        const count = document.getElementById('stopped-' + approach);
+        count.textContent = stopped == null ? '—' : stopped;
+        count.nextSibling.textContent = stopped === 1 ? ' parado' : ' parados';
     }
     if (modalCamera && t.signals) {
         document.getElementById('modal-signal').className = 'signal-light ' + t.signals[modalCamera];
