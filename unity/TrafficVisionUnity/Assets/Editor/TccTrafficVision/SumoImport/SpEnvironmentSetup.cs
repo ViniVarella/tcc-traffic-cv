@@ -22,7 +22,6 @@ namespace TccTrafficVision.Editor.SumoImport
         private const string House08Path = "Assets/Art/TrafficModels/Models/Buildings/Residential House 08/Residential House 08.fbx";
         private const string MaplePath = "Assets/Art/TrafficModels/Models/Trees/Maple/Maple.fbx";
         private const string PinePath = "Assets/Art/TrafficModels/Models/Trees/Pine/Pine.fbx";
-        private const string StreetLampPath = "Assets/Art/TrafficModels/Models/StreetObjects/Street Lamps/Street Lamp 02.fbx";
 
         [MenuItem("Traffic Vision/SUMO/Build SP Presentation Environment")]
         public static void Build()
@@ -53,7 +52,6 @@ namespace TccTrafficVision.Editor.SumoImport
             CreateGround(root.transform, grass);
             CreateBuildings(root.transform);
             CreateVegetation(root.transform);
-            CreateStreetFurniture(root.transform);
             ConfigureLighting();
 
             EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
@@ -143,19 +141,6 @@ namespace TccTrafficVision.Editor.SumoImport
             {
                 int number = pinePositions.Length + index + 1;
                 PlaceModel(PinePath, $"Pine {number:00}", root, extraPinePositions[index], number * 47f, 10f);
-            }
-        }
-
-        private static void CreateStreetFurniture(Transform root)
-        {
-            Vector3[] positions =
-            {
-                new Vector3(-25f, 0f, 19f), new Vector3(16f, 0f, 15f), new Vector3(-29f, 0f, -27f), new Vector3(21f, 0f, -27f),
-                new Vector3(-50f, 0f, 21f), new Vector3(42f, 0f, 15f), new Vector3(-49f, 0f, -31f), new Vector3(44f, 0f, -29f)
-            };
-            for (int index = 0; index < positions.Length; index++)
-            {
-                PlaceModel(StreetLampPath, $"Street Lamp {index + 1:00}", root, positions[index], index % 2 == 0 ? 0f : 180f, 7f);
             }
         }
 
