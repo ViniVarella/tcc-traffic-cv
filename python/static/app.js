@@ -95,6 +95,25 @@ const APPROACH_LABELS = { south: 'Sul', east: 'Leste', west: 'Oeste' };
 const EXIT_LABELS = { north: 'Norte', east: 'Leste', west: 'Oeste' };
 let emergencyRoutes = {};
 let announceBeforeS = null;
+// Ambulância acionada pelo botão: a contagem até ela entrar na via segue o
+// relógio da simulação (sim_time do registro em `dispatched`).
+let pendingAmbulance = null;
+
+function updateAmbulanceCountdown(dispatched, simTime) {
+    if (!pendingAmbulance || announceBeforeS == null) return;
+    if (pendingAmbulance.enterAt == null) {
+        if (dispatched.length <= pendingAmbulance.countBefore) return;  // o servidor ainda não processou o pedido
+        pendingAmbulance.enterAt = dispatched[dispatched.length - 1].sim_time + announceBeforeS;
+    }
+    const remaining = Math.ceil(pendingAmbulance.enterAt - simTime);
+    const base = `🚑 Ambulância acionada (${pendingAmbulance.route}). Aviso de aproximação enviado ao semáforo.`;
+    if (remaining > 0) {
+        showMessage(`${base} Entrada na via em ${remaining} s.`);
+    } else {
+        showMessage(`🚑 Ambulância na via (${pendingAmbulance.route}).`);
+        pendingAmbulance = null;
+    }
+}
 
 function formatClock(seconds) {
     const h = Math.floor(seconds / 3600);
@@ -139,9 +158,11 @@ function updateTelemetry(data) {
         if (data.error) showMessage('Erro: ' + data.error);
     }
     document.getElementById('val-dispatched').textContent = (data.dispatched || []).length;
+    if (!running) pendingAmbulance = null;
     if (!t) return;
 
     document.getElementById('sim-clock').textContent = formatClock(t.sim_time || 0);
+    updateAmbulanceCountdown(data.dispatched || [], t.sim_time || 0);
     updateCameras(t);
     const gt = t.ground_truth;
     document.getElementById('val-halting').textContent = gt.halting_vehicles;
@@ -309,10 +330,12 @@ btnStop.addEventListener('click', async () => {
 btnEmergency.addEventListener('click', async () => {
     try {
         const exit = selExit.value || null;
+        const countBefore = Number(document.getElementById('val-dispatched').textContent) || 0;
         await post('/api/emergency', { approach: selApproach.value, exit });
         const route = 'origem: ' + APPROACH_LABELS[selApproach.value] + (exit ? ', destino: ' + EXIT_LABELS[exit] : '');
         const delay = announceBeforeS == null ? '' : ` Entrada na via em ${announceBeforeS} s.`;
         showMessage(`🚑 Ambulância acionada (${route}). Aviso de aproximação enviado ao semáforo.${delay}`);
+        pendingAmbulance = { route, countBefore, enterAt: null };
     } catch (e) {
         showMessage(e.message);
     }
