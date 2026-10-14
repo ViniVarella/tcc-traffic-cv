@@ -572,6 +572,9 @@ body {
 
 .highlight-value {
     flex: 0 0 120px;
+    /* À direita, como numa tabela: o % fica alinhado com ou sem o sinal de menos. */
+    text-align: right;
+    font-variant-numeric: tabular-nums;
     font-size: 34px;
     font-weight: 800;
     letter-spacing: -1px;
