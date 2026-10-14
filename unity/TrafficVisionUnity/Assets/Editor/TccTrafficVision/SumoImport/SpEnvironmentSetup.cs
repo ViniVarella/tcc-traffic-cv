@@ -95,7 +95,7 @@ namespace TccTrafficVision.Editor.SumoImport
                 new Vector3(-72f, 0f, 70f), new Vector3(-63f, 0f, 60f), new Vector3(-50f, 0f, 72f), new Vector3(-39f, 0f, 65f), new Vector3(-63f, 0f, 33f),
                 new Vector3(15f, 0f, 72f), new Vector3(35f, 0f, 70f), new Vector3(55f, 0f, 63f), new Vector3(70f, 0f, 55f), new Vector3(70f, 0f, 25f),
                 new Vector3(-75f, 0f, -55f), new Vector3(-65f, 0f, -70f), new Vector3(-50f, 0f, -72f), new Vector3(-62f, 0f, -35f), new Vector3(-35f, 0f, -72f),
-                new Vector3(15f, 0f, -72f), new Vector3(38f, 0f, -71f), new Vector3(59f, 0f, -62f), new Vector3(72f, 0f, -50f), new Vector3(72f, 0f, -25f)
+                new Vector3(19.7f, 0f, -73.7f), new Vector3(38f, 0f, -71f), new Vector3(59f, 0f, -62f), new Vector3(72f, 0f, -50f), new Vector3(77.5f, 0f, -10f)
             };
             for (int index = 0; index < maplePositions.Length; index++)
             {
@@ -105,7 +105,7 @@ namespace TccTrafficVision.Editor.SumoImport
             Vector3[] pinePositions =
             {
                 new Vector3(-88f, 0f, 72f), new Vector3(-82f, 0f, 42f), new Vector3(80f, 0f, 62f), new Vector3(83f, 0f, 28f),
-                new Vector3(-86f, 0f, -60f), new Vector3(-65f, 0f, -84f), new Vector3(58f, 0f, -78f), new Vector3(83f, 0f, -46f)
+                new Vector3(-86f, 0f, -60f), new Vector3(-65f, 0f, -84f), new Vector3(58f, 0f, -78f), new Vector3(81.1f, 0f, -50.1f)
             };
             for (int index = 0; index < pinePositions.Length; index++)
             {
@@ -163,7 +163,8 @@ namespace TccTrafficVision.Editor.SumoImport
         {
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.70f, 0.75f, 0.80f);
-            RenderSettings.fog = true;
+            // No fog: the approved scene keeps it off, and it washes out the camera backgrounds.
+            RenderSettings.fog = false;
             RenderSettings.fogColor = new Color(0.68f, 0.77f, 0.82f);
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogStartDistance = 85f;
