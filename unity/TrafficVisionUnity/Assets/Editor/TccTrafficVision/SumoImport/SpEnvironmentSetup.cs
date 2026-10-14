@@ -145,9 +145,17 @@ namespace TccTrafficVision.Editor.SumoImport
             }
         }
 
+        /// <summary>
+        /// Turns the model around the vertical axis only. Some FBX roots carry
+        /// their own rotation (Maple and Pine: trunk node at 90 degrees in X);
+        /// replacing it with the yaw laid the trees on their side, so the yaw
+        /// is composed with the imported root rotation instead.
+        /// </summary>
         private static void PlaceModel(string assetPath, string objectName, Transform parent, Vector3 position, float yaw, float targetHeight)
         {
-            PlaceModel(assetPath, objectName, parent, position, Quaternion.Euler(0f, yaw, 0f), targetHeight);
+            GameObject model = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+            Quaternion rootRotation = model != null ? model.transform.localRotation : Quaternion.identity;
+            PlaceModel(assetPath, objectName, parent, position, Quaternion.Euler(0f, yaw, 0f) * rootRotation, targetHeight);
         }
 
         private static void PlaceModel(string assetPath, string objectName, Transform parent, Vector3 position, Quaternion rotation, float targetHeight)
