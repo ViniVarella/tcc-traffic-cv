@@ -191,7 +191,7 @@ let modalCamera = null;
 
 function openCamera(approach) {
     modalCamera = approach;
-    document.getElementById('camera-modal-title').textContent = 'Acesso ' + APPROACH_LABELS[approach];
+    document.getElementById('camera-modal-title').textContent = APPROACH_LABELS[approach];
     modalImg.src = '/api/video/' + approach;
     modal.hidden = false;
 }
@@ -238,7 +238,7 @@ const selExit = document.getElementById('sel-exit');
 // Só as saídas que existem para a rua escolhida (rotas do sp.yaml).
 function syncExitOptions() {
     const exits = emergencyRoutes[selApproach.value] || [];
-    selExit.innerHTML = '<option value="">Qualquer destino</option>' +
+    selExit.innerHTML = '<option value="">Aleatório</option>' +
         exits.map(name => `<option value="${name}">${EXIT_LABELS[name] || name}</option>`).join('');
 }
 selApproach.addEventListener('change', syncExitOptions);

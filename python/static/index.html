@@ -326,14 +326,14 @@
                         </select>
                     </label>
                     <label class="control-field">
-                        <span class="policy-label">Controle</span>
+                        <span class="policy-label">Algoritmo</span>
                         <select id="sel-version" class="control-select"></select>
                     </label>
                     <label class="control-field">
                         <span class="policy-label">Prioridade para ambulâncias</span>
                         <select id="sel-preemption" class="control-select">
-                            <option value="both">Aviso da ambulância + câmera</option>
-                            <option value="v2i">Somente aviso da ambulância</option>
+                            <option value="both">V2I (GPS) + câmera</option>
+                            <option value="v2i">Somente V2I (GPS)</option>
                             <option value="vision">Somente câmera</option>
                             <option value="none">Desativada</option>
                         </select>
@@ -351,7 +351,7 @@
 
                 <div class="control-strip">
                     <label class="control-field">
-                        <span class="policy-label">Origem da ambulância</span>
+                        <span class="policy-label">Sentido de origem</span>
                         <select id="sel-approach" class="control-select">
                             <option value="south">Sul</option>
                             <option value="east">Leste</option>
@@ -361,11 +361,11 @@
                     <label class="control-field">
                         <span class="policy-label">Destino</span>
                         <select id="sel-exit" class="control-select">
-                            <option value="">Qualquer destino</option>
+                            <option value="">Aleatório</option>
                         </select>
                     </label>
                     <button id="btn-emergency" class="btn btn-emergency" disabled>
-                        🚑 Acionar ambulância
+                        🚑&nbsp; Acionar ambulância
                     </button>
                     <div class="control-divider"></div>
                     <div class="phase-display">
@@ -384,7 +384,7 @@
                     <div class="camera-card" data-camera="west">
                         <div class="camera-header">
                             <span class="signal-light" id="signal-west" title="Sinal desta rua"></span>
-                            <span class="camera-name">Acesso Oeste</span>
+                            <span class="camera-name">Oeste</span>
                             <span class="camera-alert" id="alert-west">🚑 prioridade</span>
                             <span class="camera-count"><strong id="stopped-west">—</strong> parados</span>
                         </div>
@@ -396,7 +396,7 @@
                     <div class="camera-card" data-camera="south">
                         <div class="camera-header">
                             <span class="signal-light" id="signal-south" title="Sinal desta rua"></span>
-                            <span class="camera-name">Acesso Sul</span>
+                            <span class="camera-name">Sul</span>
                             <span class="camera-alert" id="alert-south">🚑 prioridade</span>
                             <span class="camera-count"><strong id="stopped-south">—</strong> parados</span>
                         </div>
@@ -408,7 +408,7 @@
                     <div class="camera-card" data-camera="east">
                         <div class="camera-header">
                             <span class="signal-light" id="signal-east" title="Sinal desta rua"></span>
-                            <span class="camera-name">Acesso Leste</span>
+                            <span class="camera-name">Leste</span>
                             <span class="camera-alert" id="alert-east">🚑 prioridade</span>
                             <span class="camera-count"><strong id="stopped-east">—</strong> parados</span>
                         </div>
