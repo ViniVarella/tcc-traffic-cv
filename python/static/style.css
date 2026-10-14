@@ -114,14 +114,15 @@ body {
 .sidebar-brand {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     padding: 24px 20px 20px;
     border-bottom: 1px solid var(--border-subtle);
 }
 
+/* O nome tem a altura do semáforo: altura das maiúsculas da Russo One = 0,70 em. */
 .brand-icon {
-    width: 40px;
-    height: 40px;
+    width: auto;
+    height: 32px;
     flex-shrink: 0;
     display: block;
 }
@@ -134,9 +135,11 @@ body {
 .brand-name {
     font-family: 'Russo One', 'Inter', sans-serif;
     font-weight: 400;
-    font-size: 24px;
+    font-size: 45.7px;
+    line-height: 1;
     letter-spacing: 0;
     font-variant-ligatures: none;
+    text-box: trim-both cap alphabetic;
 }
 
 .brand-name .brand-iq {
