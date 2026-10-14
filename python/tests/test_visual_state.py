@@ -77,7 +77,10 @@ class BuildStateEncoderTests(unittest.TestCase):
         self.assertEqual(encoder.feature_names[-3:], ("phase_6", "phase_elapsed", "greens_until_pedestrian"))
         state = encoder.encode({}, phase_index=5, phase_elapsed_seconds=20.0, greens_until_pedestrian=3)
         np.testing.assert_allclose(state[35:], [0, 0, 0, 0, 0, 1, 0, 0.5, 1.0])
-        self.assertAlmostEqual(float(encoder.encode({}, 0, 0.0, greens_until_pedestrian=1)[-1]), 1 / 3, places=6)
+        # Normalizado pelos verdes de um intervalo entre fases de pedestres (2·every_cycles − 1).
+        cycle_greens = 2 * SP_CONFIG["pedestrians"]["every_cycles"] - 1
+        self.assertAlmostEqual(float(encoder.encode({}, 0, 0.0, greens_until_pedestrian=1)[-1]), 1 / cycle_greens, places=6)
+        self.assertEqual(float(encoder.encode({}, 0, 0.0, greens_until_pedestrian=0)[-1]), 0.0)
         with self.assertRaises(ValueError):
             encoder.encode({}, 0, 0.0)
         with self.assertRaises(ValueError):

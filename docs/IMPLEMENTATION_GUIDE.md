@@ -988,7 +988,7 @@ O terceiro caso deve ser claramente documentado como baseline experimental, não
 No cenário SP, os perfis implementados são `calibrated` (demanda medida nos
 vídeos de drone, com o Leste saturado — o caso de pico assimétrico) e
 `original` (fluxo equilibrado), selecionados por `--scenario`. O controle
-idealizado corresponde à política avaliada com percepção oráculo TraCI
+idealizado corresponde à política avaliada com percepção *ground truth* (TraCI)
 (`experiments.evaluate_policies_sumo`), sempre rotulada como tal.
 
 ---
@@ -1187,7 +1187,7 @@ Status: concluído com o DQN v2 no cenário calibrado, nas seeds inéditas
 `201`–`203` e com 1800 s controlados. Pela câmera, o DQN v2 superou o ciclo
 fixo (espera 10,3 s × 16,1 s; 1599 × 1503 chegadas) e o max-pressure visual
 (11,1 s; fila de inserção de 104 veículos × 1). As versões são comparadas no
-mesmo ambiente por `experiments.compare_versions`: com percepção oráculo no
+mesmo ambiente por `experiments.compare_versions`: com percepção *ground truth* no
 cenário calibrado, a v1 e a v1.1 deixam 250–290 veículos fora da rede, contra
 6 da v2; com percepção visual, 253–289 contra 1. No cenário `original`, as
 versões adaptativas empatam com as duas percepções.

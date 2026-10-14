@@ -51,7 +51,7 @@ class ScheduleTests(unittest.TestCase):
         first = build_schedule(settings, seed=201, start_s=300, end_s=2100)
         self.assertEqual(first, build_schedule(settings, seed=201, start_s=300, end_s=2100))
         self.assertNotEqual(first, build_schedule(settings, seed=202, start_s=300, end_s=2100))
-        self.assertEqual(len(first), 10)
+        self.assertEqual(len(first), 6)  # uma viatura a cada ~5 min em 30 min
         self.assertEqual({item.approach for item in first[:3]}, {"south", "east", "west"})
         self.assertTrue(all(300 <= item.depart_s < 2100 for item in first))
 
@@ -73,11 +73,17 @@ class EmergencyTrafficTests(unittest.TestCase):
         self.assertAlmostEqual(requests[15][0].eta_s, 5 + 75 / 13.89)
         self.assertEqual(client.added, ["emergency_0"])
         self.assertAlmostEqual(requests[21][0].eta_s, 7.0)  # 70 m restantes a 10 m/s
+        # Sem lacuna no step da inserção: senão a preempção solta o semáforo
+        # e a política pode pedir uma troca com a viatura chegando.
+        self.assertTrue(all(requests[time] for time in range(15, 28)))
+        self.assertAlmostEqual(requests[20][0].eta_s, 75 / 13.89)
         crossing = min(time for time, items in requests.items() if time > 21 and not items)
         self.assertEqual(crossing, 28)
         summary = traffic.summary()
         self.assertEqual((summary["crossed_stop_line"], summary["mean_stops"], summary["share_without_stops"]), (1, 0.0, 1.0))
         self.assertEqual(summary["mean_time_loss_at_crossing_s"], 6.0)
+        # Entrou no step seguinte ao da inserção: só a latência de 1 step.
+        self.assertEqual((summary["mean_insertion_delay_s"], summary["mean_total_loss_at_crossing_s"]), (1.0, 7.0))
 
     def test_blocked_insertion_keeps_requesting_and_stops_are_counted(self) -> None:
         traffic, client = self._traffic(), FakeClient(insert_delay_steps=3, stop_steps=2)
@@ -85,6 +91,10 @@ class EmergencyTrafficTests(unittest.TestCase):
         self.assertTrue(all(requests[time] for time in range(21, 24)))  # ainda fora da rede
         summary = traffic.summary()
         self.assertEqual((summary["crossed_stop_line"], summary["mean_stops"]), (1, 1.0))
+        # A espera fora da rede (3 steps) entra na perda total, não na perda dentro da rede.
+        self.assertEqual(summary["mean_insertion_delay_s"], 4.0)
+        self.assertEqual(summary["max_total_loss_at_crossing_s"], 4.0 + summary["max_time_loss_at_crossing_s"])
+        self.assertEqual(summary["vehicles"][0]["insertion_delay_s"], 4.0)
 
 
 if __name__ == "__main__":

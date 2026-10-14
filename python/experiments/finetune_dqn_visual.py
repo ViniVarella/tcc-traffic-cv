@@ -31,7 +31,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Ajuste fino visual do DQN v2 pré-treinado.")
     parser.add_argument("--config", type=Path, default=base_dir / "configs" / "sp.yaml")
     add_scenario_argument(parser)
-    parser.add_argument("--init-checkpoint", type=Path, default=models / "dqn-v2-roi60-mix-pretrain-best.pt")
+    parser.add_argument("--init-checkpoint", type=Path, default=models / "dqn-v2-sem-motos-best.pt")
     parser.add_argument("--episodes", type=int, default=10)
     parser.add_argument("--seed-start", type=int, default=41)
     parser.add_argument("--validation-seeds", default="1001,1002")

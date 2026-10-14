@@ -41,12 +41,16 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--detections", default=None,
                         help=f"Fontes do pedido de preempção, entre {','.join(EMERGENCY_DETECTIONS)}. "
                              "Padrão: v2i (oracle) ou v2i,vision,both (visual).")
+    parser.add_argument("--skip-no-preemption", action="store_true",
+                        help="Não roda o modo sem preempção (para refazer só os modos com preempção).")
     parser.add_argument("--versions", default="baseline,v2,max_pressure")
     parser.add_argument("--seeds", default="201,202,203")
     parser.add_argument("--warmup-seconds", type=float, default=300.0)
     parser.add_argument("--control-seconds", type=float, default=1800.0)
     parser.add_argument("--v1-dqn-model", type=Path, default=models / "visual-dqn-sp-best.pt")
-    parser.add_argument("--v2-dqn-model", type=Path, default=models / "dqn-v2-roi60-mix-pretrain-best.pt")
+    parser.add_argument("--v2-dqn-model", type=Path, default=models / "dqn-v2-sem-motos-best.pt")
+    parser.add_argument("--v3-dqn-model", type=Path, default=models / "dqn-v3-fase-curta-best.pt",
+                        help="Checkpoint do estado v3 (só cenários *_ped; inclua v3 em --versions).")
     add_vision_arguments(parser)
     parser.add_argument("--step-log-dir", type=Path, default=base_dir.parent / "results" / "logs",
                         help="Com --perception visual, grava um JSONL por versão e modo neste diretório.")
@@ -75,8 +79,9 @@ def main() -> None:
     emergency = EmergencySettings.from_config(config)
     preemption = PreemptionSettings.from_config(config)
     versions = build_version_policies(config, [item.strip() for item in args.versions.split(",") if item.strip()],
-                                      args.v1_dqn_model, args.v2_dqn_model)
-    modes = [("sem_preempcao", None, "v2i")] + [(f"com_preempcao_{item}", preemption, item) for item in detections]
+                                      args.v1_dqn_model, args.v2_dqn_model, args.v3_dqn_model)
+    modes = [] if args.skip_no_preemption else [("sem_preempcao", None, "v2i")]
+    modes += [(f"com_preempcao_{item}", preemption, item) for item in detections]
     report: dict[str, Any] = {"perception": args.perception, "detections": detections, "scenario": scenario, "seeds": seeds,
                               "warmup_s": args.warmup_seconds, "control_s": args.control_seconds, "results": {}}
     bridge = UnityBridge.from_config(config) if args.perception == "visual" else None
@@ -89,7 +94,8 @@ def main() -> None:
             args.step_log_dir.mkdir(parents=True, exist_ok=True)
         for version in versions:
             environment = Environment(config, base_dir, args.scenario,
-                                      EpisodeSettings(args.warmup_seconds, args.control_seconds, version.decision_interval_s))
+                                      EpisodeSettings(args.warmup_seconds, args.control_seconds, version.decision_interval_s),
+                                      state_version=version.state_version)
             for label, settings, detection in modes:
                 handle = None if observer is None else (
                     args.step_log_dir / f"preempcao-{scenario}-visual-{version.name}-{label}.jsonl").open("w", encoding="utf-8")
@@ -104,7 +110,9 @@ def main() -> None:
                         runs.append({"seed": seed, "preemption_steps": outcome.preemption_steps,
                                      "missing_observations": outcome.missing_observations, **{key: metrics.get(key) for key in (
                                          "mean_waiting_time_seconds", "mean_travel_time_seconds", "arrived_vehicles",
-                                         "final_pending_vehicles")}, "emergency": vehicles})
+                                         "final_pending_vehicles", "pedestrian_mean_waiting_s", "pedestrian_median_waiting_s",
+                                         "pedestrian_p90_waiting_s", "pedestrian_max_waiting_s")},
+                                     "emergency": vehicles})
                 finally:
                     if handle is not None:
                         handle.close()
@@ -112,6 +120,9 @@ def main() -> None:
                 summary = {
                     "emergency_mean_time_loss_s": _mean([run["emergency"]["mean_time_loss_at_crossing_s"] for run in runs]),
                     "emergency_max_time_loss_s": max((run["emergency"]["max_time_loss_at_crossing_s"] or 0.0) for run in runs),
+                    "emergency_mean_insertion_delay_s": _mean([run["emergency"]["mean_insertion_delay_s"] for run in runs]),
+                    "emergency_mean_total_loss_s": _mean([run["emergency"]["mean_total_loss_at_crossing_s"] for run in runs]),
+                    "emergency_max_total_loss_s": max((run["emergency"]["max_total_loss_at_crossing_s"] or 0.0) for run in runs),
                     "emergency_share_without_stops": _mean([run["emergency"]["share_without_stops"] for run in runs]),
                     "emergency_crossed": sum(run["emergency"]["crossed_stop_line"] for run in runs),
                     "emergency_scheduled": sum(run["emergency"]["scheduled"] for run in runs),
@@ -121,18 +132,27 @@ def main() -> None:
                     "visual_events": sum(item["events"] for item in visual),
                     "visual_false_events": sum(item["false_events"] for item in visual),
                     **{key: _mean([run[key] for run in runs]) for key in (
-                        "mean_waiting_time_seconds", "mean_travel_time_seconds", "arrived_vehicles", "final_pending_vehicles")},
+                        "mean_waiting_time_seconds", "mean_travel_time_seconds", "arrived_vehicles", "final_pending_vehicles",
+                        "pedestrian_mean_waiting_s", "pedestrian_median_waiting_s", "pedestrian_p90_waiting_s",
+                        "pedestrian_max_waiting_s")},
                 }
                 report["results"][f"{version.name}/{label}"] = {"summary": summary, "runs": runs}
                 lead = summary["visual_mean_lead_s"]
                 print(f"preemption_evaluated version={version.name} mode={label} perception={args.perception} "
                       f"viatura_perda_media={summary['emergency_mean_time_loss_s']:.1f}s viatura_perda_max={summary['emergency_max_time_loss_s']:.1f}s "
+                      f"viatura_espera_entrada={summary['emergency_mean_insertion_delay_s']:.1f}s "
+                      f"viatura_perda_total_media={summary['emergency_mean_total_loss_s']:.1f}s "
+                      f"viatura_perda_total_max={summary['emergency_max_total_loss_s']:.1f}s "
                       f"viaturas_sem_parar={summary['emergency_share_without_stops']:.0%} "
                       f"cruzaram={summary['emergency_crossed']}/{summary['emergency_scheduled']} "
                       f"visao_detectou={summary['visual_detected']} visao_antecedencia={'n/a' if lead is None else f'{lead:.1f}s'} "
                       f"visao_alarmes_falsos={summary['visual_false_events']}/{summary['visual_events']} "
                       f"trafego_espera={summary['mean_waiting_time_seconds']:.1f}s chegadas={summary['arrived_vehicles']:.0f} "
-                      f"fila_insercao={summary['final_pending_vehicles']:.1f}", flush=True)
+                      f"fila_insercao={summary['final_pending_vehicles']:.1f}"
+                      + ("" if summary["pedestrian_mean_waiting_s"] is None else
+                         f" pedestres_espera={summary['pedestrian_mean_waiting_s']:.1f}s pedestres_mediana={summary['pedestrian_median_waiting_s']:.0f}s"
+                         f" pedestres_p90={summary['pedestrian_p90_waiting_s']:.0f}s pedestres_max={summary['pedestrian_max_waiting_s']:.0f}s"),
+                      flush=True)
     finally:
         if bridge is not None:
             bridge.close()
