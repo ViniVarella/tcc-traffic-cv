@@ -130,14 +130,8 @@ body {
 
 .brand-name {
     font-weight: 700;
-    font-size: 16px;
-    letter-spacing: -0.3px;
-}
-
-.brand-tag {
-    font-size: 11px;
-    color: var(--text-muted);
-    font-weight: 500;
+    font-size: 22px;
+    letter-spacing: -0.5px;
 }
 
 .nav-section {
