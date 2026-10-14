@@ -133,7 +133,8 @@ cópia em `optimization/SP` (que segue com a calibração antiga).
 
 - `sumo/emergency.py` insere viaturas (tipo `emergency`, sem `bluelight`, então
   obedecem ao semáforo) numa agenda reproduzível pela seed, depois do
-  aquecimento, e emite o aviso V2I (`EmergencyRequest`: aproximação e tempo
+  aquecimento, e emite o aviso V2I (*vehicle-to-infrastructure*, veículo → controlador do
+  semáforo; `EmergencyRequest`: aproximação e tempo
   até a linha de retenção) desde `announce_before_s` antes de entrarem.
 - `controller/preemption.py` atende uma viatura por vez (menor tempo estimado,
   dentro de `activation_eta_s`) até ela cruzar a linha;
