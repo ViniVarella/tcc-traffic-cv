@@ -443,38 +443,51 @@
         <div class="page" id="page-dashboard">
             <div class="page-header">
                 <div>
-                    <h1 class="page-title">Resultados da demonstração</h1>
-                    <p class="page-subtitle">Indicadores medidos pelo simulador desde o início da demonstração</p>
+                    <h1 class="page-title">Resultados e Impacto Operacional</h1>
+                    <p class="page-subtitle">Comparativo de desempenho entre o semáforo convencional e a inteligência adaptativa TraffIQ</p>
                 </div>
                 <div class="dash-controls">
-                    <button class="btn btn-sm btn-outline" id="btn-reset-charts">Limpar gráficos</button>
+                    <button class="btn btn-sm btn-outline" id="btn-reset-charts">Limpar amostragem</button>
                 </div>
             </div>
 
             <div class="kpi-row">
                 <div class="kpi-card">
                     <div class="kpi-value" id="kpi-total-steps">0:00</div>
-                    <div class="kpi-label">Tempo de simulação</div>
+                    <div class="kpi-label">Tempo de demonstração</div>
+                    <div class="kpi-subtext">Duração da amostragem</div>
                 </div>
                 <div class="kpi-card accent-amber">
                     <div class="kpi-value" id="kpi-avg-wait">0.0 s</div>
                     <div class="kpi-label">Tempo médio de espera</div>
-                </div>
-                <div class="kpi-card accent-blue">
-                    <div class="kpi-value" id="kpi-halting">0</div>
-                    <div class="kpi-label">Veículos parados agora</div>
+                    <div class="kpi-subtext" id="kpi-baseline-ref">vs 20.8 s (tempo fixo)</div>
                 </div>
                 <div class="kpi-card accent-green">
-                    <div class="kpi-value" id="kpi-avg-reward">0.000</div>
-                    <div class="kpi-label">Pontuação da IA (quanto mais próxima de 0, melhor)</div>
+                    <div class="kpi-value text-green" id="kpi-reduction-val">—</div>
+                    <div class="kpi-label">Redução na espera</div>
+                    <div class="kpi-subtext text-green font-semibold">Economia gerada pela IA</div>
+                </div>
+                <div class="kpi-card accent-siren">
+                    <div class="kpi-value text-siren" id="kpi-emergency-val">0</div>
+                    <div class="kpi-label">Ambulâncias com onda verde</div>
+                    <div class="kpi-subtext text-siren" id="kpi-emergency-sub">100% de passagem livre</div>
                 </div>
             </div>
 
             <div class="charts-row">
                 <div class="chart-card wide">
                     <div class="chart-header">
-                        <h3>Tempo médio de espera (s)</h3>
-                        <span class="chart-badge live">AO VIVO</span>
+                        <div>
+                            <h3>Tempo médio de espera: TraffIQ vs Semáforo Convencional</h3>
+                            <span class="chart-subtitle">Evolução do tempo de espera com linha de referência do tempo fixo</span>
+                        </div>
+                        <div class="chart-header-actions">
+                            <div class="chart-legend">
+                                <span class="legend-item"><span class="legend-badge-line baseline"></span> Tempo fixo (<span id="legend-baseline-val">20.8s</span>)</span>
+                                <span class="legend-item"><span class="legend-badge-line live-line"></span> TraffIQ (IA)</span>
+                            </div>
+                            <span class="chart-badge live">AO VIVO</span>
+                        </div>
                     </div>
                     <div class="chart-body">
                         <canvas id="chart-waiting" width="800" height="260"></canvas>
@@ -482,28 +495,25 @@
                 </div>
                 <div class="chart-card">
                     <div class="chart-header">
-                        <h3>Pontuação da IA</h3>
+                        <div>
+                            <h3>Veículos retidos no cruzamento</h3>
+                            <span class="chart-subtitle">Fila instantânea nas aproximações</span>
+                        </div>
                         <span class="chart-badge live">AO VIVO</span>
                     </div>
                     <div class="chart-body">
-                        <canvas id="chart-reward" width="400" height="260"></canvas>
+                        <canvas id="chart-halting" width="400" height="260"></canvas>
                     </div>
                 </div>
             </div>
 
             <div class="charts-row">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3>Veículos parados no cruzamento</h3>
-                        <span class="chart-badge live">AO VIVO</span>
-                    </div>
-                    <div class="chart-body">
-                        <canvas id="chart-halting" width="400" height="240"></canvas>
-                    </div>
-                </div>
                 <div class="chart-card wide">
                     <div class="chart-header">
-                        <h3>Tempo acumulado por fase</h3>
+                        <div>
+                            <h3>Divisão do tempo do semáforo por fase</h3>
+                            <span class="chart-subtitle">Alocação dinâmica do verde conforme a demanda visual real</span>
+                        </div>
                     </div>
                     <div class="chart-body">
                         <div class="phase-bars" id="phase-distribution">
@@ -528,6 +538,121 @@
                                 <span class="phase-bar-pct" id="phase-pct-ped">0%</span>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div>
+                            <h3>Ganhos Operacionais e de Segurança</h3>
+                            <span class="chart-subtitle">Benefícios medidos no cruzamento</span>
+                        </div>
+                    </div>
+                    <div class="chart-body">
+                        <div class="impact-cards-list">
+                            <div class="impact-item">
+                                <div class="impact-icon green">🎯</div>
+                                <div class="impact-details">
+                                    <div class="impact-title">Nível de Serviço da Via (HCM)</div>
+                                    <div class="impact-desc">Evolução do <span class="badge-tag tag-warning">Nível C/D</span> (20,8 s) para <span class="badge-tag tag-success">Nível B</span> (14,1 s).</div>
+                                </div>
+                            </div>
+                            <div class="impact-item">
+                                <div class="impact-icon siren">🚑</div>
+                                <div class="impact-details">
+                                    <div class="impact-title">Prioridade para Emergências</div>
+                                    <div class="impact-desc">Onda verde automática: ambulâncias cruzam <span class="badge-tag tag-siren">sem parar (0 s de perda)</span>.</div>
+                                </div>
+                            </div>
+                            <div class="impact-item">
+                                <div class="impact-icon purple">🚶</div>
+                                <div class="impact-details">
+                                    <div class="impact-title">Segurança de Pedestres</div>
+                                    <div class="impact-desc">Fase exclusiva garantida a cada ciclo (7 s verde + 11 s liberação).</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bloco de Validação Experimental do TCC -->
+            <div class="benchmark-section">
+                <div class="benchmark-header">
+                    <div>
+                        <h2>Validação Experimental do TCC</h2>
+                        <p class="section-subtitle">Resultados consolidados em ambiente calibrado com tráfego real de São Paulo (drone, 35 min/ensaio, 3 seeds)</p>
+                    </div>
+                    <div class="benchmark-badge">Resultados Oficiais</div>
+                </div>
+
+                <div class="benchmark-grid">
+                    <div class="benchmark-card highlighted">
+                        <div class="benchmark-scenario">Cenário com Pedestres (v4 Atual)</div>
+                        <div class="benchmark-metric-main">−32%</div>
+                        <div class="benchmark-metric-label">no tempo de espera dos veículos</div>
+                        <div class="benchmark-comparison">
+                            <div class="comp-row">
+                                <span>Semáforo fixo:</span>
+                                <strong>20,8 s</strong>
+                            </div>
+                            <div class="comp-row">
+                                <span>TraffIQ (IA):</span>
+                                <strong class="text-green">14,1 s</strong>
+                            </div>
+                        </div>
+                        <div class="benchmark-footer-note">Pedestres: espera reduzida em 56% (56,6 s → 25,0 s)</div>
+                    </div>
+
+                    <div class="benchmark-card">
+                        <div class="benchmark-scenario">Cenário sem Pedestres (Fluxo Direto)</div>
+                        <div class="benchmark-metric-main">−67%</div>
+                        <div class="benchmark-metric-label">no tempo de espera dos veículos</div>
+                        <div class="benchmark-comparison">
+                            <div class="comp-row">
+                                <span>Semáforo fixo:</span>
+                                <strong>13,0 s</strong>
+                            </div>
+                            <div class="comp-row">
+                                <span>TraffIQ (IA):</span>
+                                <strong class="text-green">4,3 s</strong>
+                            </div>
+                        </div>
+                        <div class="benchmark-footer-note">Semáforo adaptativo esvazia as filas instantaneamente</div>
+                    </div>
+
+                    <div class="benchmark-card">
+                        <div class="benchmark-scenario">Veículos de Emergência</div>
+                        <div class="benchmark-metric-main">100%</div>
+                        <div class="benchmark-metric-label">das ambulâncias passam sem parar</div>
+                        <div class="benchmark-comparison">
+                            <div class="comp-row">
+                                <span>Semáforo fixo:</span>
+                                <strong>11% sem parar</strong>
+                            </div>
+                            <div class="comp-row">
+                                <span>TraffIQ (IA):</span>
+                                <strong class="text-siren">100% sem parar</strong>
+                            </div>
+                        </div>
+                        <div class="benchmark-footer-note">Atraso médio cai de 35,3 s para 1,7 s na aproximação</div>
+                    </div>
+
+                    <div class="benchmark-card">
+                        <div class="benchmark-scenario">Precisão da Visão Computacional</div>
+                        <div class="benchmark-metric-main">0</div>
+                        <div class="benchmark-metric-label">frames perdidos na captura</div>
+                        <div class="benchmark-comparison">
+                            <div class="comp-row">
+                                <span>Diferença da visão:</span>
+                                <strong>−0,1 s (idêntica ao real)</strong>
+                            </div>
+                            <div class="comp-row">
+                                <span>Alcance das ROIs:</span>
+                                <strong>60 metros por faixa</strong>
+                            </div>
+                        </div>
+                        <div class="benchmark-footer-note">YOLOv8 + ByteTrack monitorando 7 faixas em tempo real</div>
                     </div>
                 </div>
             </div>

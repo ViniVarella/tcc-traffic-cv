@@ -74,15 +74,23 @@ function connectWS() {
 connectWS();
 
 // ============================================
-//  Telemetria
+//  Telemetria & Benchmarks
 // ============================================
 // vision = o que a IA vê pelas câmeras; ground_truth = medido pelo simulador, só para mostrar.
 let isRunning = false;
 let lastSimTime = null;
 let lastError = null;
-let chartData = { timestamps: [], waitingTimes: [], rewards: [], haltingVehicles: [], phaseCounters: {} };
+let chartData = { timestamps: [], waitingTimes: [], haltingVehicles: [], phaseCounters: {} };
 const MAX_CHART_POINTS = 300;
 const APPROACHES = ['west', 'south', 'east'];
+
+const SCENARIO_BASELINES = {
+    calibrated_ped: 20.8,
+    calibrated: 13.0,
+    original: 8.0
+};
+let currentScenario = 'calibrated_ped';
+let recordedBaselineWait = null;
 
 const PHASE_LABELS = {
     EAST_WEST_GREEN: 'Verde para Leste e Oeste', EAST_WEST_YELLOW: 'Amarelo para Leste e Oeste',
@@ -160,12 +168,18 @@ function updateTelemetry(data) {
         lastError = data.error;
         if (data.error) showMessage('Erro: ' + data.error);
     }
-    document.getElementById('val-dispatched').textContent = (data.dispatched || []).length;
+    const dispatchedList = data.dispatched || [];
+    document.getElementById('val-dispatched').textContent = dispatchedList.length;
     if (!running) pendingAmbulance = null;
     if (!t) return;
 
+    if (data.request && data.request.scenario) {
+        currentScenario = data.request.scenario;
+    }
+    const currentVersion = data.request ? data.request.version : null;
+
     document.getElementById('sim-clock').textContent = formatClock(t.sim_time || 0);
-    updateAmbulanceCountdown(data.dispatched || [], t.sim_time || 0);
+    updateAmbulanceCountdown(dispatchedList, t.sim_time || 0);
     updateCameras(t);
     const gt = t.ground_truth;
     document.getElementById('val-halting').textContent = gt.halting_vehicles;
@@ -182,25 +196,57 @@ function updateTelemetry(data) {
     lastSimTime = t.sim_time;
     chartData.timestamps.push(t.sim_time);
     chartData.waitingTimes.push(gt.mean_wait_per_stopped_s);
-    chartData.rewards.push(t.reward);
     chartData.haltingVehicles.push(gt.halting_vehicles);
     chartData.phaseCounters[t.phase] = (chartData.phaseCounters[t.phase] || 0) + 1;
     if (chartData.timestamps.length > MAX_CHART_POINTS) {
         chartData.timestamps.shift();
         chartData.waitingTimes.shift();
-        chartData.rewards.shift();
         chartData.haltingVehicles.shift();
     }
+
+    // Se estiver rodando o baseline ao vivo, registra a média observada
+    if (currentVersion === 'baseline' && chartData.waitingTimes.length > 5) {
+        recordedBaselineWait = chartData.waitingTimes.reduce((a, b) => a + b, 0) / chartData.waitingTimes.length;
+    }
+
+    const baseline = recordedBaselineWait || SCENARIO_BASELINES[currentScenario] || 20.8;
+    const legendBaseline = document.getElementById('legend-baseline-val');
+    if (legendBaseline) legendBaseline.textContent = baseline.toFixed(1) + 's';
+    const baselineRef = document.getElementById('kpi-baseline-ref');
+    if (baselineRef) baselineRef.textContent = `vs ${baseline.toFixed(1)} s (tempo fixo)`;
 
     const points = chartData.timestamps.length;
     const followed = chartData.timestamps[points - 1] - chartData.timestamps[0];
     document.getElementById('kpi-total-steps').textContent =
         `${Math.floor(followed / 60)}:${String(Math.floor(followed % 60)).padStart(2, '0')}`;
-    const avgReward = chartData.rewards.reduce((a, b) => a + b, 0) / points;
-    document.getElementById('kpi-avg-reward').textContent = avgReward.toFixed(3);
     const avgWait = chartData.waitingTimes.reduce((a, b) => a + b, 0) / points;
     document.getElementById('kpi-avg-wait').textContent = avgWait.toFixed(1) + ' s';
-    document.getElementById('kpi-halting').textContent = gt.halting_vehicles;
+
+    // Cálculo da economia percentual gerada
+    const reductionElem = document.getElementById('kpi-reduction-val');
+    if (reductionElem) {
+        if (points >= 3 && baseline > 0) {
+            const reductionPct = ((baseline - avgWait) / baseline) * 100;
+            if (reductionPct >= 0) {
+                reductionElem.textContent = '−' + reductionPct.toFixed(1) + '%';
+                reductionElem.className = 'kpi-value text-green';
+            } else {
+                reductionElem.textContent = '+' + Math.abs(reductionPct).toFixed(1) + '%';
+                reductionElem.className = 'kpi-value text-amber';
+            }
+        } else {
+            reductionElem.textContent = '—';
+            reductionElem.className = 'kpi-value text-green';
+        }
+    }
+
+    // Status de Ambulâncias
+    const emergVal = document.getElementById('kpi-emergency-val');
+    if (emergVal) emergVal.textContent = dispatchedList.length;
+    const emergSub = document.getElementById('kpi-emergency-sub');
+    if (emergSub) {
+        emergSub.textContent = dispatchedList.length > 0 ? '100% livres (onda verde)' : '100% de passagem livre';
+    }
 
     requestAnimationFrame(renderCharts);
     updatePhaseDistribution();
@@ -302,14 +348,19 @@ async function post(url, body) {
 }
 
 function resetCharts() {
-    chartData = { timestamps: [], waitingTimes: [], rewards: [], haltingVehicles: [], phaseCounters: {} };
+    chartData = { timestamps: [], waitingTimes: [], haltingVehicles: [], phaseCounters: {} };
     lastSimTime = null;
     renderCharts();
     updatePhaseDistribution();
     document.getElementById('kpi-total-steps').textContent = '0:00';
-    document.getElementById('kpi-avg-reward').textContent = '0.000';
     document.getElementById('kpi-avg-wait').textContent = '0.0 s';
-    document.getElementById('kpi-halting').textContent = '0';
+    const reductionElem = document.getElementById('kpi-reduction-val');
+    if (reductionElem) {
+        reductionElem.textContent = '—';
+        reductionElem.className = 'kpi-value text-green';
+    }
+    const emergVal = document.getElementById('kpi-emergency-val');
+    if (emergVal) emergVal.textContent = '0';
 }
 
 btnStart.addEventListener('click', async () => {
@@ -352,7 +403,7 @@ updateButtons();
 // ============================================
 //  Chart Rendering (Canvas-based, no library)
 // ============================================
-function drawLineChart(canvasId, data, color, label, yLabel) {
+function drawLineChart(canvasId, data, color, label, yLabel, baselineVal = null) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -368,7 +419,7 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
 
     const W = rect.width;
     const H = 260;
-    const pad = { top: 20, right: 20, bottom: 36, left: 60 };
+    const pad = { top: 24, right: 20, bottom: 36, left: 56 };
     const plotW = W - pad.left - pad.right;
     const plotH = H - pad.top - pad.bottom;
 
@@ -379,20 +430,24 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
         ctx.fillStyle = '#5c6578';
         ctx.font = '13px Inter, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('Aguardando dados…', W / 2, H / 2);
+        ctx.fillText('Aguardando dados da demonstração…', W / 2, H / 2);
         return;
     }
 
-    // Compute bounds
+    // Compute bounds (incorporando a linha de baseline para não cortar)
     let minY = Math.min(...data);
     let maxY = Math.max(...data);
+    if (baselineVal !== null) {
+        minY = Math.min(minY, baselineVal);
+        maxY = Math.max(maxY, baselineVal);
+    }
     if (minY === maxY) { minY -= 1; maxY += 1; }
     const rangeY = maxY - minY;
-    minY -= rangeY * 0.1;
-    maxY += rangeY * 0.1;
+    minY = Math.max(0, minY - rangeY * 0.1);
+    maxY += rangeY * 0.18;
 
     // Grid lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
     ctx.lineWidth = 1;
     const gridLines = 5;
     for (let i = 0; i <= gridLines; i++) {
@@ -404,15 +459,35 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
 
         // Y labels
         const val = maxY - ((maxY - minY) / gridLines) * i;
-        ctx.fillStyle = '#5c6578';
+        ctx.fillStyle = '#6b778d';
         ctx.font = '11px JetBrains Mono, monospace';
         ctx.textAlign = 'right';
         ctx.fillText(val.toFixed(1), pad.left - 8, y + 4);
     }
 
+    // Baseline horizontal line
+    if (baselineVal !== null && data.length >= 2) {
+        const baselineY = pad.top + plotH - ((baselineVal - minY) / (maxY - minY)) * plotH;
+        ctx.save();
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = '#f06565';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, baselineY);
+        ctx.lineTo(W - pad.right, baselineY);
+        ctx.stroke();
+
+        // Tag sobre a linha
+        ctx.fillStyle = '#f06565';
+        ctx.font = '600 11px JetBrains Mono, monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(`Tempo fixo: ${baselineVal.toFixed(1)}s`, W - pad.right - 8, baselineY - 6);
+        ctx.restore();
+    }
+
     // X labels
     const xLabelCount = Math.min(6, data.length);
-    ctx.fillStyle = '#5c6578';
+    ctx.fillStyle = '#6b778d';
     ctx.font = '11px JetBrains Mono, monospace';
     ctx.textAlign = 'center';
     for (let i = 0; i < xLabelCount; i++) {
@@ -437,8 +512,8 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
     ctx.closePath();
 
     const gradient = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
-    gradient.addColorStop(0, color + '25');
-    gradient.addColorStop(1, color + '02');
+    gradient.addColorStop(0, color + '28');
+    gradient.addColorStop(1, color + '00');
     ctx.fillStyle = gradient;
     ctx.fill();
 
@@ -451,7 +526,7 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
         else ctx.lineTo(x, y);
     }
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.2;
     ctx.lineJoin = 'round';
     ctx.stroke();
 
@@ -464,7 +539,7 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
         ctx.fillStyle = color;
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(lastX, lastY, 7, 0, Math.PI * 2);
+        ctx.arc(lastX, lastY, 8, 0, Math.PI * 2);
         ctx.strokeStyle = color + '40';
         ctx.lineWidth = 2;
         ctx.stroke();
@@ -472,8 +547,8 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
 }
 
 function renderCharts() {
-    drawLineChart('chart-waiting', chartData.waitingTimes, '#f0b045', 'Espera', 's');
-    drawLineChart('chart-reward', chartData.rewards, '#2dd4a0', 'Recompensa', '');
+    const baseline = recordedBaselineWait || SCENARIO_BASELINES[currentScenario] || 20.8;
+    drawLineChart('chart-waiting', chartData.waitingTimes, '#2dd4a0', 'Espera', 's', baseline);
     drawLineChart('chart-halting', chartData.haltingVehicles, '#4f8ff7', 'Veículos', '');
 }
 

@@ -35,7 +35,16 @@ def main() -> None:
     args = parse_args()
     model = Path(args.model)
     if not model.exists():
-        raise SystemExit(f"Detector YOLO não encontrado: {model} (rode a partir de python/ ou passe --model).")
+        # Fallback para o yolov8n.pt local se o detector customizado não estiver presente
+        local_yolo = Path(__file__).resolve().parents[1] / "yolov8n.pt"
+        if local_yolo.exists():
+            print(f"Aviso: detector ajustado ({model}) não encontrado.")
+            print(f"Utilizando modelo local de fallback: {local_yolo.name} com classes COCO (2,3,5,7).")
+            args.model = str(local_yolo)
+            args.classes = "2,3,5,7"
+            model = local_yolo
+        else:
+            raise SystemExit(f"Detector YOLO não encontrado: {model} (rode a partir de python/ ou passe --model).")
     base_dir = Path(__file__).resolve().parents[1]
     app = create_app(PanelSettings(base_dir, args, args.warmup_seconds, args.control_seconds))
     uvicorn.run(app, host=args.host, port=args.port)
