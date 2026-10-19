@@ -920,7 +920,7 @@ body {
 .status-area {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 14px;
 }
 .control-message:empty { display: none; }
 /* Sem mensagem e sem ambulâncias, o bloco não ocupa espaço (nem o gap do layout). */
