@@ -229,7 +229,8 @@ function updateTelemetry(data) {
     document.getElementById('preempt-name').textContent = priority
         ? '🚑 verde para ' + priority.map(a => APPROACH_LABELS[a]).join(' e ') : '—';
 
-    if (running) document.querySelectorAll('.camera-overlay').forEach(el => el.classList.add('hidden'));
+    // As imagens só aparecem quando o tempo de teste começa (depois do aquecimento).
+    document.querySelectorAll('.camera-overlay').forEach(el => el.classList.toggle('hidden', running && !warming));
 
     // Um ponto por instante novo da simulação (a telemetria pode repetir o mesmo).
     if (t.sim_time === lastSimTime) return;

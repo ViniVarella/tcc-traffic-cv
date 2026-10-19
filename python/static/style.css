@@ -1037,15 +1037,35 @@ body {
     display: block;
 }
 
+/* Cobre a câmera até o tempo de teste começar (inclusive no aquecimento, quando as
+   primeiras imagens já chegam): fundo opaco, ícone girando e a legenda embaixo. */
 .camera-overlay {
     position: absolute;
     inset: 0;
     display: flex;
+    flex-direction: column;
+    gap: 12px;
     align-items: center;
     justify-content: center;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(4px);
+    background: #07090d;
     transition: var(--transition-base);
+}
+
+.camera-spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.12);
+    border-top-color: var(--accent);
+    animation: camera-spin 0.9s linear infinite;
+}
+
+@keyframes camera-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .camera-spinner { animation-duration: 2.5s; }
 }
 
 .camera-overlay span {
