@@ -224,8 +224,10 @@ function updateTelemetry(data) {
     updateAmbulanceCounts(t.emergencies);
     updateCameras(t, running && !warming);
     const gt = t.ground_truth;
-    document.getElementById('val-halting').textContent = gt.halting_vehicles;
-    document.getElementById('val-wait').textContent = gt.mean_wait_per_stopped_s.toFixed(1) + ' s';
+    // Indicadores do simulador: só no tempo de teste, junto com as câmeras.
+    const live = running && !warming;
+    document.getElementById('val-halting').textContent = live ? gt.halting_vehicles : '—';
+    document.getElementById('val-wait').textContent = live ? gt.mean_wait_per_stopped_s.toFixed(1) + ' s' : '—';
     document.getElementById('phase-name').textContent = running && !warming ? PHASE_LABELS[t.phase] || t.phase : '—';
     const priority = PRIORITY_APPROACHES[t.preempt_target];
     document.getElementById('preempt-name').textContent = priority && running && !warming
