@@ -376,8 +376,11 @@
                         <span class="phase-value" id="preempt-name">—</span>
                     </div>
                 </div>
-                <div class="control-message" id="control-message"></div>
-                <div class="ambulance-list" id="ambulance-list" hidden></div>
+                <!-- Mensagens e ambulâncias a caminho: um bloco só, que some quando os dois estão vazios. -->
+                <div class="status-area">
+                    <div class="control-message" id="control-message"></div>
+                    <div class="ambulance-list" id="ambulance-list" hidden></div>
+                </div>
 
                 <!-- Câmeras na ordem do mapa: Oeste, Sul, Leste -->
                 <div class="cameras-grid">
