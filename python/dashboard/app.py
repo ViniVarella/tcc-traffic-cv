@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
 from pathlib import Path
 import queue
@@ -81,6 +81,9 @@ class StartRequest(BaseModel):
     version: str = "v2"
     preemption: str = "v2i"
     seed: int = 201
+    # Agenda automática de viaturas (uma a cada ~5 min, como nas avaliações de
+    # preempção). Desligada, só entram as do botão.
+    auto_emergencies: bool = False
 
 
 class EmergencyRequestBody(BaseModel):
@@ -268,10 +271,11 @@ class EpisodeRunner:
                 self._publish_frames(results)
 
         print(f"painel_episodio_inicio scenario={request.scenario} version={request.version} "
-              f"preemption={request.preemption} seed={request.seed}")
+              f"preemption={request.preemption} seed={request.seed} auto_emergencies={request.auto_emergencies}")
         try:
             outcome, _ = environment.run(request.seed, version.policy, observer=observer, on_step=on_step,
-                                         emergency=EmergencySettings.from_config(self.config), preemption=preemption,
+                                         emergency=replace(EmergencySettings.from_config(self.config),
+                                                           scheduled=request.auto_emergencies), preemption=preemption,
                                          emergency_detection="v2i" if preemption is None else request.preemption)
         except InterruptedError:
             print("painel_episodio_interrompido")
@@ -319,7 +323,7 @@ def create_app(settings: PanelSettings) -> FastAPI:
                 "preemption": list(PREEMPTION_SOURCES), "approaches": list(APPROACHES),
                 "emergency_routes": runner.emergency_routes(), "announce_before_s": runner.announce_before_s,
                 "fixed_time_reference_s": runner.fixed_time_reference,
-                "fixed_time_reference_source": runner.fixed_time_reference_source, "min_sample_s": MIN_SAMPLE_S,
+                "fixed_time_reference_source": runner.fixed_time_reference_source, "min_sample_s": MIN_SAMPLE_S, "warmup_s": settings.warmup_s,
                 "generic_detector": settings.generic_detector}
 
     @app.get("/api/state")

@@ -40,6 +40,8 @@ class EmergencySettings:
         "east": (("E2", "E0"), ("E2", "E5")),
         "west": (("E6", "E1"),),
     })
+    # False: sem a agenda automática; só entram viaturas despachadas (botão do painel).
+    scheduled: bool = True
 
     def __post_init__(self) -> None:
         if self.interval_s <= 0 or not 0 <= self.jitter_s < self.interval_s or self.announce_before_s < 0:
@@ -106,7 +108,8 @@ class EmergencyTraffic:
     def __init__(self, settings: EmergencySettings, approach_edges: Mapping[str, str], seed: int, start_s: float, end_s: float) -> None:
         self.settings = settings
         self.approach_edges = dict(approach_edges)
-        self._vehicles = [_Tracked(plan) for plan in build_schedule(settings, seed, start_s, end_s)]
+        plans = build_schedule(settings, seed, start_s, end_s) if settings.scheduled else []
+        self._vehicles = [_Tracked(plan) for plan in plans]
         self._type_ready = False
         self._visual_events: dict[str, bool] = {}
         self._manual_rng = random.Random(f"emergency-manual-{seed}")

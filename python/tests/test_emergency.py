@@ -77,6 +77,17 @@ class EmergencyTrafficTests(unittest.TestCase):
         self.assertEqual(client.added, [vehicle_id])  # entra 5 s depois, antes da agendada (t = 20)
         self.assertEqual(traffic.summary()["scheduled"], 2)
 
+    def test_without_schedule_only_dispatched_vehicles_enter(self) -> None:
+        settings = EmergencySettings(interval_s=500, jitter_s=0, first_after_s=20, announce_before_s=5, scheduled=False)
+        traffic, client = EmergencyTraffic(settings, EDGES, seed=1, start_s=0, end_s=100), FakeClient()
+        for time in range(0, 60):
+            traffic.step(client, float(time))
+        self.assertEqual((client.added, traffic.summary()["scheduled"]), ([], 0))
+        vehicle_id = traffic.dispatch("east", 60.0)
+        for time in range(60, 70):
+            traffic.step(client, float(time))
+        self.assertEqual(client.added, [vehicle_id])
+
     def test_dispatch_rejects_unknown_approach(self) -> None:
         with self.assertRaises(ValueError):
             self._traffic().dispatch("north", 0.0)

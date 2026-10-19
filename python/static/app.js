@@ -90,6 +90,7 @@ const APPROACHES = ['west', 'south', 'east'];
 // mínima antes de mostrar a redução: vêm de /api/options (fonte única no backend).
 let fixedTimeReferenceS = {};
 let minSampleS = 600;
+let warmupS = 300;
 let runningRequest = null;  // cenário e controlador em execução (data.request)
 let lastRunScenario = null;  // cenário dos dados no gráfico (mantido depois do Parar)
 let lastDispatchedCount = -1;
@@ -139,6 +140,11 @@ function updateAmbulanceCountdown(dispatched, simTime) {
         showMessage(`🚑 Ambulância na via (${pendingAmbulance.route}).`);
         pendingAmbulance = null;
     }
+}
+
+function minutesClock(seconds) {
+    const total = Math.max(0, Math.floor(seconds));
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
 function formatClock(seconds) {
@@ -232,9 +238,12 @@ function updateTelemetry(data) {
     }
 
     updateReferenceLabels();
+    // Relógio da simulação, como no Ao vivo e no eixo dos gráficos; embaixo, a fase da amostra.
     const sampled = trip.sampled_s || 0;
-    document.getElementById('kpi-total-steps').textContent =
-        `${Math.floor(sampled / 60)}:${String(Math.floor(sampled % 60)).padStart(2, '0')}`;
+    document.getElementById('kpi-total-steps').textContent = minutesClock(t.sim_time);
+    document.getElementById('kpi-time-note').textContent = t.sim_time <= warmupS
+        ? `aquecendo: ${minutesClock(t.sim_time)} de ${minutesClock(warmupS)}`
+        : sampled < minSampleS ? `amostra: ${minutesClock(sampled)} de ${minutesClock(minSampleS)}` : `amostra: ${minutesClock(sampled)}`;
     document.getElementById('kpi-avg-wait').textContent = meanWait == null ? '—' : meanWait.toFixed(1) + ' s';
     // Quem ainda espera para entrar na rede não está na média (só veículos que concluíram o trajeto).
     const pending = trip.pending_vehicles || 0;
@@ -297,6 +306,7 @@ const btnEmergency = document.getElementById('btn-emergency');
 const selScenario = document.getElementById('sel-scenario');
 const selVersion = document.getElementById('sel-version');
 const selPreemption = document.getElementById('sel-preemption');
+const selAutoEmergencies = document.getElementById('sel-auto-emergencies');
 const selApproach = document.getElementById('sel-approach');
 const selExit = document.getElementById('sel-exit');
 
@@ -323,7 +333,7 @@ function updateButtons() {
     btnStart.classList.toggle('btn-resume', isRunning && isPaused);
     btnStop.disabled = !isRunning;
     btnEmergency.disabled = !isRunning;
-    [selScenario, selVersion, selPreemption].forEach(el => { el.disabled = isRunning; });
+    [selScenario, selVersion, selPreemption, selAutoEmergencies].forEach(el => { el.disabled = isRunning; });
 }
 
 async function loadOptions() {
@@ -334,6 +344,7 @@ async function loadOptions() {
         announceBeforeS = options.announce_before_s;
         fixedTimeReferenceS = options.fixed_time_reference_s || {};
         minSampleS = options.min_sample_s ?? minSampleS;
+        warmupS = options.warmup_s ?? warmupS;
         if (options.generic_detector) {
             // Sem a classe de viatura, a câmera não pede prioridade: só o V2I.
             for (const option of selPreemption.options) {
@@ -375,7 +386,7 @@ selScenario.addEventListener('change', () => { updateReferenceLabels(); renderCh
 
 // Zera os cartões de Resultados ao iniciar outra rodada, para nunca misturar amostras.
 function resetKpis() {
-    for (const [id, text] of [['kpi-total-steps', '0:00'], ['kpi-avg-wait', '—'], ['kpi-reduction-val', '—'],
+    for (const [id, text] of [['kpi-total-steps', '0:00'], ['kpi-time-note', 'aguardando o início'], ['kpi-avg-wait', '—'], ['kpi-reduction-val', '—'],
                               ['kpi-pending', 'fila de entrada: —'], ['kpi-reduction-note', 'aguardando amostra']]) {
         document.getElementById(id).textContent = text;
     }
@@ -391,7 +402,8 @@ btnStart.addEventListener('click', async () => {
             updateButtons();
             return;
         }
-        await post('/api/start', { scenario: selScenario.value, version: selVersion.value, preemption: selPreemption.value });
+        await post('/api/start', { scenario: selScenario.value, version: selVersion.value, preemption: selPreemption.value,
+                                   auto_emergencies: selAutoEmergencies.value === 'true' });
         lastRunScenario = selScenario.value;
         resetCharts();
         resetKpis();
@@ -586,7 +598,7 @@ function updateReduction(meanWait, sampled) {
     if (runningRequest && runningRequest.version === 'baseline') {
         note.textContent = 'o tempo fixo é a própria referência';
     } else if (reference == null || meanWait == null || sampled < minSampleS) {
-        note.textContent = `aguardando ${Math.round(minSampleS / 60)} min de amostra (${Math.floor(sampled / 60)} min)`;
+        note.textContent = `faltam ${Math.max(1, Math.ceil((minSampleS - sampled) / 60))} min de amostra`;
     } else {
         const pct = (reference - meanWait) / reference * 100;
         value.textContent = (pct >= 0 ? '−' : '+') + Math.abs(pct).toFixed(0) + '%';

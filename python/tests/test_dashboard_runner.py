@@ -79,6 +79,11 @@ class EpisodeRunnerValidationTests(unittest.TestCase):
         self.assertEqual((values["original"], sources["original"]), (FIXED_TIME_REFERENCE_S["original"], "valor embutido"))
         self.assertEqual(sources["calibrated_ped"], "valor embutido")  # arquivo ausente
 
+    def test_automatic_emergencies_are_off_by_default(self) -> None:
+        self.assertFalse(StartRequest().auto_emergencies)
+        self.runner.start(StartRequest(auto_emergencies=True))
+        self.assertTrue(self.runner.state["request"]["auto_emergencies"])
+
     def test_pause_and_resume_only_while_running(self) -> None:
         for action in (self.runner.pause, self.runner.resume):
             with self.assertRaises(ValueError):

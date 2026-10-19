@@ -342,6 +342,14 @@
                 </div>
 
                 <div class="control-strip">
+                    <label class="control-field" title="Agenda das avaliações: uma ambulância a cada ~5 min simulados, com origem sorteada">
+                        <span class="policy-label">Ambulâncias automáticas</span>
+                        <select id="sel-auto-emergencies" class="control-select">
+                            <option value="false">Desligadas</option>
+                            <option value="true">A cada ~5 min</option>
+                        </select>
+                    </label>
+                    <div class="control-divider"></div>
                     <label class="control-field">
                         <span class="policy-label">Sentido de origem</span>
                         <select id="sel-approach" class="control-select">
@@ -454,8 +462,8 @@
             <div class="kpi-row">
                 <div class="kpi-card">
                     <div class="kpi-value" id="kpi-total-steps">0:00</div>
-                    <div class="kpi-label">Tempo de amostra</div>
-                    <div class="kpi-subtext">Simulado, depois do aquecimento</div>
+                    <div class="kpi-label">Tempo de simulação</div>
+                    <div class="kpi-subtext" id="kpi-time-note">aguardando o início</div>
                 </div>
                 <div class="kpi-card accent-amber">
                     <div class="kpi-value" id="kpi-avg-wait">—</div>
@@ -480,7 +488,7 @@
                     <div class="chart-header">
                         <div>
                             <h3>Espera média por veículo: demonstração vs tempo fixo</h3>
-                            <span class="chart-subtitle">Média desde o aquecimento; a linha tracejada é o tempo fixo na avaliação oficial</span>
+                            <span class="chart-subtitle">Últimos 5 min de simulação; média desde o aquecimento, e a linha tracejada é o tempo fixo na avaliação oficial</span>
                         </div>
                         <div class="chart-header-actions">
                             <div class="chart-legend">
@@ -498,7 +506,7 @@
                     <div class="chart-header">
                         <div>
                             <h3>Veículos retidos no cruzamento</h3>
-                            <span class="chart-subtitle">Fila instantânea nas aproximações</span>
+                            <span class="chart-subtitle">Fila instantânea nas aproximações, últimos 5 min de simulação</span>
                         </div>
                         <span class="chart-badge live">AO VIVO</span>
                     </div>
