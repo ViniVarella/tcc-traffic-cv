@@ -1075,6 +1075,11 @@ body {
     .camera-spinner { animation-duration: 2.5s; }
 }
 
+/* Parada (antes de iniciar ou depois de Parar): ícone de câmera fixo, sem girar. */
+.camera-idle-icon { display: none; color: var(--text-muted); }
+.camera-overlay.idle .camera-spinner { display: none; }
+.camera-overlay.idle .camera-idle-icon { display: block; }
+
 .camera-overlay span {
     font-size: 13px;
     color: var(--text-secondary);

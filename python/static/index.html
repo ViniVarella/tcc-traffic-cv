@@ -393,7 +393,7 @@
                         </div>
                         <button class="camera-viewport" type="button" data-camera="west" title="Clique para ampliar">
                             <img data-stream="/api/video/west" alt="Câmera da rua que chega pelo Oeste" id="cam-west">
-                            <div class="camera-overlay" id="overlay-west"><span class="camera-spinner" aria-hidden="true"></span><span>Aguardando imagens…</span></div>
+                            <div class="camera-overlay idle" id="overlay-west"><span class="camera-spinner" aria-hidden="true"></span><svg class="camera-idle-icon" aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span class="camera-overlay-text">Inicie a demonstração para ver as câmeras</span></div>
                         </button>
                     </div>
                     <div class="camera-card" data-camera="south">
@@ -405,7 +405,7 @@
                         </div>
                         <button class="camera-viewport" type="button" data-camera="south" title="Clique para ampliar">
                             <img data-stream="/api/video/south" alt="Câmera da rua que chega pelo Sul" id="cam-south">
-                            <div class="camera-overlay" id="overlay-south"><span class="camera-spinner" aria-hidden="true"></span><span>Aguardando imagens…</span></div>
+                            <div class="camera-overlay idle" id="overlay-south"><span class="camera-spinner" aria-hidden="true"></span><svg class="camera-idle-icon" aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span class="camera-overlay-text">Inicie a demonstração para ver as câmeras</span></div>
                         </button>
                     </div>
                     <div class="camera-card" data-camera="east">
@@ -417,7 +417,7 @@
                         </div>
                         <button class="camera-viewport" type="button" data-camera="east" title="Clique para ampliar">
                             <img data-stream="/api/video/east" alt="Câmera da rua que chega pelo Leste" id="cam-east">
-                            <div class="camera-overlay" id="overlay-east"><span class="camera-spinner" aria-hidden="true"></span><span>Aguardando imagens…</span></div>
+                            <div class="camera-overlay idle" id="overlay-east"><span class="camera-spinner" aria-hidden="true"></span><svg class="camera-idle-icon" aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span class="camera-overlay-text">Inicie a demonstração para ver as câmeras</span></div>
                         </button>
                     </div>
                 </div>
@@ -435,7 +435,7 @@
                         <div class="metric-icon wait"></div>
                         <div class="metric-info">
                             <span class="metric-label">Tempo médio de espera</span>
-                            <span class="metric-number" id="val-wait">— s</span>
+                            <span class="metric-number" id="val-wait">—</span>
                         </div>
                     </div>
                     <div class="metric-tile">

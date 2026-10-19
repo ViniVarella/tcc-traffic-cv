@@ -167,6 +167,17 @@ function formatClock(seconds) {
 
 // live: rodada em andamento e já no tempo de teste. Fora disso as câmeras mostram o
 // ícone de espera, e moldura, luz e contagem ficam neutras para não sugerir imagens.
+// Sobreposição das câmeras: 'idle' (parada, ícone fixo), 'waiting' (aquecimento,
+// ícone girando) ou 'live' (sem sobreposição, imagens ao vivo).
+function setCameraOverlays(mode) {
+    document.querySelectorAll('.camera-overlay').forEach(el => {
+        el.classList.toggle('hidden', mode === 'live');
+        el.classList.toggle('idle', mode === 'idle');
+        el.querySelector('.camera-overlay-text').textContent =
+            mode === 'idle' ? 'Inicie a demonstração para ver as câmeras' : 'Aguardando imagens…';
+    });
+}
+
 function updateCameras(t, live) {
     const priority = live ? PRIORITY_APPROACHES[t.preempt_target] || [] : [];
     for (const approach of APPROACHES) {
@@ -234,7 +245,7 @@ function updateTelemetry(data) {
         ? '🚑 verde para ' + priority.map(a => APPROACH_LABELS[a]).join(' e ') : '—';
 
     // As imagens só aparecem quando o tempo de teste começa (depois do aquecimento).
-    document.querySelectorAll('.camera-overlay').forEach(el => el.classList.toggle('hidden', running && !warming));
+    setCameraOverlays(!running ? 'idle' : warming ? 'waiting' : 'live');
 
     // Um ponto por instante novo da simulação (a telemetria pode repetir o mesmo).
     if (t.sim_time === lastSimTime) return;
@@ -437,6 +448,7 @@ btnStart.addEventListener('click', async () => {
         lastRunScenario = selScenario.value;
         resetCharts();
         resetKpis();
+        setCameraOverlays('waiting');
         showMessage('Iniciando a simulação. As imagens serão exibidas em alguns segundos.');
         waitingFirstImages = true;
         isRunning = true;
@@ -451,7 +463,7 @@ btnStop.addEventListener('click', async () => {
     await post('/api/stop').catch(e => showMessage(e.message));
     waitingFirstImages = false;
     showMessage('Demonstração encerrada.', 4000);
-    document.querySelectorAll('.camera-overlay').forEach(el => el.classList.remove('hidden'));
+    setCameraOverlays('idle');
 });
 
 btnEmergency.addEventListener('click', async () => {
