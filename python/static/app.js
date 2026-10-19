@@ -457,8 +457,8 @@ btnStop.addEventListener('click', async () => {
 btnEmergency.addEventListener('click', async () => {
     try {
         const exit = selExit.value || null;
+        // A lista de ambulâncias a caminho já mostra a nova; só erros viram mensagem.
         await post('/api/emergency', { approach: selApproach.value, exit });
-        showMessage('🚑 Ambulância acionada: aviso de aproximação enviado ao semáforo.', 4000);
     } catch (e) {
         showMessage(e.message);
     }
