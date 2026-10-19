@@ -208,7 +208,10 @@ function updateTelemetry(data) {
     if (runningRequest) lastRunScenario = runningRequest.scenario;
     if (!t) return;
 
-    document.getElementById('sim-clock').textContent = formatClock(t.sim_time || 0);
+    // Tempo de teste: começa em 0 quando o aquecimento termina e o controlador assume.
+    const testTime = (t.sim_time || 0) - warmupS;
+    const warming = testTime <= 0;
+    document.getElementById('sim-clock').textContent = warming ? 'preparando…' : formatClock(testTime);
     renderAmbulances(t.emergencies, t.sim_time || 0, runningRequest && runningRequest.preemption !== 'none');
     updateAmbulanceCounts(t.emergencies);
     updateCameras(t);
@@ -228,25 +231,26 @@ function updateTelemetry(data) {
     // Espera por veículo desde o aquecimento: a mesma métrica da avaliação oficial.
     const trip = t.trip || {};
     const meanWait = trip.mean_waiting_time_s;
-    chartData.timestamps.push(t.sim_time);
-    chartData.haltingVehicles.push(gt.halting_vehicles);
-    if (meanWait != null) {
-        chartData.waitingTimes.push(meanWait);
-        chartData.waitingTimesAt.push(t.sim_time);
+    // O aquecimento não entra nos gráficos nem na divisão por fase: só o tempo de teste.
+    if (!warming) {
+        chartData.timestamps.push(testTime);
+        chartData.haltingVehicles.push(gt.halting_vehicles);
+        if (meanWait != null) {
+            chartData.waitingTimes.push(meanWait);
+            chartData.waitingTimesAt.push(testTime);
+        }
+        chartData.phaseCounters[t.phase] = (chartData.phaseCounters[t.phase] || 0) + 1;
     }
-    chartData.phaseCounters[t.phase] = (chartData.phaseCounters[t.phase] || 0) + 1;
     // Cada série anda junto com o próprio eixo do tempo.
     for (const series of [chartData.timestamps, chartData.haltingVehicles, chartData.waitingTimes, chartData.waitingTimesAt]) {
         if (series.length > MAX_CHART_POINTS) series.shift();
     }
 
     updateReferenceLabels();
-    // Relógio da simulação, como no Ao vivo e no eixo dos gráficos; embaixo, a fase da amostra.
+    // O mesmo tempo de teste do Ao vivo e do eixo dos gráficos.
     const sampled = trip.sampled_s || 0;
-    document.getElementById('kpi-total-steps').textContent = minutesClock(t.sim_time);
-    document.getElementById('kpi-time-note').textContent = t.sim_time <= warmupS
-        ? `aquecendo: ${minutesClock(t.sim_time)} de ${minutesClock(warmupS)}`
-        : sampled < minSampleS ? `amostra: ${minutesClock(sampled)} de ${minutesClock(minSampleS)}` : `amostra: ${minutesClock(sampled)}`;
+    document.getElementById('kpi-total-steps').textContent = warming ? '0:00' : minutesClock(testTime);
+    document.getElementById('kpi-time-note').textContent = warming ? 'preparando o cruzamento…' : 'desde o início do teste';
     document.getElementById('kpi-avg-wait').textContent = meanWait == null ? '—' : meanWait.toFixed(1) + ' s';
     // Quem ainda espera para entrar na rede não está na média (só veículos que concluíram o trajeto).
     const pending = trip.pending_vehicles || 0;
@@ -615,7 +619,7 @@ function updateReduction(meanWait, sampled) {
         // Com pouca amostra a média ainda oscila: o número aparece, mas em cinza.
         value.className = 'kpi-value text-muted';
         note.className = 'kpi-subtext text-muted';
-        note.textContent = `preliminar · faltam ${Math.max(1, Math.ceil((minSampleS - sampled) / 60))} min de amostra`;
+        note.textContent = `preliminar até ${minutesClock(minSampleS)} de teste`;
     } else if (pct < 0) {
         value.className = 'kpi-value text-amber';
     }
