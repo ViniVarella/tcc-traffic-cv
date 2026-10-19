@@ -192,6 +192,10 @@ function updateTelemetry(data) {
     else if (running) setBadge(sumoDot, 'online', data.status === 'rodando' ? 'Em execução' : 'Iniciando');
     else setBadge(sumoDot, 'warning', 'Parada');
     if (t && t.vision) setBadge(unityDot, 'online', 'Recebendo imagens');
+    if (t && t.vision && waitingFirstImages) {
+        waitingFirstImages = false;
+        showMessage('');
+    }
     else if (running && t) setBadge(unityDot, 'warning', 'Sem imagens');
     else setBadge(unityDot, 'offline', 'Aguardando');
 
@@ -211,7 +215,7 @@ function updateTelemetry(data) {
     // Tempo de teste: começa em 0 quando o aquecimento termina e o controlador assume.
     const testTime = (t.sim_time || 0) - warmupS;
     const warming = testTime <= 0;
-    document.getElementById('sim-clock').textContent = warming ? 'preparando…' : formatClock(testTime);
+    document.getElementById('sim-clock').textContent = warming ? 'Aguarde…' : formatClock(testTime);
     renderAmbulances(t.emergencies, t.sim_time || 0, runningRequest && runningRequest.preemption !== 'none');
     updateAmbulanceCounts(t.emergencies);
     updateCameras(t);
@@ -325,8 +329,14 @@ function syncExitOptions() {
 }
 selApproach.addEventListener('change', syncExitOptions);
 
-function showMessage(text) {
+// Mensagens de confirmação somem sozinhas (transient_ms); erros e avisos ficam até
+// a próxima mensagem. "Iniciando…" some quando chegam as primeiras imagens.
+let messageTimer = null;
+let waitingFirstImages = false;
+function showMessage(text, transientMs = 0) {
+    clearTimeout(messageTimer);
     document.getElementById('control-message').textContent = text;
+    if (transientMs > 0) messageTimer = setTimeout(() => showMessage(''), transientMs);
 }
 
 const ICON_PLAY = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
@@ -410,7 +420,8 @@ btnStart.addEventListener('click', async () => {
             // Pausa ou retoma: o SUMO só avança quando o Python pede o próximo passo.
             await post(isPaused ? '/api/resume' : '/api/pause');
             isPaused = !isPaused;
-            showMessage(isPaused ? 'Simulação pausada. Os dados ficam na tela para análise.' : 'Simulação retomada.');
+            if (isPaused) showMessage('Simulação pausada. Os dados ficam na tela para análise.');
+            else showMessage('Simulação retomada.', 4000);
             updateButtons();
             return;
         }
@@ -420,6 +431,7 @@ btnStart.addEventListener('click', async () => {
         resetCharts();
         resetKpis();
         showMessage('Iniciando a simulação. As imagens serão exibidas em alguns segundos.');
+        waitingFirstImages = true;
         isRunning = true;
         isPaused = false;
         updateButtons();
@@ -430,7 +442,8 @@ btnStart.addEventListener('click', async () => {
 
 btnStop.addEventListener('click', async () => {
     await post('/api/stop').catch(e => showMessage(e.message));
-    showMessage('Demonstração encerrada.');
+    waitingFirstImages = false;
+    showMessage('Demonstração encerrada.', 4000);
     document.querySelectorAll('.camera-overlay').forEach(el => el.classList.remove('hidden'));
 });
 
@@ -438,7 +451,7 @@ btnEmergency.addEventListener('click', async () => {
     try {
         const exit = selExit.value || null;
         await post('/api/emergency', { approach: selApproach.value, exit });
-        showMessage('🚑 Ambulância acionada: aviso de aproximação enviado ao semáforo.');
+        showMessage('🚑 Ambulância acionada: aviso de aproximação enviado ao semáforo.', 4000);
     } catch (e) {
         showMessage(e.message);
     }
