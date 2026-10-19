@@ -131,7 +131,10 @@ class EpisodeRunner:
         self.fixed_time_reference, self.fixed_time_reference_source = load_fixed_time_reference(
             settings.base_dir.parent / "results" / "evaluation")
         self.state: dict[str, Any] = {"is_running": False, "paused": False, "status": "parado", "request": None, "telemetry": None,
-                                      "dispatched": [], "error": None, "last_summary": None}
+                                      "error": None, "last_summary": None}
+        # As rotas da API (event loop) e o on_step (thread do episódio) reescrevem o
+        # estado: a trava evita que uma escrita apague a outra (ex.: a pausa).
+        self._state_lock = threading.Lock()
         self.frames: dict[str, bytes | None] = {camera: None for camera in APPROACHES}
         self._pending: queue.Queue[StartRequest] = queue.Queue(maxsize=1)
         self._dispatch: queue.Queue[tuple[str, str | None]] = queue.Queue()
@@ -165,8 +168,8 @@ class EpisodeRunner:
         self._stop_episode.clear()
         self._resume.set()
         self._pending.put(request)
-        self.state = {**self.state, "is_running": True, "paused": False, "status": "iniciando", "request": request.model_dump(),
-                      "telemetry": None, "dispatched": [], "error": None}
+        self._update_state(is_running=True, paused=False, status="iniciando", request=request.model_dump(), telemetry=None,
+                           error=None)
 
     def stop(self) -> None:
         self._stop_episode.set()
@@ -176,14 +179,20 @@ class EpisodeRunner:
         """Congela a simulação: o SUMO só avança quando o Python pede o próximo step."""
         if not self.state["is_running"]:
             raise ValueError("Não há demonstração em execução para pausar.")
-        self._resume.clear()
-        self.state = {**self.state, "paused": True, "status": "pausado"}
+        with self._state_lock:
+            self._resume.clear()
+            self.state = {**self.state, "paused": True, "status": "pausado"}
 
     def resume(self) -> None:
         if not self.state["is_running"]:
             raise ValueError("Não há demonstração em execução para retomar.")
-        self.state = {**self.state, "paused": False, "status": "rodando"}
-        self._resume.set()
+        with self._state_lock:
+            self.state = {**self.state, "paused": False, "status": "rodando"}
+            self._resume.set()
+
+    def _update_state(self, **changes: Any) -> None:
+        with self._state_lock:
+            self.state = {**self.state, **changes}
 
     def _wait_while_paused(self) -> None:
         while not self._resume.wait(timeout=0.2):
@@ -238,7 +247,7 @@ class EpisodeRunner:
             bridge.start_frame_server()
         except Exception as error:  # noqa: BLE001 - ex.: porta de frames já em uso por outro script
             traceback.print_exc()
-            self.state = {**self.state, "error": f"Falha ao abrir a conexão com a Unity: {error}"}
+            self._update_state(error=f"Falha ao abrir a conexão com a Unity: {error}")
             return
         self._bridge_ready.set()
         try:
@@ -251,10 +260,10 @@ class EpisodeRunner:
                     self._run_episode(request, bridge)
                 except Exception as error:  # noqa: BLE001 - o painel mostra o erro e continua vivo
                     traceback.print_exc()
-                    self.state = {**self.state, "error": str(error)}
+                    self._update_state(error=str(error))
                 finally:
                     self._clear_dispatches()
-                    self.state = {**self.state, "is_running": False, "paused": False, "status": "parado"}
+                    self._update_state(is_running=False, paused=False, status="parado")
         finally:
             bridge.close()
 
@@ -278,14 +287,13 @@ class EpisodeRunner:
             while traffic is not None and not self._dispatch.empty():
                 approach, exit_name = self._dispatch.get_nowait()
                 to_edge = None if exit_name is None else EXIT_EDGES[exit_name]
-                vehicle_id = traffic.dispatch(approach, float(info["sim_time"]), to_edge=to_edge)
-                self.state = {**self.state, "dispatched": [*self.state["dispatched"], {
-                    "id": vehicle_id, "approach": approach, "exit": exit_name, "sim_time": info["sim_time"]}]}
+                traffic.dispatch(approach, float(info["sim_time"]), to_edge=to_edge)
             telemetry = build_telemetry(info)
             if traffic is not None:
                 telemetry["emergencies"] = emergency_board(traffic, environment.emergency_preemption, float(info["sim_time"]))
-            self.state = {**self.state, "status": "pausado" if self.state["paused"] else "rodando",
-                          "telemetry": telemetry}
+            with self._state_lock:
+                self.state = {**self.state, "status": "pausado" if self.state["paused"] else "rodando",
+                              "telemetry": telemetry}
             results = getattr(observer, "last_results", None)
             if results is not None and results is not last_results[0]:
                 last_results[0] = results
@@ -302,12 +310,12 @@ class EpisodeRunner:
             print("painel_episodio_interrompido")
             return
         metrics = outcome.metrics
-        self.state = {**self.state, "last_summary": {
+        self._update_state(last_summary={
             "mean_waiting_time_seconds": metrics.get("mean_waiting_time_seconds"),
             "arrived_vehicles": metrics.get("arrived_vehicles"),
             "pedestrian_mean_waiting_s": metrics.get("pedestrian_mean_waiting_s"),
             "emergency_mean_total_loss_s": metrics.get("emergency", {}).get("mean_total_loss_at_crossing_s"),
-        }}
+        })
 
     def _publish_frames(self, results: dict[str, Any]) -> None:
         for camera_id, result in results.items():
@@ -345,6 +353,7 @@ def create_app(settings: PanelSettings) -> FastAPI:
                 "emergency_routes": runner.emergency_routes(), "announce_before_s": runner.announce_before_s,
                 "fixed_time_reference_s": runner.fixed_time_reference,
                 "fixed_time_reference_source": runner.fixed_time_reference_source, "min_sample_s": MIN_SAMPLE_S, "warmup_s": settings.warmup_s,
+                "reference_warmup_s": OFFICIAL_PROTOCOL["warmup_s"],
                 "generic_detector": settings.generic_detector}
 
     @app.get("/api/state")

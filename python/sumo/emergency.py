@@ -62,6 +62,8 @@ class ScheduledEmergency:
     approach: str
     from_edge: str
     to_edge: str
+    # Despachada pelo painel (botão), fora da agenda automática.
+    manual: bool = False
 
 
 def build_schedule(settings: EmergencySettings, seed: int, start_s: float, end_s: float) -> list[ScheduledEmergency]:
@@ -135,7 +137,7 @@ class EmergencyTraffic:
         vehicle_id = f"emergency_manual_{self._manual_count}"
         self._manual_count += 1
         self._vehicles.append(_Tracked(ScheduledEmergency(vehicle_id, sim_time + self.settings.announce_before_s, approach,
-                                                          from_edge, to_edge)))
+                                                          from_edge, to_edge, manual=True)))
         return vehicle_id
 
     def step(self, client: EmergencyClient, sim_time: float) -> list[EmergencyRequest]:
@@ -192,24 +194,33 @@ class EmergencyTraffic:
         ``automatic`` distingue a agenda do despacho manual (botão).
         """
         result = []
-        for vehicle in self._vehicles:
+        for vehicle in self._announced(sim_time):
             plan = vehicle.plan
-            if sim_time < plan.depart_s - self.settings.announce_before_s:
-                continue
             crossed = vehicle.passed_stop_line_s
             if crossed is not None and sim_time - crossed > keep_crossed_s:
                 continue
-            state = "cruzou" if crossed is not None else "na_via" if vehicle.inserted else "anunciada"
+            if crossed is None and vehicle.arrived_s is not None:
+                continue  # saiu da rede sem passar pela linha (ex.: teleporte do SUMO)
+            if crossed is not None:
+                state = "cruzou"
+            elif vehicle.seen:
+                state = "na_via"
+            elif vehicle.inserted:
+                state = "entrando"  # já pedida ao SUMO, ainda na fila de inserção
+            else:
+                state = "anunciada"
             result.append({"id": plan.vehicle_id, "approach": plan.approach, "to_edge": plan.to_edge, "state": state,
-                           "enter_at_s": plan.depart_s, "automatic": not plan.vehicle_id.startswith("emergency_manual_")})
+                           "enter_at_s": plan.depart_s, "automatic": not plan.manual})
         return sorted(result, key=lambda item: item["enter_at_s"])
 
     def announced_counts(self, sim_time: float) -> dict[str, int]:
         """Viaturas anunciadas até agora, despachadas (botão) e da agenda automática."""
-        announced = [vehicle.plan.vehicle_id for vehicle in self._vehicles
-                     if sim_time >= vehicle.plan.depart_s - self.settings.announce_before_s]
-        manual = sum(vehicle_id.startswith("emergency_manual_") for vehicle_id in announced)
+        announced = self._announced(sim_time)
+        manual = sum(vehicle.plan.manual for vehicle in announced)
         return {"manual": manual, "automatic": len(announced) - manual}
+
+    def _announced(self, sim_time: float) -> list[_Tracked]:
+        return [vehicle for vehicle in self._vehicles if sim_time >= vehicle.plan.depart_s - self.settings.announce_before_s]
 
     def present_on(self, approach: str) -> bool:
         """Há viatura na edge de entrada desta aproximação, antes da linha de retenção?"""

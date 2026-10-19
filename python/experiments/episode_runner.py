@@ -218,7 +218,7 @@ def run_episode(
                      "phase_elapsed": elapsed, "decision": decision,
                      "requested_action": requested, "lane_features": lane_features, "lane_metrics": lane_metrics,
                      # Sem as viaturas: a avaliação de versões não as tem.
-                     "trip_metrics": metrics.progress(sim_time, exclude_prefix="emergency")})
+                     "trip_metrics": metrics.progress(sim_time, exclude_emergencies=True)})
     # Episódio truncado pelo tempo: a última transição faz bootstrap (done=False).
     if last_state is not None:
         _learn(learner, accumulator.close(last_state), outcome)

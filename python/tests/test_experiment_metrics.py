@@ -55,7 +55,7 @@ class ExperimentMetricsCollectorTests(unittest.TestCase):
             "emergency_0": {"speed": 0.0, "accumulated_waiting_time": 0.0},
             "emergency_manual_0": {"speed": 0.0, "accumulated_waiting_time": 0.0}})
         collector.observe(2, {"departed": [], "arrived": ["car", "emergency_0", "emergency_manual_0"]}, {})
-        self.assertEqual(collector.progress(2.0, exclude_prefix="emergency")["mean_waiting_time_s"], 6.0)
+        self.assertEqual(collector.progress(2.0, exclude_emergencies=True)["mean_waiting_time_s"], 6.0)
         self.assertEqual(collector.progress(2.0)["mean_waiting_time_s"], collector.summary()["mean_waiting_time_seconds"])
 
     def test_pending_metrics_are_omitted_when_not_observed(self) -> None:

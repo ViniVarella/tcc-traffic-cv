@@ -91,6 +91,7 @@ const APPROACHES = ['west', 'south', 'east'];
 let fixedTimeReferenceS = {};
 let minSampleS = 600;
 let warmupS = 300;
+let referenceWarmupS = 300;  // aquecimento da avaliação oficial (a referência)
 let runningRequest = null;  // cenário e controlador em execução (data.request)
 let lastRunScenario = null;  // cenário dos dados no gráfico (mantido depois do Parar)
 
@@ -120,7 +121,6 @@ const PRIORITY_APPROACHES = { EAST_WEST_GREEN: ['east', 'west'], SOUTH_GREEN: ['
 const APPROACH_LABELS = { south: 'Sul', east: 'Leste', west: 'Oeste' };
 const EXIT_LABELS = { north: 'Norte', east: 'Leste', west: 'Oeste' };
 let emergencyRoutes = {};
-let announceBeforeS = null;
 // Lista das ambulâncias a caminho (botão e agenda automática), vinda da telemetria:
 // cada uma com a própria contagem, no relógio da simulação.
 function renderAmbulances(board, simTime, preemptionOn) {
@@ -133,6 +133,8 @@ function renderAmbulances(board, simTime, preemptionOn) {
         let status;
         if (vehicle.state === 'anunciada') {
             status = `entrada na via em ${Math.max(1, Math.ceil(vehicle.enter_at_s - simTime))} s`;
+        } else if (vehicle.state === 'entrando') {
+            status = 'entrando na via';
         } else if (vehicle.state === 'na_via') {
             status = vehicle.served ? 'na via, verde garantido' : preemptionOn ? 'na via, aguardando a vez' : 'na via';
         } else {
@@ -358,10 +360,10 @@ async function loadOptions() {
         const options = await (await fetch('/api/options')).json();
         selVersion.innerHTML = options.versions.map(v => `<option value="${v.id}">${v.label}</option>`).join('');
         emergencyRoutes = options.emergency_routes || {};
-        announceBeforeS = options.announce_before_s;
         fixedTimeReferenceS = options.fixed_time_reference_s || {};
         minSampleS = options.min_sample_s ?? minSampleS;
         warmupS = options.warmup_s ?? warmupS;
+        referenceWarmupS = options.reference_warmup_s ?? referenceWarmupS;
         if (options.generic_detector) {
             // Sem a classe de viatura, a câmera não pede prioridade: só o V2I.
             for (const option of selPreemption.options) {
@@ -691,7 +693,12 @@ function updateReduction(meanWait, sampled) {
     }
     const pct = (reference - meanWait) / reference * 100;
     value.textContent = (pct >= 0 ? '−' : '+') + Math.abs(pct).toFixed(0) + '%';
-    if (sampled < minSampleS) {
+    if (warmupS !== referenceWarmupS) {
+        // Outro aquecimento: a média ao vivo não é comparável com a referência.
+        value.className = 'kpi-value text-muted';
+        note.className = 'kpi-subtext text-amber';
+        note.textContent = `aquecimento diferente da avaliação (${warmupS} s × ${referenceWarmupS} s)`;
+    } else if (sampled < minSampleS) {
         // Com pouca amostra a média ainda oscila: o número aparece, mas em cinza.
         value.className = 'kpi-value text-muted';
         note.className = 'kpi-subtext text-muted';

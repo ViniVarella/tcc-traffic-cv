@@ -105,6 +105,20 @@ class EmergencyTrafficTests(unittest.TestCase):
         self.assertTrue(states[15]["emergency_0"]["automatic"])  # a agendada (t = 20) é anunciada 5 s antes
         self.assertEqual(traffic.announced_counts(15.0), {"manual": 1, "automatic": 1})
 
+    def test_vehicle_in_the_insertion_queue_is_not_on_the_road_yet(self) -> None:
+        traffic, client = self._traffic(), FakeClient(insert_delay_steps=10)
+        manual = traffic.dispatch("east", 0.0)
+        for time in range(0, 12):
+            traffic.step(client, float(time))
+        self.assertEqual({item["id"]: item["state"] for item in traffic.live_status(11.0)}[manual], "entrando")
+
+    def test_vehicle_that_leaves_without_crossing_drops_out(self) -> None:
+        traffic = self._traffic()
+        manual = traffic.dispatch("south", 0.0)
+        tracked = traffic._vehicles[-1]
+        tracked.inserted, tracked.seen, tracked.arrived_s = True, True, 30.0  # teleporte: some sem cruzar a linha
+        self.assertNotIn(manual, [item["id"] for item in traffic.live_status(31.0)])
+
     def test_dispatch_rejects_unknown_approach(self) -> None:
         with self.assertRaises(ValueError):
             self._traffic().dispatch("north", 0.0)
