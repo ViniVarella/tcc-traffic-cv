@@ -414,6 +414,7 @@ Todos a partir de `python/`:
 # results/evaluation. Sem o detector ajustado, só sobe com --allow-generic-detector
 # (yolov8n.pt COCO, sem detecção visual de ambulâncias).
 ../.venv/bin/python -m experiments.api_server
+# (no PyCharm: Run Configurations compartilhadas em .run/ — "Painel TraffIQ" e "Testes unitários")
 
 # Estender ROIs de faixa a partir da borda próxima desenhada na calibração
 ../.venv/bin/python -m experiments.extend_lane_rois --length 60

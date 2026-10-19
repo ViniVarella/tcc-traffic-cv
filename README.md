@@ -338,12 +338,16 @@ rodando):
 ../.venv/bin/python -m experiments.api_server   # abra http://127.0.0.1:8000/
 ```
 
+No PyCharm, a configuração **Painel TraffIQ** (pasta `.run/`, compartilhada
+pelo repositório) roda o mesmo comando com um clique; **Testes unitários** roda
+a suíte.
+
 O painel escolhe cenário, versão e fonte da preempção, mostra as três câmeras
 com as caixas do YOLO e despacha viaturas sob demanda (aviso V2I imediato; a
 viatura entra 15 s depois). As filas por aproximação vêm da câmera; a espera e
 os veículos parados dos gráficos vêm do TraCI (*ground truth*) e não entram na
-decisão. É um episódio longo de demonstração (30 s de aquecimento), não uma
-avaliação: os números das tabelas vêm de `compare_versions` e
+decisão. É um episódio longo de demonstração (300 s de aquecimento, como as
+avaliações), não uma avaliação: os números das tabelas vêm de `compare_versions` e
 `evaluate_preemption`.
 
 O detector ajustado (`runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`)
