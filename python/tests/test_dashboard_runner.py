@@ -10,7 +10,10 @@ import unittest
 import json
 import tempfile
 
-from dashboard.app import FIXED_TIME_REFERENCE_S, SCENARIOS, EpisodeRunner, PanelSettings, StartRequest, load_fixed_time_reference
+from types import SimpleNamespace
+
+from dashboard.app import (FIXED_TIME_REFERENCE_S, SCENARIOS, EpisodeRunner, PanelSettings, StartRequest, emergency_board,
+                           load_fixed_time_reference)
 from experiments.api_server import GENERIC_CLASSES, choose_detector, parse_args
 
 
@@ -78,6 +81,18 @@ class EpisodeRunnerValidationTests(unittest.TestCase):
         self.assertEqual((values["calibrated"], sources["calibrated"]), (12.3, "avaliação"))
         self.assertEqual((values["original"], sources["original"]), (FIXED_TIME_REFERENCE_S["original"], "valor embutido"))
         self.assertEqual(sources["calibrated_ped"], "valor embutido")  # arquivo ausente
+
+    def test_emergency_board_marks_the_served_vehicle_and_names_the_exit(self) -> None:
+        traffic = SimpleNamespace(
+            live_status=lambda time: [{"id": "emergency_manual_0", "approach": "south", "to_edge": "E0", "state": "na_via",
+                                       "enter_at_s": 10.0, "automatic": False},
+                                      {"id": "emergency_1", "approach": "east", "to_edge": "E5", "state": "anunciada",
+                                       "enter_at_s": 20.0, "automatic": True}],
+            announced_counts=lambda time: {"manual": 1, "automatic": 1})
+        board = emergency_board(traffic, SimpleNamespace(active=SimpleNamespace(vehicle_id="emergency_manual_0")), 12.0)
+        self.assertEqual([(item["exit"], item["served"]) for item in board["vehicles"]], [("north", True), ("west", False)])
+        self.assertEqual(board["counts"], {"manual": 1, "automatic": 1})
+        self.assertFalse(any(item["served"] for item in emergency_board(traffic, None, 12.0)["vehicles"]))
 
     def test_automatic_emergencies_are_off_by_default(self) -> None:
         self.assertFalse(StartRequest().auto_emergencies)

@@ -93,6 +93,16 @@ class EmergencyRequestBody(BaseModel):
 
 # Saídas da rede SP (Cruzamento.net.xml): E0 vai ao Norte, E1 ao Leste, E5 ao Oeste.
 EXIT_EDGES = {"north": "E0", "east": "E1", "west": "E5"}
+EXIT_NAMES = {edge: name for name, edge in EXIT_EDGES.items()}
+
+
+def emergency_board(traffic: Any, preemption: Any, sim_time: float) -> dict[str, Any]:
+    """Viaturas a caminho (lista do painel) e as contagens, com a que a preempção atende agora."""
+    active = getattr(preemption, "active", None)
+    serving = None if active is None else active.vehicle_id
+    vehicles = [{**item, "exit": EXIT_NAMES.get(item["to_edge"]), "served": item["id"] == serving}
+                for item in traffic.live_status(sim_time)]
+    return {"vehicles": vehicles, "counts": traffic.announced_counts(sim_time)}
 
 
 @dataclass(frozen=True, slots=True)
@@ -263,8 +273,11 @@ class EpisodeRunner:
                 vehicle_id = traffic.dispatch(approach, float(info["sim_time"]), to_edge=to_edge)
                 self.state = {**self.state, "dispatched": [*self.state["dispatched"], {
                     "id": vehicle_id, "approach": approach, "exit": exit_name, "sim_time": info["sim_time"]}]}
+            telemetry = build_telemetry(info)
+            if traffic is not None:
+                telemetry["emergencies"] = emergency_board(traffic, environment.emergency_preemption, float(info["sim_time"]))
             self.state = {**self.state, "status": "pausado" if self.state["paused"] else "rodando",
-                          "telemetry": build_telemetry(info)}
+                          "telemetry": telemetry}
             results = getattr(observer, "last_results", None)
             if results is not None and results is not last_results[0]:
                 last_results[0] = results

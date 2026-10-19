@@ -93,7 +93,6 @@ let minSampleS = 600;
 let warmupS = 300;
 let runningRequest = null;  // cenário e controlador em execução (data.request)
 let lastRunScenario = null;  // cenário dos dados no gráfico (mantido depois do Parar)
-let lastDispatchedCount = -1;
 
 /** Referência do tempo fixo do cenário dos dados mostrados: o em execução, o da última
  *  rodada enquanto o gráfico tiver dados dela, ou (sem dados) o selecionado. */
@@ -122,24 +121,34 @@ const APPROACH_LABELS = { south: 'Sul', east: 'Leste', west: 'Oeste' };
 const EXIT_LABELS = { north: 'Norte', east: 'Leste', west: 'Oeste' };
 let emergencyRoutes = {};
 let announceBeforeS = null;
-// Ambulância acionada pelo botão: a contagem até ela entrar na via segue o
-// relógio da simulação (sim_time do registro em `dispatched`).
-let pendingAmbulance = null;
+// Lista das ambulâncias a caminho (botão e agenda automática), vinda da telemetria:
+// cada uma com a própria contagem, no relógio da simulação.
+function renderAmbulances(board, simTime, preemptionOn) {
+    const list = document.getElementById('ambulance-list');
+    const vehicles = (board && board.vehicles) || [];
+    list.hidden = vehicles.length === 0;
+    list.innerHTML = vehicles.map(vehicle => {
+        const route = APPROACH_LABELS[vehicle.approach] + (vehicle.exit ? ' → ' + EXIT_LABELS[vehicle.exit] : '');
+        const kind = vehicle.automatic ? ' <span class="ambulance-tag">automática</span>' : '';
+        let status;
+        if (vehicle.state === 'anunciada') {
+            status = `entrada na via em ${Math.max(1, Math.ceil(vehicle.enter_at_s - simTime))} s`;
+        } else if (vehicle.state === 'na_via') {
+            status = vehicle.served ? 'na via, verde garantido' : preemptionOn ? 'na via, aguardando a vez' : 'na via';
+        } else {
+            status = 'cruzou o semáforo';
+        }
+        return `<div class="ambulance-item ${vehicle.served ? 'served' : ''}">🚑 ${route}${kind}: <strong>${status}</strong></div>`;
+    }).join('');
+}
 
-function updateAmbulanceCountdown(dispatched, simTime) {
-    if (!pendingAmbulance || announceBeforeS == null) return;
-    if (pendingAmbulance.enterAt == null) {
-        if (dispatched.length <= pendingAmbulance.countBefore) return;  // o servidor ainda não processou o pedido
-        pendingAmbulance.enterAt = dispatched[dispatched.length - 1].sim_time + announceBeforeS;
-    }
-    const remaining = Math.ceil(pendingAmbulance.enterAt - simTime);
-    const base = `🚑 Ambulância acionada (${pendingAmbulance.route}). Aviso de aproximação enviado ao semáforo.`;
-    if (remaining > 0) {
-        showMessage(`${base} Entrada na via em ${remaining} s.`);
-    } else {
-        showMessage(`🚑 Ambulância na via (${pendingAmbulance.route}).`);
-        pendingAmbulance = null;
-    }
+function updateAmbulanceCounts(board) {
+    const counts = (board && board.counts) || { manual: 0, automatic: 0 };
+    const total = counts.manual + counts.automatic;
+    document.getElementById('val-dispatched').textContent = total;
+    document.getElementById('kpi-emergency-val').textContent = total;
+    document.getElementById('kpi-emergency-sub').textContent = counts.automatic
+        ? `${counts.manual} pelo botão · ${counts.automatic} automáticas` : 'nesta demonstração';
 }
 
 function minutesClock(seconds) {
@@ -195,19 +204,13 @@ function updateTelemetry(data) {
         lastError = data.error;
         if (data.error) showMessage('Erro: ' + data.error);
     }
-    const dispatchedList = data.dispatched || [];
-    if (dispatchedList.length !== lastDispatchedCount) {
-        lastDispatchedCount = dispatchedList.length;
-        document.getElementById('val-dispatched').textContent = lastDispatchedCount;
-        document.getElementById('kpi-emergency-val').textContent = lastDispatchedCount;
-    }
-    if (!running) pendingAmbulance = null;
     runningRequest = running ? data.request : null;
     if (runningRequest) lastRunScenario = runningRequest.scenario;
     if (!t) return;
 
     document.getElementById('sim-clock').textContent = formatClock(t.sim_time || 0);
-    updateAmbulanceCountdown(dispatchedList, t.sim_time || 0);
+    renderAmbulances(t.emergencies, t.sim_time || 0, runningRequest && runningRequest.preemption !== 'none');
+    updateAmbulanceCounts(t.emergencies);
     updateCameras(t);
     const gt = t.ground_truth;
     document.getElementById('val-halting').textContent = gt.halting_vehicles;
@@ -306,7 +309,7 @@ const btnEmergency = document.getElementById('btn-emergency');
 const selScenario = document.getElementById('sel-scenario');
 const selVersion = document.getElementById('sel-version');
 const selPreemption = document.getElementById('sel-preemption');
-const selAutoEmergencies = document.getElementById('sel-auto-emergencies');
+const tglAutoEmergencies = document.getElementById('tgl-auto-emergencies');
 const selApproach = document.getElementById('sel-approach');
 const selExit = document.getElementById('sel-exit');
 
@@ -333,7 +336,7 @@ function updateButtons() {
     btnStart.classList.toggle('btn-resume', isRunning && isPaused);
     btnStop.disabled = !isRunning;
     btnEmergency.disabled = !isRunning;
-    [selScenario, selVersion, selPreemption, selAutoEmergencies].forEach(el => { el.disabled = isRunning; });
+    [selScenario, selVersion, selPreemption, tglAutoEmergencies].forEach(el => { el.disabled = isRunning; });
 }
 
 async function loadOptions() {
@@ -383,6 +386,9 @@ function resetCharts() {
 }
 
 selScenario.addEventListener('change', () => { updateReferenceLabels(); renderCharts(); });
+tglAutoEmergencies.addEventListener('change', () => {
+    document.getElementById('auto-emergencies-state').textContent = tglAutoEmergencies.checked ? 'a cada ~5 min' : 'desligadas';
+});
 
 // Zera os cartões de Resultados ao iniciar outra rodada, para nunca misturar amostras.
 function resetKpis() {
@@ -390,6 +396,8 @@ function resetKpis() {
                               ['kpi-pending', 'fila de entrada: —'], ['kpi-reduction-note', 'aguardando amostra']]) {
         document.getElementById(id).textContent = text;
     }
+    updateAmbulanceCounts(null);
+    renderAmbulances(null, 0, false);
 }
 
 btnStart.addEventListener('click', async () => {
@@ -403,7 +411,7 @@ btnStart.addEventListener('click', async () => {
             return;
         }
         await post('/api/start', { scenario: selScenario.value, version: selVersion.value, preemption: selPreemption.value,
-                                   auto_emergencies: selAutoEmergencies.value === 'true' });
+                                   auto_emergencies: tglAutoEmergencies.checked });
         lastRunScenario = selScenario.value;
         resetCharts();
         resetKpis();
@@ -425,12 +433,8 @@ btnStop.addEventListener('click', async () => {
 btnEmergency.addEventListener('click', async () => {
     try {
         const exit = selExit.value || null;
-        const countBefore = Number(document.getElementById('val-dispatched').textContent) || 0;
         await post('/api/emergency', { approach: selApproach.value, exit });
-        const route = 'origem: ' + APPROACH_LABELS[selApproach.value] + (exit ? ', destino: ' + EXIT_LABELS[exit] : '');
-        const delay = announceBeforeS == null ? '' : ` Entrada na via em ${announceBeforeS} s.`;
-        showMessage(`🚑 Ambulância acionada (${route}). Aviso de aproximação enviado ao semáforo.${delay}`);
-        pendingAmbulance = { route, countBefore, enterAt: null };
+        showMessage('🚑 Ambulância acionada: aviso de aproximação enviado ao semáforo.');
     } catch (e) {
         showMessage(e.message);
     }

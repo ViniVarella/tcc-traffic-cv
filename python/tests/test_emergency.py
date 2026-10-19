@@ -88,6 +88,23 @@ class EmergencyTrafficTests(unittest.TestCase):
             traffic.step(client, float(time))
         self.assertEqual(client.added, [vehicle_id])
 
+    def test_live_status_follows_each_vehicle_until_shortly_after_crossing(self) -> None:
+        traffic, client = self._traffic(), FakeClient()
+        self.assertEqual(traffic.live_status(0.0), [])
+        manual = traffic.dispatch("west", 0.0)
+        states = {}
+        for time in range(0, 60):
+            traffic.step(client, float(time))
+            states[time] = {item["id"]: item for item in traffic.live_status(float(time))}
+        self.assertEqual(states[0][manual]["state"], "anunciada")
+        self.assertFalse(states[0][manual]["automatic"])
+        self.assertEqual(states[6][manual]["state"], "na_via")
+        crossed = [time for time in states if manual in states[time] and states[time][manual]["state"] == "cruzou"]
+        self.assertTrue(crossed)
+        self.assertNotIn(manual, states[crossed[0] + 9])  # some 8 s depois de cruzar
+        self.assertTrue(states[15]["emergency_0"]["automatic"])  # a agendada (t = 20) é anunciada 5 s antes
+        self.assertEqual(traffic.announced_counts(15.0), {"manual": 1, "automatic": 1})
+
     def test_dispatch_rejects_unknown_approach(self) -> None:
         with self.assertRaises(ValueError):
             self._traffic().dispatch("north", 0.0)

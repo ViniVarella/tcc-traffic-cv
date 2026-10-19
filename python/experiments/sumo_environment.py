@@ -53,6 +53,8 @@ class Environment:
         # Tráfego de emergência do episódio em andamento (None fora de run() ou sem
         # ``emergency``): o painel web despacha viaturas extras por ele no ``on_step``.
         self.emergency_traffic: EmergencyTraffic | None = None
+        # Preempção do episódio em andamento (o painel mostra qual viatura ela atende).
+        self.emergency_preemption: EmergencyPreemption | None = None
 
     def oracle_source(self, seed: int) -> TraciLaneFeatureSource:
         return TraciLaneFeatureSource(self.geometries, self.parameters, self.noise, seed=seed)
@@ -101,6 +103,7 @@ class Environment:
                 emergency, self.approach_edges, seed, self.settings.warmup_s, self.settings.warmup_s + self.settings.control_s)
             preempt = None if preemption is None else EmergencyPreemption(preemption)
             self.emergency_traffic = traffic
+            self.emergency_preemption = preempt
 
             def emergency_step(sim_time: float) -> str | None:
                 v2i = traffic.step(client, sim_time)
@@ -120,5 +123,6 @@ class Environment:
                 outcome.metrics["emergency"] = {**traffic.summary(), "detection": emergency_detection}
         finally:
             self.emergency_traffic = None
+            self.emergency_preemption = None
             client.close()
         return outcome, client.scenario

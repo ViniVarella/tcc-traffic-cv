@@ -184,6 +184,33 @@ class EmergencyTraffic:
                 vehicle.approach_stops = vehicle.stops
         return requests
 
+    def live_status(self, sim_time: float, keep_crossed_s: float = 8.0) -> list[dict[str, Any]]:
+        """Viaturas já anunciadas e ainda relevantes para o painel, na ordem de chegada.
+
+        ``state``: ``anunciada`` (aviso V2I enviado, ainda fora da via), ``na_via``
+        ou ``cruzou`` (até ``keep_crossed_s`` depois da linha de retenção).
+        ``automatic`` distingue a agenda do despacho manual (botão).
+        """
+        result = []
+        for vehicle in self._vehicles:
+            plan = vehicle.plan
+            if sim_time < plan.depart_s - self.settings.announce_before_s:
+                continue
+            crossed = vehicle.passed_stop_line_s
+            if crossed is not None and sim_time - crossed > keep_crossed_s:
+                continue
+            state = "cruzou" if crossed is not None else "na_via" if vehicle.inserted else "anunciada"
+            result.append({"id": plan.vehicle_id, "approach": plan.approach, "to_edge": plan.to_edge, "state": state,
+                           "enter_at_s": plan.depart_s, "automatic": not plan.vehicle_id.startswith("emergency_manual_")})
+        return sorted(result, key=lambda item: item["enter_at_s"])
+
+    def announced_counts(self, sim_time: float) -> dict[str, int]:
+        """Viaturas anunciadas até agora, despachadas (botão) e da agenda automática."""
+        announced = [vehicle.plan.vehicle_id for vehicle in self._vehicles
+                     if sim_time >= vehicle.plan.depart_s - self.settings.announce_before_s]
+        manual = sum(vehicle_id.startswith("emergency_manual_") for vehicle_id in announced)
+        return {"manual": manual, "automatic": len(announced) - manual}
+
     def present_on(self, approach: str) -> bool:
         """Há viatura na edge de entrada desta aproximação, antes da linha de retenção?"""
         return any(vehicle.on_approach and vehicle.plan.approach == approach for vehicle in self._vehicles)

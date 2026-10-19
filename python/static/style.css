@@ -855,6 +855,69 @@ body {
     opacity: 0.5;
 }
 
+/* Interruptor das ambulâncias automáticas. */
+.switch-field {
+    cursor: pointer;
+    gap: 10px;
+}
+.switch-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.switch-track {
+    position: relative;
+    width: 38px;
+    height: 22px;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.16);
+    transition: var(--transition-fast);
+    flex-shrink: 0;
+}
+.switch-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+    transition: var(--transition-fast);
+}
+.switch-input:checked + .switch-track { background: var(--siren); }
+.switch-input:checked + .switch-track .switch-thumb { left: 19px; background: #ffffff; }
+.switch-input:focus-visible + .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.switch-input:disabled + .switch-track { opacity: 0.5; }
+.switch-state {
+    font-size: 13px;
+    color: var(--text-secondary);
+    min-width: 92px;
+}
+
+/* Ambulâncias a caminho: uma linha por viatura, com a própria contagem. */
+.ambulance-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+.ambulance-list[hidden] { display: none; }
+.ambulance-item {
+    font-size: 13px;
+    color: var(--text-secondary);
+    background: var(--siren-soft);
+    border: 1px solid rgba(61, 139, 255, 0.25);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+}
+.ambulance-item strong { color: var(--text-primary); font-weight: 600; }
+.ambulance-item.served { border-color: var(--siren); }
+.ambulance-tag {
+    font-size: 11px;
+    color: var(--siren);
+    margin-left: 4px;
+}
+
 .control-message {
     min-height: 18px;
     font-size: 13px;

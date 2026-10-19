@@ -342,12 +342,11 @@
                 </div>
 
                 <div class="control-strip">
-                    <label class="control-field" title="Agenda das avaliações: uma ambulância a cada ~5 min simulados, com origem sorteada">
+                    <label class="control-field switch-field" title="Agenda das avaliações: uma ambulância a cada ~5 min simulados, com origem sorteada">
                         <span class="policy-label">Ambulâncias automáticas</span>
-                        <select id="sel-auto-emergencies" class="control-select">
-                            <option value="false">Desligadas</option>
-                            <option value="true">A cada ~5 min</option>
-                        </select>
+                        <input type="checkbox" id="tgl-auto-emergencies" class="switch-input">
+                        <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+                        <span class="switch-state" id="auto-emergencies-state">desligadas</span>
                     </label>
                     <div class="control-divider"></div>
                     <label class="control-field">
@@ -378,6 +377,7 @@
                     </div>
                 </div>
                 <div class="control-message" id="control-message"></div>
+                <div class="ambulance-list" id="ambulance-list" hidden></div>
 
                 <!-- Câmeras na ordem do mapa: Oeste, Sul, Leste -->
                 <div class="cameras-grid">
@@ -479,7 +479,7 @@
                 <div class="kpi-card accent-siren">
                     <div class="kpi-value text-siren" id="kpi-emergency-val">0</div>
                     <div class="kpi-label">Ambulâncias acionadas</div>
-                    <div class="kpi-subtext text-siren">nesta demonstração</div>
+                    <div class="kpi-subtext text-siren" id="kpi-emergency-sub">nesta demonstração</div>
                 </div>
             </div>
 
