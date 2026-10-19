@@ -465,6 +465,10 @@ updateButtons();
 // ============================================
 //  Chart Rendering (Canvas-based, no library)
 // ============================================
+// Posição do mouse (px, relativa ao canvas) sobre cada gráfico, ou ausente fora dele.
+// Guardamos a posição, não o índice: com o gráfico andando, o ponto sob o mouse muda.
+const chartHoverX = {};
+
 function drawLineChart(canvasId, data, color, label, yLabel, baselineVal = null, times = chartData.timestamps) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
@@ -606,6 +610,64 @@ function drawLineChart(canvasId, data, color, label, yLabel, baselineVal = null,
         ctx.lineWidth = 2;
         ctx.stroke();
     }
+
+    // Hover: linha vertical, ponto e o valor daquele instante.
+    const hoverX = chartHoverX[canvasId];
+    if (hoverX == null || hoverX < pad.left || hoverX > pad.left + plotW) return;
+    const idx = Math.round((hoverX - pad.left) / plotW * (data.length - 1));
+    const x = pad.left + (plotW * idx / (data.length - 1));
+    const y = pad.top + plotH - ((data[idx] - minY) / (maxY - minY)) * plotH;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x, pad.top);
+    ctx.lineTo(x, pad.top + plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#0d1117';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const value = yLabel ? `${data[idx].toFixed(1)} ${yLabel}` : `${Math.round(data[idx])}`;
+    const lines = [`${label}: ${value}`, `tempo de teste ${minutesClock(times[idx] || 0)}`];
+    ctx.font = '600 12px Inter, sans-serif';
+    const boxW = Math.max(...lines.map(line => ctx.measureText(line).width)) + 20;
+    const boxH = 44;
+    let boxX = x + 12;
+    if (boxX + boxW > W - pad.right) boxX = x - 12 - boxW;
+    const boxY = Math.min(Math.max(pad.top, y - boxH - 10), pad.top + plotH - boxH);
+    ctx.fillStyle = 'rgba(13, 17, 23, 0.94)';
+    ctx.strokeStyle = color + '80';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxW, boxH, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#eaf0f6';
+    ctx.fillText(lines[0], boxX + 10, boxY + 18);
+    ctx.font = '11px Inter, sans-serif';
+    ctx.fillStyle = '#8b95a8';
+    ctx.fillText(lines[1], boxX + 10, boxY + 34);
+    ctx.restore();
+}
+
+for (const canvasId of ['chart-waiting', 'chart-halting']) {
+    const canvas = document.getElementById(canvasId);
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        chartHoverX[canvasId] = e.clientX - rect.left;
+        renderCharts();
+    });
+    canvas.addEventListener('mouseleave', () => {
+        delete chartHoverX[canvasId];
+        renderCharts();
+    });
 }
 
 /** Redução da espera contra o tempo fixo do cenário: só com amostra suficiente e
@@ -639,8 +701,8 @@ function updateReduction(meanWait, sampled) {
 }
 
 function renderCharts() {
-    drawLineChart('chart-waiting', chartData.waitingTimes, '#2dd4a0', 'Espera', 's', fixedTimeReference(), chartData.waitingTimesAt);
-    drawLineChart('chart-halting', chartData.haltingVehicles, '#4f8ff7', 'Veículos', '');
+    drawLineChart('chart-waiting', chartData.waitingTimes, '#2dd4a0', 'Espera média', 's', fixedTimeReference(), chartData.waitingTimesAt);
+    drawLineChart('chart-halting', chartData.haltingVehicles, '#4f8ff7', 'Veículos retidos', '');
 }
 
 function updatePhaseDistribution() {
