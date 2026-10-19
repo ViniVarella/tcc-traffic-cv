@@ -315,11 +315,12 @@ function showMessage(text) {
 const ICON_PLAY = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
 const ICON_PAUSE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
 
-// Parado: Iniciar (verde). Rodando: Pausar (amarelo). Pausado: Retomar (amarelo).
+// Parado: Iniciar (verde). Rodando: Pausar (amarelo). Pausado: Retomar (azul).
 function updateButtons() {
     const [icon, label] = !isRunning ? [ICON_PLAY, 'Iniciar'] : isPaused ? [ICON_PLAY, 'Retomar'] : [ICON_PAUSE, 'Pausar'];
     btnStart.innerHTML = `${icon} ${label}`;
-    btnStart.classList.toggle('btn-pause', isRunning);
+    btnStart.classList.toggle('btn-pause', isRunning && !isPaused);
+    btnStart.classList.toggle('btn-resume', isRunning && isPaused);
     btnStop.disabled = !isRunning;
     btnEmergency.disabled = !isRunning;
     [selScenario, selVersion, selPreemption].forEach(el => { el.disabled = isRunning; });

@@ -740,7 +740,7 @@ body {
     box-shadow: 0 4px 16px rgba(45, 212, 160, 0.3);
 }
 
-/* Rodando ou pausada: o Iniciar vira Pausar/Retomar, em amarelo. */
+/* Rodando, o Iniciar vira Pausar (amarelo); pausada, Retomar (azul). */
 .btn-start.btn-pause {
     background: var(--amber);
     color: #1f1606;
@@ -748,6 +748,14 @@ body {
 .btn-start.btn-pause:hover:not(:disabled) {
     background: #e2a23a;
     box-shadow: 0 4px 16px rgba(240, 176, 69, 0.3);
+}
+.btn-start.btn-resume {
+    background: var(--accent);
+    color: #ffffff;
+}
+.btn-start.btn-resume:hover:not(:disabled) {
+    background: #3d7fe6;
+    box-shadow: 0 4px 16px rgba(79, 143, 247, 0.3);
 }
 
 .btn-stop {
