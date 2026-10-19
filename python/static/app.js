@@ -192,12 +192,12 @@ function updateTelemetry(data) {
     else if (running) setBadge(sumoDot, 'online', data.status === 'rodando' ? 'Em execução' : 'Iniciando');
     else setBadge(sumoDot, 'warning', 'Parada');
     if (t && t.vision) setBadge(unityDot, 'online', 'Recebendo imagens');
+    else if (running && t) setBadge(unityDot, 'warning', 'Sem imagens');
+    else setBadge(unityDot, 'offline', 'Aguardando');
     if (t && t.vision && waitingFirstImages) {
         waitingFirstImages = false;
         showMessage('');
     }
-    else if (running && t) setBadge(unityDot, 'warning', 'Sem imagens');
-    else setBadge(unityDot, 'offline', 'Aguardando');
 
     if (running !== isRunning || paused !== isPaused) {
         isRunning = running;
