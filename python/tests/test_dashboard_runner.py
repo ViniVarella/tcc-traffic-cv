@@ -7,7 +7,14 @@ from pathlib import Path
 import threading
 import unittest
 
-from dashboard.app import EpisodeRunner, PanelSettings, StartRequest
+import json
+import tempfile
+
+from types import SimpleNamespace
+
+from dashboard.app import (FIXED_TIME_REFERENCE_S, SCENARIOS, EpisodeRunner, PanelSettings, StartRequest, emergency_board,
+                           load_fixed_time_reference)
+from experiments.api_server import GENERIC_CLASSES, choose_detector, parse_args
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -49,6 +56,71 @@ class EpisodeRunnerValidationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.runner.dispatch_emergency(approach, exit_name)
 
+    def test_generic_detector_refuses_visual_preemption(self) -> None:
+        runner = EpisodeRunner(PanelSettings(BASE_DIR, argparse.Namespace(), generic_detector=True))
+        runner.checkpoints, runner._thread = self.runner.checkpoints, threading.current_thread()
+        runner._bridge_ready.set()
+        for source in ("vision", "both"):
+            with self.assertRaisesRegex(ValueError, "V2I"):
+                runner.start(StartRequest(preemption=source))
+        runner.start(StartRequest(preemption="v2i"))
+        self.assertTrue(runner.state["is_running"])
+
+    def test_every_scenario_has_a_fixed_time_reference(self) -> None:
+        self.assertEqual(set(FIXED_TIME_REFERENCE_S), set(SCENARIOS))
+
+    def test_reference_comes_from_the_official_evaluation_only(self) -> None:
+        def report(warmup: float, wait: float) -> str:
+            return json.dumps({"warmup_s": warmup, "control_s": 1800.0, "seeds": [201, 202, 203],
+                               "versions": {"baseline": {"mean": {"mean_waiting_time_seconds": wait}}}})
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            (folder / "versoes-calibrated-oracle.json").write_text(report(300.0, 12.34), encoding="utf-8")
+            (folder / "versoes-original-oracle.json").write_text(report(30.0, 99.0), encoding="utf-8")  # outro protocolo
+            values, sources = load_fixed_time_reference(folder)
+        self.assertEqual((values["calibrated"], sources["calibrated"]), (12.3, "avaliação"))
+        self.assertEqual((values["original"], sources["original"]), (FIXED_TIME_REFERENCE_S["original"], "valor embutido"))
+        self.assertEqual(sources["calibrated_ped"], "valor embutido")  # arquivo ausente
+
+    def test_emergency_board_marks_the_served_vehicle_and_names_the_exit(self) -> None:
+        traffic = SimpleNamespace(
+            live_status=lambda time: [{"id": "emergency_manual_0", "approach": "south", "to_edge": "E0", "state": "na_via",
+                                       "enter_at_s": 10.0, "automatic": False},
+                                      {"id": "emergency_1", "approach": "east", "to_edge": "E5", "state": "anunciada",
+                                       "enter_at_s": 20.0, "automatic": True}],
+            announced_counts=lambda time: {"manual": 1, "automatic": 1})
+        board = emergency_board(traffic, SimpleNamespace(active=SimpleNamespace(vehicle_id="emergency_manual_0")), 12.0)
+        self.assertEqual([(item["exit"], item["served"]) for item in board["vehicles"]], [("north", True), ("west", False)])
+        self.assertEqual(board["counts"], {"manual": 1, "automatic": 1})
+        self.assertFalse(any(item["served"] for item in emergency_board(traffic, None, 12.0)["vehicles"]))
+
+    def test_automatic_emergencies_are_off_by_default(self) -> None:
+        self.assertFalse(StartRequest().auto_emergencies)
+        self.runner.start(StartRequest(auto_emergencies=True))
+        self.assertTrue(self.runner.state["request"]["auto_emergencies"])
+
+    def test_pause_and_resume_only_while_running(self) -> None:
+        for action in (self.runner.pause, self.runner.resume):
+            with self.assertRaises(ValueError):
+                action()
+        self.runner.start(StartRequest())
+        self.runner.pause()
+        self.assertEqual((self.runner.state["paused"], self.runner.state["status"]), (True, "pausado"))
+        self.assertFalse(self.runner._resume.is_set())
+        self.runner.resume()
+        self.assertEqual((self.runner.state["paused"], self.runner.state["status"]), (False, "rodando"))
+
+    def test_stop_releases_a_paused_episode(self) -> None:
+        self.runner.start(StartRequest())
+        self.runner.pause()
+        waiter = threading.Thread(target=self.runner._wait_while_paused)
+        waiter.start()
+        waiter.join(timeout=0.5)
+        self.assertTrue(waiter.is_alive())  # pausado: o laço espera
+        self.runner.stop()
+        waiter.join(timeout=1.0)
+        self.assertFalse(waiter.is_alive())
+
     def test_v1_heuristic_needs_no_checkpoint(self) -> None:
         self.runner.v1_1_checkpoint = BASE_DIR / "nao-existe.pt"
         self.runner.start(StartRequest(version="v1"))
@@ -71,6 +143,49 @@ class EpisodeRunnerValidationTests(unittest.TestCase):
     def test_emergency_routes_follow_the_config(self) -> None:
         self.assertEqual(self.runner.emergency_routes(),
                          {"south": ["east", "north", "west"], "east": ["north", "west"], "west": ["east"]})
+
+
+class DetectorChoiceTests(unittest.TestCase):
+    TUNED = str(BASE_DIR / "configs" / "sp.yaml")  # um arquivo que existe
+    MISSING = str(BASE_DIR / "nao-existe.pt")
+    GENERIC = BASE_DIR / "configs" / "sp.yaml"
+
+    def args(self, model: str, classes: str = "0,1", allow: bool = True) -> argparse.Namespace:
+        return argparse.Namespace(model=model, classes=classes, allow_generic_detector=allow)
+
+    def test_tuned_detector_is_kept(self) -> None:
+        args = self.args(self.TUNED)
+        self.assertFalse(choose_detector(args, [], self.GENERIC))
+        self.assertEqual((args.model, args.classes), (self.TUNED, "0,1"))
+
+    def test_default_missing_falls_back_to_generic_without_motorcycles(self) -> None:
+        args = self.args(self.MISSING)
+        self.assertTrue(choose_detector(args, [], self.GENERIC))
+        self.assertEqual((args.model, args.classes), (str(self.GENERIC), GENERIC_CLASSES))
+        self.assertNotIn("3", GENERIC_CLASSES.split(","))
+
+    def test_explicit_classes_are_never_replaced(self) -> None:
+        args = self.args(self.MISSING, classes="2,7")
+        self.assertTrue(choose_detector(args, ["--classes", "2,7"], self.GENERIC))
+        self.assertEqual(args.classes, "2,7")
+
+    def test_generic_detector_needs_the_explicit_option(self) -> None:
+        # Sem --allow-generic-detector (ex.: servidor aberto fora de python/), falha como antes.
+        with self.assertRaisesRegex(SystemExit, "allow-generic-detector"):
+            choose_detector(self.args(self.MISSING, allow=False), [], self.GENERIC)
+
+    def test_abbreviated_options_are_refused(self) -> None:
+        with self.assertRaises(SystemExit):
+            parse_args(["--mod", self.MISSING])
+        self.assertEqual(parse_args([]).warmup_seconds, 300.0)
+
+    def test_explicit_missing_model_still_fails(self) -> None:
+        with self.assertRaises(SystemExit):
+            choose_detector(self.args(self.MISSING), ["--model", self.MISSING], self.GENERIC)
+        with self.assertRaises(SystemExit):
+            choose_detector(self.args(self.MISSING), [f"--model={self.MISSING}"], self.GENERIC)
+        with self.assertRaises(SystemExit):
+            choose_detector(self.args(self.MISSING), [], BASE_DIR / "tambem-nao-existe.pt")
 
 
 if __name__ == "__main__":

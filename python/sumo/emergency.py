@@ -40,6 +40,8 @@ class EmergencySettings:
         "east": (("E2", "E0"), ("E2", "E5")),
         "west": (("E6", "E1"),),
     })
+    # False: sem a agenda automática; só entram viaturas despachadas (botão do painel).
+    scheduled: bool = True
 
     def __post_init__(self) -> None:
         if self.interval_s <= 0 or not 0 <= self.jitter_s < self.interval_s or self.announce_before_s < 0:
@@ -60,6 +62,8 @@ class ScheduledEmergency:
     approach: str
     from_edge: str
     to_edge: str
+    # Despachada pelo painel (botão), fora da agenda automática.
+    manual: bool = False
 
 
 def build_schedule(settings: EmergencySettings, seed: int, start_s: float, end_s: float) -> list[ScheduledEmergency]:
@@ -106,7 +110,8 @@ class EmergencyTraffic:
     def __init__(self, settings: EmergencySettings, approach_edges: Mapping[str, str], seed: int, start_s: float, end_s: float) -> None:
         self.settings = settings
         self.approach_edges = dict(approach_edges)
-        self._vehicles = [_Tracked(plan) for plan in build_schedule(settings, seed, start_s, end_s)]
+        plans = build_schedule(settings, seed, start_s, end_s) if settings.scheduled else []
+        self._vehicles = [_Tracked(plan) for plan in plans]
         self._type_ready = False
         self._visual_events: dict[str, bool] = {}
         self._manual_rng = random.Random(f"emergency-manual-{seed}")
@@ -132,7 +137,7 @@ class EmergencyTraffic:
         vehicle_id = f"emergency_manual_{self._manual_count}"
         self._manual_count += 1
         self._vehicles.append(_Tracked(ScheduledEmergency(vehicle_id, sim_time + self.settings.announce_before_s, approach,
-                                                          from_edge, to_edge)))
+                                                          from_edge, to_edge, manual=True)))
         return vehicle_id
 
     def step(self, client: EmergencyClient, sim_time: float) -> list[EmergencyRequest]:
@@ -180,6 +185,42 @@ class EmergencyTraffic:
                 vehicle.approach_time_loss = vehicle.time_loss
                 vehicle.approach_stops = vehicle.stops
         return requests
+
+    def live_status(self, sim_time: float, keep_crossed_s: float = 8.0) -> list[dict[str, Any]]:
+        """Viaturas já anunciadas e ainda relevantes para o painel, na ordem de chegada.
+
+        ``state``: ``anunciada`` (aviso V2I enviado, ainda fora da via), ``na_via``
+        ou ``cruzou`` (até ``keep_crossed_s`` depois da linha de retenção).
+        ``automatic`` distingue a agenda do despacho manual (botão).
+        """
+        result = []
+        for vehicle in self._announced(sim_time):
+            plan = vehicle.plan
+            crossed = vehicle.passed_stop_line_s
+            if crossed is not None and sim_time - crossed > keep_crossed_s:
+                continue
+            if crossed is None and vehicle.arrived_s is not None:
+                continue  # saiu da rede sem passar pela linha (ex.: teleporte do SUMO)
+            if crossed is not None:
+                state = "cruzou"
+            elif vehicle.seen:
+                state = "na_via"
+            elif vehicle.inserted:
+                state = "entrando"  # já pedida ao SUMO, ainda na fila de inserção
+            else:
+                state = "anunciada"
+            result.append({"id": plan.vehicle_id, "approach": plan.approach, "to_edge": plan.to_edge, "state": state,
+                           "enter_at_s": plan.depart_s, "automatic": not plan.manual})
+        return sorted(result, key=lambda item: item["enter_at_s"])
+
+    def announced_counts(self, sim_time: float) -> dict[str, int]:
+        """Viaturas anunciadas até agora, despachadas (botão) e da agenda automática."""
+        announced = self._announced(sim_time)
+        manual = sum(vehicle.plan.manual for vehicle in announced)
+        return {"manual": manual, "automatic": len(announced) - manual}
+
+    def _announced(self, sim_time: float) -> list[_Tracked]:
+        return [vehicle for vehicle in self._vehicles if sim_time >= vehicle.plan.depart_s - self.settings.announce_before_s]
 
     def present_on(self, approach: str) -> bool:
         """Há viatura na edge de entrada desta aproximação, antes da linha de retenção?"""

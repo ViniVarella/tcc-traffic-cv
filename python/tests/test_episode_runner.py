@@ -127,6 +127,15 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(policy(None, _features(south_stopped=1, east_stopped=0), self.PHASE_EW), 1)
         self.assertEqual(policy(None, _features(), self.PHASE_EW), 0)
 
+    def test_on_step_reports_trip_progress_after_warmup(self) -> None:
+        steps = []
+        run_episode(client=FakeSumo(), controller=DqnTrafficController("tls", CONFIG), observe=lambda time: _features(),
+                    encoder=ConstantEncoder(), policy=AlwaysSwitch(), reward=REWARD,
+                    settings=EpisodeSettings(warmup_s=10.0, control_s=20.0), on_step=steps.append)
+        self.assertEqual({key: steps[4]["trip_metrics"][key] for key in ("completed_vehicles", "mean_waiting_time_s", "sampled_s")},
+                         {"completed_vehicles": 0, "mean_waiting_time_s": None, "sampled_s": 0.0})
+        self.assertEqual(steps[-1]["trip_metrics"]["sampled_s"], 20.0)
+
     def test_epsilon_schedule_is_linear_by_decision(self) -> None:
         schedule = EpsilonSchedule(1.0, 0.0, 10)
         self.assertEqual([schedule.value(index) for index in (0, 5, 10, 50)], [1.0, 0.5, 0.0, 0.0])

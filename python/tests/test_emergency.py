@@ -77,6 +77,48 @@ class EmergencyTrafficTests(unittest.TestCase):
         self.assertEqual(client.added, [vehicle_id])  # entra 5 s depois, antes da agendada (t = 20)
         self.assertEqual(traffic.summary()["scheduled"], 2)
 
+    def test_without_schedule_only_dispatched_vehicles_enter(self) -> None:
+        settings = EmergencySettings(interval_s=500, jitter_s=0, first_after_s=20, announce_before_s=5, scheduled=False)
+        traffic, client = EmergencyTraffic(settings, EDGES, seed=1, start_s=0, end_s=100), FakeClient()
+        for time in range(0, 60):
+            traffic.step(client, float(time))
+        self.assertEqual((client.added, traffic.summary()["scheduled"]), ([], 0))
+        vehicle_id = traffic.dispatch("east", 60.0)
+        for time in range(60, 70):
+            traffic.step(client, float(time))
+        self.assertEqual(client.added, [vehicle_id])
+
+    def test_live_status_follows_each_vehicle_until_shortly_after_crossing(self) -> None:
+        traffic, client = self._traffic(), FakeClient()
+        self.assertEqual(traffic.live_status(0.0), [])
+        manual = traffic.dispatch("west", 0.0)
+        states = {}
+        for time in range(0, 60):
+            traffic.step(client, float(time))
+            states[time] = {item["id"]: item for item in traffic.live_status(float(time))}
+        self.assertEqual(states[0][manual]["state"], "anunciada")
+        self.assertFalse(states[0][manual]["automatic"])
+        self.assertEqual(states[6][manual]["state"], "na_via")
+        crossed = [time for time in states if manual in states[time] and states[time][manual]["state"] == "cruzou"]
+        self.assertTrue(crossed)
+        self.assertNotIn(manual, states[crossed[0] + 9])  # some 8 s depois de cruzar
+        self.assertTrue(states[15]["emergency_0"]["automatic"])  # a agendada (t = 20) é anunciada 5 s antes
+        self.assertEqual(traffic.announced_counts(15.0), {"manual": 1, "automatic": 1})
+
+    def test_vehicle_in_the_insertion_queue_is_not_on_the_road_yet(self) -> None:
+        traffic, client = self._traffic(), FakeClient(insert_delay_steps=10)
+        manual = traffic.dispatch("east", 0.0)
+        for time in range(0, 12):
+            traffic.step(client, float(time))
+        self.assertEqual({item["id"]: item["state"] for item in traffic.live_status(11.0)}[manual], "entrando")
+
+    def test_vehicle_that_leaves_without_crossing_drops_out(self) -> None:
+        traffic = self._traffic()
+        manual = traffic.dispatch("south", 0.0)
+        tracked = traffic._vehicles[-1]
+        tracked.inserted, tracked.seen, tracked.arrived_s = True, True, 30.0  # teleporte: some sem cruzar a linha
+        self.assertNotIn(manual, [item["id"] for item in traffic.live_status(31.0)])
+
     def test_dispatch_rejects_unknown_approach(self) -> None:
         with self.assertRaises(ValueError):
             self._traffic().dispatch("north", 0.0)

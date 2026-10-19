@@ -74,15 +74,42 @@ function connectWS() {
 connectWS();
 
 // ============================================
-//  Telemetria
+//  Telemetria & Benchmarks
 // ============================================
 // vision = o que a IA vê pelas câmeras; ground_truth = medido pelo simulador, só para mostrar.
 let isRunning = false;
+let isPaused = false;
 let lastSimTime = null;
 let lastError = null;
-let chartData = { timestamps: [], waitingTimes: [], rewards: [], haltingVehicles: [], phaseCounters: {} };
+// waitingTimesAt: instante de cada ponto de espera (a série só começa no primeiro veículo concluído).
+let chartData = { timestamps: [], waitingTimes: [], waitingTimesAt: [], haltingVehicles: [], phaseCounters: {} };
 const MAX_CHART_POINTS = 300;
 const APPROACHES = ['west', 'south', 'east'];
+
+// Espera por veículo do tempo fixo na avaliação oficial, por cenário, e a amostra
+// mínima antes de mostrar a redução: vêm de /api/options (fonte única no backend).
+let fixedTimeReferenceS = {};
+let minSampleS = 600;
+let warmupS = 300;
+let referenceWarmupS = 300;  // aquecimento da avaliação oficial (a referência)
+let runningRequest = null;  // cenário e controlador em execução (data.request)
+let lastRunScenario = null;  // cenário dos dados no gráfico (mantido depois do Parar)
+
+/** Referência do tempo fixo do cenário dos dados mostrados: o em execução, o da última
+ *  rodada enquanto o gráfico tiver dados dela, ou (sem dados) o selecionado. */
+function fixedTimeReference() {
+    let scenario = selScenario.value;
+    if (isRunning && runningRequest) scenario = runningRequest.scenario;
+    else if (chartData.waitingTimes.length && lastRunScenario) scenario = lastRunScenario;
+    return fixedTimeReferenceS[scenario] ?? null;
+}
+
+function updateReferenceLabels() {
+    const reference = fixedTimeReference();
+    const text = reference == null ? '—' : reference.toFixed(1) + ' s';
+    document.getElementById('legend-baseline-val').textContent = text;
+    document.getElementById('kpi-baseline-ref').textContent = `tempo fixo na avaliação: ${text}`;
+}
 
 const PHASE_LABELS = {
     EAST_WEST_GREEN: 'Verde para Leste e Oeste', EAST_WEST_YELLOW: 'Amarelo para Leste e Oeste',
@@ -94,25 +121,41 @@ const PRIORITY_APPROACHES = { EAST_WEST_GREEN: ['east', 'west'], SOUTH_GREEN: ['
 const APPROACH_LABELS = { south: 'Sul', east: 'Leste', west: 'Oeste' };
 const EXIT_LABELS = { north: 'Norte', east: 'Leste', west: 'Oeste' };
 let emergencyRoutes = {};
-let announceBeforeS = null;
-// Ambulância acionada pelo botão: a contagem até ela entrar na via segue o
-// relógio da simulação (sim_time do registro em `dispatched`).
-let pendingAmbulance = null;
+// Lista das ambulâncias a caminho (botão e agenda automática), vinda da telemetria:
+// cada uma com a própria contagem, no relógio da simulação.
+function renderAmbulances(board, simTime, preemptionOn) {
+    const list = document.getElementById('ambulance-list');
+    const vehicles = (board && board.vehicles) || [];
+    list.hidden = vehicles.length === 0;
+    list.innerHTML = vehicles.map(vehicle => {
+        const route = APPROACH_LABELS[vehicle.approach] + (vehicle.exit ? ' → ' + EXIT_LABELS[vehicle.exit] : '');
+        const kind = vehicle.automatic ? ' <span class="ambulance-tag">automática</span>' : '';
+        let status;
+        if (vehicle.state === 'anunciada') {
+            status = `entrada na via em ${Math.max(1, Math.ceil(vehicle.enter_at_s - simTime))} s`;
+        } else if (vehicle.state === 'entrando') {
+            status = 'entrando na via';
+        } else if (vehicle.state === 'na_via') {
+            status = vehicle.served ? 'na via, verde garantido' : preemptionOn ? 'na via, aguardando a vez' : 'na via';
+        } else {
+            status = 'cruzou o semáforo';
+        }
+        return `<div class="ambulance-item ${vehicle.served ? 'served' : ''}">🚑 ${route}${kind}: <strong>${status}</strong></div>`;
+    }).join('');
+}
 
-function updateAmbulanceCountdown(dispatched, simTime) {
-    if (!pendingAmbulance || announceBeforeS == null) return;
-    if (pendingAmbulance.enterAt == null) {
-        if (dispatched.length <= pendingAmbulance.countBefore) return;  // o servidor ainda não processou o pedido
-        pendingAmbulance.enterAt = dispatched[dispatched.length - 1].sim_time + announceBeforeS;
-    }
-    const remaining = Math.ceil(pendingAmbulance.enterAt - simTime);
-    const base = `🚑 Ambulância acionada (${pendingAmbulance.route}). Aviso de aproximação enviado ao semáforo.`;
-    if (remaining > 0) {
-        showMessage(`${base} Entrada na via em ${remaining} s.`);
-    } else {
-        showMessage(`🚑 Ambulância na via (${pendingAmbulance.route}).`);
-        pendingAmbulance = null;
-    }
+function updateAmbulanceCounts(board) {
+    const counts = (board && board.counts) || { manual: 0, automatic: 0 };
+    const total = counts.manual + counts.automatic;
+    document.getElementById('val-dispatched').textContent = total;
+    document.getElementById('kpi-emergency-val').textContent = total;
+    document.getElementById('kpi-emergency-sub').textContent = counts.automatic
+        ? `${counts.manual} pelo botão · ${counts.automatic} automáticas` : 'nesta demonstração';
+}
+
+function minutesClock(seconds) {
+    const total = Math.max(0, Math.floor(seconds));
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
 function formatClock(seconds) {
@@ -122,22 +165,35 @@ function formatClock(seconds) {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-function updateCameras(t) {
-    const priority = PRIORITY_APPROACHES[t.preempt_target] || [];
+// live: rodada em andamento e já no tempo de teste. Fora disso as câmeras mostram o
+// ícone de espera, e moldura, luz e contagem ficam neutras para não sugerir imagens.
+// Sobreposição das câmeras: 'idle' (parada, ícone fixo), 'waiting' (aquecimento,
+// ícone girando) ou 'live' (sem sobreposição, imagens ao vivo).
+function setCameraOverlays(mode) {
+    document.querySelectorAll('.camera-overlay').forEach(el => {
+        el.classList.toggle('hidden', mode === 'live');
+        el.classList.toggle('idle', mode === 'idle');
+        el.querySelector('.camera-overlay-text').textContent =
+            mode === 'idle' ? 'Inicie a demonstração para ver as câmeras' : 'Aguardando imagens…';
+    });
+}
+
+function updateCameras(t, live) {
+    const priority = live ? PRIORITY_APPROACHES[t.preempt_target] || [] : [];
     for (const approach of APPROACHES) {
-        const color = t.signals ? t.signals[approach] : '';
+        const color = live && t.signals ? t.signals[approach] : '';
         const card = document.querySelector(`.camera-card[data-camera="${approach}"]`);
         card.classList.remove('signal-green', 'signal-yellow', 'signal-red');
         if (color) card.classList.add('signal-' + color);
         card.classList.toggle('priority', priority.includes(approach));
         document.getElementById('signal-' + approach).className = 'signal-light ' + (color || '');
         // Parados vistos pela câmera ("—" num instante sem imagem).
-        const stopped = t.vision ? t.vision[approach].stopped : null;
+        const stopped = live && t.vision ? t.vision[approach].stopped : null;
         const count = document.getElementById('stopped-' + approach);
         count.textContent = stopped == null ? '—' : stopped;
         count.nextSibling.textContent = stopped === 1 ? ' parado' : ' parados';
     }
-    if (modalCamera && t.signals) {
+    if (modalCamera && live && t.signals) {
         document.getElementById('modal-signal').className = 'signal-light ' + t.signals[modalCamera];
     }
 }
@@ -146,61 +202,84 @@ function updateTelemetry(data) {
     const running = data.is_running === true;
     const t = data.telemetry;
 
-    if (running) setBadge(sumoDot, 'online', data.status === 'rodando' ? 'Em execução' : 'Iniciando');
+    const paused = running && data.paused === true;
+    if (paused) setBadge(sumoDot, 'warning', 'Pausada');
+    else if (running) setBadge(sumoDot, 'online', data.status === 'rodando' ? 'Em execução' : 'Iniciando');
     else setBadge(sumoDot, 'warning', 'Parada');
     if (t && t.vision) setBadge(unityDot, 'online', 'Recebendo imagens');
     else if (running && t) setBadge(unityDot, 'warning', 'Sem imagens');
     else setBadge(unityDot, 'offline', 'Aguardando');
+    if (t && t.vision && waitingFirstImages) {
+        waitingFirstImages = false;
+        showMessage('');
+    }
 
-    if (running !== isRunning) {
+    if (running !== isRunning || paused !== isPaused) {
         isRunning = running;
+        isPaused = paused;
         updateButtons();
     }
     if (data.error !== lastError) {
         lastError = data.error;
         if (data.error) showMessage('Erro: ' + data.error);
     }
-    document.getElementById('val-dispatched').textContent = (data.dispatched || []).length;
-    if (!running) pendingAmbulance = null;
+    runningRequest = running ? data.request : null;
+    if (runningRequest) lastRunScenario = runningRequest.scenario;
     if (!t) return;
 
-    document.getElementById('sim-clock').textContent = formatClock(t.sim_time || 0);
-    updateAmbulanceCountdown(data.dispatched || [], t.sim_time || 0);
-    updateCameras(t);
+    // Tempo de teste: começa em 0 quando o aquecimento termina e o controlador assume.
+    const testTime = (t.sim_time || 0) - warmupS;
+    const warming = testTime <= 0;
+    document.getElementById('sim-clock').textContent = warming ? 'Aguarde…' : formatClock(testTime);
+    renderAmbulances(t.emergencies, t.sim_time || 0, runningRequest && runningRequest.preemption !== 'none');
+    updateAmbulanceCounts(t.emergencies);
+    updateCameras(t, running && !warming);
     const gt = t.ground_truth;
-    document.getElementById('val-halting').textContent = gt.halting_vehicles;
-    document.getElementById('val-wait').textContent = gt.mean_wait_per_stopped_s.toFixed(1) + ' s';
-    document.getElementById('phase-name').textContent = PHASE_LABELS[t.phase] || t.phase;
+    // Indicadores do simulador: só no tempo de teste, junto com as câmeras.
+    const live = running && !warming;
+    document.getElementById('val-halting').textContent = live ? gt.halting_vehicles : '—';
+    document.getElementById('val-wait').textContent = live ? gt.mean_wait_per_stopped_s.toFixed(1) + ' s' : '—';
+    document.getElementById('phase-name').textContent = running && !warming ? PHASE_LABELS[t.phase] || t.phase : '—';
     const priority = PRIORITY_APPROACHES[t.preempt_target];
-    document.getElementById('preempt-name').textContent = priority
+    document.getElementById('preempt-name').textContent = priority && running && !warming
         ? '🚑 verde para ' + priority.map(a => APPROACH_LABELS[a]).join(' e ') : '—';
 
-    if (running) document.querySelectorAll('.camera-overlay').forEach(el => el.classList.add('hidden'));
+    // As imagens só aparecem quando o tempo de teste começa (depois do aquecimento).
+    setCameraOverlays(!running ? 'idle' : warming ? 'waiting' : 'live');
 
     // Um ponto por instante novo da simulação (a telemetria pode repetir o mesmo).
     if (t.sim_time === lastSimTime) return;
     lastSimTime = t.sim_time;
-    chartData.timestamps.push(t.sim_time);
-    chartData.waitingTimes.push(gt.mean_wait_per_stopped_s);
-    chartData.rewards.push(t.reward);
-    chartData.haltingVehicles.push(gt.halting_vehicles);
-    chartData.phaseCounters[t.phase] = (chartData.phaseCounters[t.phase] || 0) + 1;
-    if (chartData.timestamps.length > MAX_CHART_POINTS) {
-        chartData.timestamps.shift();
-        chartData.waitingTimes.shift();
-        chartData.rewards.shift();
-        chartData.haltingVehicles.shift();
+    // Espera por veículo desde o aquecimento: a mesma métrica da avaliação oficial.
+    const trip = t.trip || {};
+    const meanWait = trip.mean_waiting_time_s;
+    // O aquecimento não entra nos gráficos nem na divisão por fase: só o tempo de teste.
+    if (!warming) {
+        chartData.timestamps.push(testTime);
+        chartData.haltingVehicles.push(gt.halting_vehicles);
+        if (meanWait != null) {
+            chartData.waitingTimes.push(meanWait);
+            chartData.waitingTimesAt.push(testTime);
+        }
+        chartData.phaseCounters[t.phase] = (chartData.phaseCounters[t.phase] || 0) + 1;
+    }
+    // Cada série anda junto com o próprio eixo do tempo.
+    for (const series of [chartData.timestamps, chartData.haltingVehicles, chartData.waitingTimes, chartData.waitingTimesAt]) {
+        if (series.length > MAX_CHART_POINTS) series.shift();
     }
 
-    const points = chartData.timestamps.length;
-    const followed = chartData.timestamps[points - 1] - chartData.timestamps[0];
-    document.getElementById('kpi-total-steps').textContent =
-        `${Math.floor(followed / 60)}:${String(Math.floor(followed % 60)).padStart(2, '0')}`;
-    const avgReward = chartData.rewards.reduce((a, b) => a + b, 0) / points;
-    document.getElementById('kpi-avg-reward').textContent = avgReward.toFixed(3);
-    const avgWait = chartData.waitingTimes.reduce((a, b) => a + b, 0) / points;
-    document.getElementById('kpi-avg-wait').textContent = avgWait.toFixed(1) + ' s';
-    document.getElementById('kpi-halting').textContent = gt.halting_vehicles;
+    updateReferenceLabels();
+    // O mesmo tempo de teste do Ao vivo e do eixo dos gráficos.
+    const sampled = trip.sampled_s || 0;
+    document.getElementById('kpi-total-steps').textContent = warming ? '0:00' : minutesClock(testTime);
+    document.getElementById('kpi-time-note').textContent = warming ? 'preparando o cruzamento…' : 'desde o início do teste';
+    document.getElementById('kpi-avg-wait').textContent = meanWait == null ? '—' : meanWait.toFixed(1) + ' s';
+    // Quem ainda espera para entrar na rede não está na média (só veículos que concluíram o trajeto).
+    const pending = trip.pending_vehicles || 0;
+    const pendingNote = document.getElementById('kpi-pending');
+    pendingNote.textContent = pending ? `fila de entrada: ${pending} veículos (ainda fora da média)` : 'fila de entrada: 0';
+    pendingNote.classList.toggle('text-amber', pending > 0);
+    updateReduction(meanWait, sampled);
 
     requestAnimationFrame(renderCharts);
     updatePhaseDistribution();
@@ -256,6 +335,7 @@ const btnEmergency = document.getElementById('btn-emergency');
 const selScenario = document.getElementById('sel-scenario');
 const selVersion = document.getElementById('sel-version');
 const selPreemption = document.getElementById('sel-preemption');
+const tglAutoEmergencies = document.getElementById('tgl-auto-emergencies');
 const selApproach = document.getElementById('sel-approach');
 const selExit = document.getElementById('sel-exit');
 
@@ -267,15 +347,28 @@ function syncExitOptions() {
 }
 selApproach.addEventListener('change', syncExitOptions);
 
-function showMessage(text) {
+// Mensagens de confirmação somem sozinhas (transient_ms); erros e avisos ficam até
+// a próxima mensagem. "Iniciando…" some quando chegam as primeiras imagens.
+let messageTimer = null;
+let waitingFirstImages = false;
+function showMessage(text, transientMs = 0) {
+    clearTimeout(messageTimer);
     document.getElementById('control-message').textContent = text;
+    if (transientMs > 0) messageTimer = setTimeout(() => showMessage(''), transientMs);
 }
 
+const ICON_PLAY = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+const ICON_PAUSE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+
+// Parado: Iniciar (verde). Rodando: Pausar (amarelo). Pausado: Retomar (azul).
 function updateButtons() {
-    btnStart.disabled = isRunning;
+    const [icon, label] = !isRunning ? [ICON_PLAY, 'Iniciar'] : isPaused ? [ICON_PLAY, 'Retomar'] : [ICON_PAUSE, 'Pausar'];
+    btnStart.innerHTML = `${icon} ${label}`;
+    btnStart.classList.toggle('btn-pause', isRunning && !isPaused);
+    btnStart.classList.toggle('btn-resume', isRunning && isPaused);
     btnStop.disabled = !isRunning;
     btnEmergency.disabled = !isRunning;
-    [selScenario, selVersion, selPreemption].forEach(el => { el.disabled = isRunning; });
+    [selScenario, selVersion, selPreemption, tglAutoEmergencies].forEach(el => { el.disabled = isRunning; });
 }
 
 async function loadOptions() {
@@ -283,8 +376,22 @@ async function loadOptions() {
         const options = await (await fetch('/api/options')).json();
         selVersion.innerHTML = options.versions.map(v => `<option value="${v.id}">${v.label}</option>`).join('');
         emergencyRoutes = options.emergency_routes || {};
-        announceBeforeS = options.announce_before_s;
+        fixedTimeReferenceS = options.fixed_time_reference_s || {};
+        minSampleS = options.min_sample_s ?? minSampleS;
+        warmupS = options.warmup_s ?? warmupS;
+        referenceWarmupS = options.reference_warmup_s ?? referenceWarmupS;
+        if (options.generic_detector) {
+            // Sem a classe de viatura, a câmera não pede prioridade: só o V2I.
+            for (const option of selPreemption.options) {
+                if (option.value === 'vision' || option.value === 'both') option.disabled = true;
+            }
+            // Só troca se a escolha atual ficou indisponível; "Desativada" é mantida.
+            if (selPreemption.selectedOptions[0]?.disabled) selPreemption.value = 'v2i';
+            showMessage('Detector genérico em uso: sem detecção visual de ambulâncias (prioridade só pelo V2I).');
+        }
         syncExitOptions();
+        updateReferenceLabels();
+        renderCharts();
     } catch (e) {
         showMessage('Não foi possível conectar ao servidor do painel.');
     }
@@ -301,23 +408,51 @@ async function post(url, body) {
     }
 }
 
+// Limpa só os gráficos: os indicadores vêm do coletor da rodada inteira no servidor
+// e se atualizam na próxima telemetria.
 function resetCharts() {
-    chartData = { timestamps: [], waitingTimes: [], rewards: [], haltingVehicles: [], phaseCounters: {} };
+    chartData = { timestamps: [], waitingTimes: [], waitingTimesAt: [], haltingVehicles: [], phaseCounters: {} };
     lastSimTime = null;
     renderCharts();
     updatePhaseDistribution();
-    document.getElementById('kpi-total-steps').textContent = '0:00';
-    document.getElementById('kpi-avg-reward').textContent = '0.000';
-    document.getElementById('kpi-avg-wait').textContent = '0.0 s';
-    document.getElementById('kpi-halting').textContent = '0';
+}
+
+selScenario.addEventListener('change', () => { updateReferenceLabels(); renderCharts(); });
+tglAutoEmergencies.addEventListener('change', () => {
+    document.getElementById('auto-emergencies-state').textContent = tglAutoEmergencies.checked ? 'a cada ~5 min' : 'desligadas';
+});
+
+// Zera os cartões de Resultados ao iniciar outra rodada, para nunca misturar amostras.
+function resetKpis() {
+    for (const [id, text] of [['kpi-total-steps', '0:00'], ['kpi-time-note', 'aguardando o início'], ['kpi-avg-wait', '—'], ['kpi-reduction-val', '—'],
+                              ['kpi-pending', 'fila de entrada: —'], ['kpi-reduction-note', 'aguardando amostra']]) {
+        document.getElementById(id).textContent = text;
+    }
+    updateAmbulanceCounts(null);
+    renderAmbulances(null, 0, false);
 }
 
 btnStart.addEventListener('click', async () => {
     try {
-        await post('/api/start', { scenario: selScenario.value, version: selVersion.value, preemption: selPreemption.value });
+        if (isRunning) {
+            // Pausa ou retoma: o SUMO só avança quando o Python pede o próximo passo.
+            await post(isPaused ? '/api/resume' : '/api/pause');
+            isPaused = !isPaused;
+            if (isPaused) showMessage('Simulação pausada. Os dados ficam na tela para análise.');
+            else showMessage('Simulação retomada.', 4000);
+            updateButtons();
+            return;
+        }
+        await post('/api/start', { scenario: selScenario.value, version: selVersion.value, preemption: selPreemption.value,
+                                   auto_emergencies: tglAutoEmergencies.checked });
+        lastRunScenario = selScenario.value;
         resetCharts();
+        resetKpis();
+        setCameraOverlays('waiting');
         showMessage('Iniciando a simulação. As imagens serão exibidas em alguns segundos.');
+        waitingFirstImages = true;
         isRunning = true;
+        isPaused = false;
         updateButtons();
     } catch (e) {
         showMessage(e.message);
@@ -326,19 +461,16 @@ btnStart.addEventListener('click', async () => {
 
 btnStop.addEventListener('click', async () => {
     await post('/api/stop').catch(e => showMessage(e.message));
-    showMessage('Demonstração encerrada.');
-    document.querySelectorAll('.camera-overlay').forEach(el => el.classList.remove('hidden'));
+    waitingFirstImages = false;
+    showMessage('Demonstração encerrada.', 4000);
+    setCameraOverlays('idle');
 });
 
 btnEmergency.addEventListener('click', async () => {
     try {
         const exit = selExit.value || null;
-        const countBefore = Number(document.getElementById('val-dispatched').textContent) || 0;
+        // A lista de ambulâncias a caminho já mostra a nova; só erros viram mensagem.
         await post('/api/emergency', { approach: selApproach.value, exit });
-        const route = 'origem: ' + APPROACH_LABELS[selApproach.value] + (exit ? ', destino: ' + EXIT_LABELS[exit] : '');
-        const delay = announceBeforeS == null ? '' : ` Entrada na via em ${announceBeforeS} s.`;
-        showMessage(`🚑 Ambulância acionada (${route}). Aviso de aproximação enviado ao semáforo.${delay}`);
-        pendingAmbulance = { route, countBefore, enterAt: null };
     } catch (e) {
         showMessage(e.message);
     }
@@ -352,23 +484,28 @@ updateButtons();
 // ============================================
 //  Chart Rendering (Canvas-based, no library)
 // ============================================
-function drawLineChart(canvasId, data, color, label, yLabel) {
+// Posição do mouse (px, relativa ao canvas) sobre cada gráfico, ou ausente fora dele.
+// Guardamos a posição, não o índice: com o gráfico andando, o ponto sob o mouse muda.
+const chartHoverX = {};
+
+function drawLineChart(canvasId, data, color, label, yLabel, baselineVal = null, times = chartData.timestamps) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // Handle high DPI
-    const rect = canvas.parentElement.getBoundingClientRect();
+    // Alta densidade de pixels. A largura é a do próprio canvas na tela (o .chart-body
+    // tem padding): desenho e coordenadas do mouse ficam na mesma escala.
+    const width = canvas.clientWidth || canvas.parentElement.clientWidth;
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
+    canvas.width = width * dpr;
     canvas.height = 260 * dpr;
-    canvas.style.width = rect.width + 'px';
+    canvas.style.width = width + 'px';
     canvas.style.height = '260px';
     ctx.scale(dpr, dpr);
 
-    const W = rect.width;
+    const W = width;
     const H = 260;
-    const pad = { top: 20, right: 20, bottom: 36, left: 60 };
+    const pad = { top: 24, right: 20, bottom: 36, left: 56 };
     const plotW = W - pad.left - pad.right;
     const plotH = H - pad.top - pad.bottom;
 
@@ -379,20 +516,24 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
         ctx.fillStyle = '#5c6578';
         ctx.font = '13px Inter, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('Aguardando dados…', W / 2, H / 2);
+        ctx.fillText('Aguardando dados da demonstração…', W / 2, H / 2);
         return;
     }
 
-    // Compute bounds
+    // Compute bounds (incorporando a linha de baseline para não cortar)
     let minY = Math.min(...data);
     let maxY = Math.max(...data);
+    if (baselineVal !== null) {
+        minY = Math.min(minY, baselineVal);
+        maxY = Math.max(maxY, baselineVal);
+    }
     if (minY === maxY) { minY -= 1; maxY += 1; }
     const rangeY = maxY - minY;
-    minY -= rangeY * 0.1;
-    maxY += rangeY * 0.1;
+    minY = Math.max(0, minY - rangeY * 0.1);
+    maxY += rangeY * 0.18;
 
     // Grid lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
     ctx.lineWidth = 1;
     const gridLines = 5;
     for (let i = 0; i <= gridLines; i++) {
@@ -404,21 +545,41 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
 
         // Y labels
         const val = maxY - ((maxY - minY) / gridLines) * i;
-        ctx.fillStyle = '#5c6578';
+        ctx.fillStyle = '#6b778d';
         ctx.font = '11px JetBrains Mono, monospace';
         ctx.textAlign = 'right';
         ctx.fillText(val.toFixed(1), pad.left - 8, y + 4);
     }
 
+    // Baseline horizontal line
+    if (baselineVal !== null && data.length >= 2) {
+        const baselineY = pad.top + plotH - ((baselineVal - minY) / (maxY - minY)) * plotH;
+        ctx.save();
+        ctx.setLineDash([6, 5]);
+        ctx.strokeStyle = '#f06565';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, baselineY);
+        ctx.lineTo(W - pad.right, baselineY);
+        ctx.stroke();
+
+        // Tag sobre a linha
+        ctx.fillStyle = '#f06565';
+        ctx.font = '600 11px JetBrains Mono, monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(`Tempo fixo: ${baselineVal.toFixed(1)}s`, W - pad.right - 8, baselineY - 6);
+        ctx.restore();
+    }
+
     // X labels
     const xLabelCount = Math.min(6, data.length);
-    ctx.fillStyle = '#5c6578';
+    ctx.fillStyle = '#6b778d';
     ctx.font = '11px JetBrains Mono, monospace';
     ctx.textAlign = 'center';
     for (let i = 0; i < xLabelCount; i++) {
         const idx = Math.floor((data.length - 1) * i / (xLabelCount - 1));
         const x = pad.left + (plotW * idx / (data.length - 1));
-        const t = chartData.timestamps[idx] || 0;
+        const t = times[idx] || 0;
         const m = Math.floor(t / 60);
         const s = Math.floor(t % 60);
         ctx.fillText(`${m}:${String(s).padStart(2, '0')}`, x, H - 8);
@@ -437,8 +598,8 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
     ctx.closePath();
 
     const gradient = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
-    gradient.addColorStop(0, color + '25');
-    gradient.addColorStop(1, color + '02');
+    gradient.addColorStop(0, color + '28');
+    gradient.addColorStop(1, color + '00');
     ctx.fillStyle = gradient;
     ctx.fill();
 
@@ -451,7 +612,7 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
         else ctx.lineTo(x, y);
     }
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.2;
     ctx.lineJoin = 'round';
     ctx.stroke();
 
@@ -464,17 +625,109 @@ function drawLineChart(canvasId, data, color, label, yLabel) {
         ctx.fillStyle = color;
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(lastX, lastY, 7, 0, Math.PI * 2);
+        ctx.arc(lastX, lastY, 8, 0, Math.PI * 2);
         ctx.strokeStyle = color + '40';
         ctx.lineWidth = 2;
         ctx.stroke();
     }
+
+    // Hover: linha vertical, ponto e o valor daquele instante.
+    const hoverX = chartHoverX[canvasId];
+    if (hoverX == null || hoverX < pad.left || hoverX > pad.left + plotW) return;
+    const idx = Math.round((hoverX - pad.left) / plotW * (data.length - 1));
+    const x = pad.left + (plotW * idx / (data.length - 1));
+    const y = pad.top + plotH - ((data[idx] - minY) / (maxY - minY)) * plotH;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x, pad.top);
+    ctx.lineTo(x, pad.top + plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = '#0d1117';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const value = yLabel ? `${data[idx].toFixed(1)} ${yLabel}` : `${Math.round(data[idx])}`;
+    const lines = [`${label}: ${value}`, `tempo de teste ${minutesClock(times[idx] || 0)}`];
+    ctx.font = '600 12px Inter, sans-serif';
+    const boxW = Math.max(...lines.map(line => ctx.measureText(line).width)) + 20;
+    const boxH = 44;
+    let boxX = x + 12;
+    if (boxX + boxW > W - pad.right) boxX = x - 12 - boxW;
+    const boxY = Math.min(Math.max(pad.top, y - boxH - 10), pad.top + plotH - boxH);
+    ctx.fillStyle = 'rgba(13, 17, 23, 0.94)';
+    ctx.strokeStyle = color + '80';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxW, boxH, 6);
+    ctx.fill();
+    ctx.stroke();
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#eaf0f6';
+    ctx.fillText(lines[0], boxX + 10, boxY + 18);
+    ctx.font = '11px Inter, sans-serif';
+    ctx.fillStyle = '#8b95a8';
+    ctx.fillText(lines[1], boxX + 10, boxY + 34);
+    ctx.restore();
+}
+
+for (const canvasId of ['chart-waiting', 'chart-halting']) {
+    const canvas = document.getElementById(canvasId);
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        chartHoverX[canvasId] = e.clientX - rect.left;
+        renderCharts();
+    });
+    canvas.addEventListener('mouseleave', () => {
+        delete chartHoverX[canvasId];
+        renderCharts();
+    });
+}
+
+/** Redução da espera contra o tempo fixo do cenário: só com amostra suficiente e
+ *  nunca para o próprio tempo fixo (seria comparar a referência com ela mesma). */
+function updateReduction(meanWait, sampled) {
+    const value = document.getElementById('kpi-reduction-val');
+    const note = document.getElementById('kpi-reduction-note');
+    const reference = fixedTimeReference();
+    value.className = 'kpi-value text-green';
+    value.textContent = '—';
+    note.className = 'kpi-subtext text-green font-semibold';
+    note.textContent = '';
+    if (runningRequest && runningRequest.version === 'baseline') {
+        note.textContent = 'o tempo fixo é a própria referência';
+        return;
+    }
+    if (reference == null || meanWait == null) {
+        note.textContent = 'aguardando os primeiros veículos';
+        return;
+    }
+    const pct = (reference - meanWait) / reference * 100;
+    value.textContent = (pct >= 0 ? '−' : '+') + Math.abs(pct).toFixed(0) + '%';
+    if (warmupS !== referenceWarmupS) {
+        // Outro aquecimento: a média ao vivo não é comparável com a referência.
+        value.className = 'kpi-value text-muted';
+        note.className = 'kpi-subtext text-amber';
+        note.textContent = `aquecimento diferente da avaliação (${warmupS} s × ${referenceWarmupS} s)`;
+    } else if (sampled < minSampleS) {
+        // Com pouca amostra a média ainda oscila: o número aparece, mas em cinza.
+        value.className = 'kpi-value text-muted';
+        note.className = 'kpi-subtext text-muted';
+        note.textContent = `preliminar até ${minutesClock(minSampleS)} de teste`;
+    } else if (pct < 0) {
+        value.className = 'kpi-value text-amber';
+    }
 }
 
 function renderCharts() {
-    drawLineChart('chart-waiting', chartData.waitingTimes, '#f0b045', 'Espera', 's');
-    drawLineChart('chart-reward', chartData.rewards, '#2dd4a0', 'Recompensa', '');
-    drawLineChart('chart-halting', chartData.haltingVehicles, '#4f8ff7', 'Veículos', '');
+    drawLineChart('chart-waiting', chartData.waitingTimes, '#2dd4a0', 'Espera média', 's', fixedTimeReference(), chartData.waitingTimesAt);
+    drawLineChart('chart-halting', chartData.haltingVehicles, '#4f8ff7', 'Veículos retidos', '');
 }
 
 function updatePhaseDistribution() {
