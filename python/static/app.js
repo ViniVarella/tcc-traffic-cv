@@ -87,7 +87,7 @@ const APPROACHES = ['west', 'south', 'east'];
 const SCENARIO_BASELINES = {
     calibrated_ped: 20.8,
     calibrated: 13.0,
-    original: 8.0
+    original: 15.0
 };
 let currentScenario = 'calibrated_ped';
 let recordedBaselineWait = null;
@@ -245,7 +245,7 @@ function updateTelemetry(data) {
     if (emergVal) emergVal.textContent = dispatchedList.length;
     const emergSub = document.getElementById('kpi-emergency-sub');
     if (emergSub) {
-        emergSub.textContent = dispatchedList.length > 0 ? '100% livres (onda verde)' : '100% de passagem livre';
+        emergSub.textContent = 'nesta demonstração';
     }
 
     requestAnimationFrame(renderCharts);

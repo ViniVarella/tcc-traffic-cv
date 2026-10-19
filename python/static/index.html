@@ -465,12 +465,12 @@
                 <div class="kpi-card accent-green">
                     <div class="kpi-value text-green" id="kpi-reduction-val">—</div>
                     <div class="kpi-label">Redução na espera</div>
-                    <div class="kpi-subtext text-green font-semibold">Economia gerada pela IA</div>
+                    <div class="kpi-subtext text-green font-semibold">nesta demonstração, contra a média do tempo fixo</div>
                 </div>
                 <div class="kpi-card accent-siren">
                     <div class="kpi-value text-siren" id="kpi-emergency-val">0</div>
-                    <div class="kpi-label">Ambulâncias com onda verde</div>
-                    <div class="kpi-subtext text-siren" id="kpi-emergency-sub">100% de passagem livre</div>
+                    <div class="kpi-label">Ambulâncias acionadas</div>
+                    <div class="kpi-subtext text-siren" id="kpi-emergency-sub">nesta demonstração</div>
                 </div>
             </div>
 
@@ -554,14 +554,14 @@
                                 <div class="impact-icon green">🎯</div>
                                 <div class="impact-details">
                                     <div class="impact-title">Nível de Serviço da Via (HCM)</div>
-                                    <div class="impact-desc">Evolução do <span class="badge-tag tag-warning">Nível C/D</span> (20,8 s) para <span class="badge-tag tag-success">Nível B</span> (14,1 s).</div>
+                                    <div class="impact-desc">Evolução do <span class="badge-tag tag-warning">Nível C</span> (20,8 s) para <span class="badge-tag tag-success">Nível B</span> (14,1 s).</div>
                                 </div>
                             </div>
                             <div class="impact-item">
                                 <div class="impact-icon siren">🚑</div>
                                 <div class="impact-details">
                                     <div class="impact-title">Prioridade para Emergências</div>
-                                    <div class="impact-desc">Onda verde automática: ambulâncias cruzam <span class="badge-tag tag-siren">sem parar (0 s de perda)</span>.</div>
+                                    <div class="impact-desc">Com o aviso de aproximação (V2I), todas as ambulâncias cruzam <span class="badge-tag tag-siren">sem parar</span>, com perda média de 1,8 s.</div>
                                 </div>
                             </div>
                             <div class="impact-item">
@@ -601,7 +601,7 @@
                                 <strong class="text-green">14,1 s</strong>
                             </div>
                         </div>
-                        <div class="benchmark-footer-note">Pedestres: espera reduzida em 56% (56,6 s → 25,0 s)</div>
+                        <div class="benchmark-footer-note">Pela câmera, com a fase de pedestres a cada ciclo</div>
                     </div>
 
                     <div class="benchmark-card">
@@ -618,24 +618,24 @@
                                 <strong class="text-green">4,3 s</strong>
                             </div>
                         </div>
-                        <div class="benchmark-footer-note">Semáforo adaptativo esvazia as filas instantaneamente</div>
+                        <div class="benchmark-footer-note">Pela câmera; com os dados do simulador, 4,1 s</div>
                     </div>
 
                     <div class="benchmark-card">
                         <div class="benchmark-scenario">Veículos de Emergência</div>
                         <div class="benchmark-metric-main">100%</div>
-                        <div class="benchmark-metric-label">das ambulâncias passam sem parar</div>
+                        <div class="benchmark-metric-label">das ambulâncias passam sem parar com aviso V2I</div>
                         <div class="benchmark-comparison">
                             <div class="comp-row">
-                                <span>Semáforo fixo:</span>
-                                <strong>11% sem parar</strong>
+                                <span>Sem prioridade:</span>
+                                <strong>50% sem parar</strong>
                             </div>
                             <div class="comp-row">
-                                <span>TraffIQ (IA):</span>
+                                <span>Com aviso V2I:</span>
                                 <strong class="text-siren">100% sem parar</strong>
                             </div>
                         </div>
-                        <div class="benchmark-footer-note">Atraso médio cai de 35,3 s para 1,7 s na aproximação</div>
+                        <div class="benchmark-footer-note">Perda média cai de 13,0 s para 1,8 s (cenário com pedestres, pela câmera)</div>
                     </div>
 
                     <div class="benchmark-card">
@@ -645,7 +645,7 @@
                         <div class="benchmark-comparison">
                             <div class="comp-row">
                                 <span>Diferença da visão:</span>
-                                <strong>−0,1 s (idêntica ao real)</strong>
+                                <strong>−0,1 s em relação ao simulador</strong>
                             </div>
                             <div class="comp-row">
                                 <span>Alcance das ROIs:</span>
