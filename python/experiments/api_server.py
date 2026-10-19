@@ -65,13 +65,26 @@ def choose_detector(args: argparse.Namespace, argv: Sequence[str], generic: Path
     return True
 
 
+class PanelServer(uvicorn.Server):
+    """Uvicorn que avisa o painel ao receber Ctrl+C (ou Stop/Rerun do PyCharm).
+
+    As câmeras (MJPEG) e a telemetria (WebSocket) são conexões contínuas: avisadas,
+    elas terminam sozinhas e o encerramento não fica esperando por elas. O prazo
+    de 2 s do uvicorn é só a garantia; depois dele o lifespan fecha o SUMO.
+    """
+
+    def handle_exit(self, sig: int, frame: object) -> None:
+        self.config.app.state.runner.begin_shutdown()
+        super().handle_exit(sig, frame)
+
+
 def main() -> None:
     argv = sys.argv[1:]
     args = parse_args(argv)
     base_dir = Path(__file__).resolve().parents[1]
     generic = choose_detector(args, argv, base_dir / "yolov8n.pt")
     app = create_app(PanelSettings(base_dir, args, args.warmup_seconds, args.control_seconds, generic_detector=generic))
-    uvicorn.run(app, host=args.host, port=args.port)
+    PanelServer(uvicorn.Config(app, host=args.host, port=args.port, timeout_graceful_shutdown=2)).run()
 
 
 if __name__ == "__main__":

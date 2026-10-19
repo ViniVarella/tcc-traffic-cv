@@ -213,11 +213,19 @@ class EpisodeRunner:
         self._thread = threading.Thread(target=self._loop, name="episodio-painel", daemon=True)
         self._thread.start()
 
-    def shutdown(self, timeout_s: float = 15.0) -> None:
-        """Para o episódio e espera a thread fechar o TraCI e os sockets."""
+    def begin_shutdown(self) -> None:
+        """Sinal de encerramento do servidor: para o episódio e solta câmeras e telemetria."""
         self._shutdown.set()
         self._stop_episode.set()
         self._resume.set()
+
+    @property
+    def closing(self) -> bool:
+        return self._shutdown.is_set()
+
+    def shutdown(self, timeout_s: float = 15.0) -> None:
+        """Para o episódio e espera a thread fechar o TraCI e os sockets."""
+        self.begin_shutdown()
         if self._thread is not None:
             self._thread.join(timeout=timeout_s)
 
@@ -384,15 +392,17 @@ def create_app(settings: PanelSettings) -> FastAPI:
     async def telemetry(websocket: WebSocket) -> None:
         await websocket.accept()
         try:
-            while True:
+            while not runner.closing:
                 await websocket.send_json(runner.state)
                 await asyncio.sleep(0.5)
+            await websocket.close()
         except WebSocketDisconnect:
             return
 
     async def frames(camera_id: str):
         sent = None
-        while True:
+        # Termina no encerramento do servidor, para ele não esperar o stream para sempre.
+        while not runner.closing:
             frame = runner.frames.get(camera_id)
             # Os frames mudam ~1 vez por step: só reenvia quando há um novo.
             if frame and frame is not sent:
@@ -406,4 +416,5 @@ def create_app(settings: PanelSettings) -> FastAPI:
             raise HTTPException(status_code=404, detail="Câmera desconhecida.")
         return StreamingResponse(frames(camera_id), media_type="multipart/x-mixed-replace; boundary=frame")
 
+    app.state.runner = runner
     return app
