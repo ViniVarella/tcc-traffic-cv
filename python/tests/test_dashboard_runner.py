@@ -79,6 +79,28 @@ class EpisodeRunnerValidationTests(unittest.TestCase):
         self.assertEqual((values["original"], sources["original"]), (FIXED_TIME_REFERENCE_S["original"], "valor embutido"))
         self.assertEqual(sources["calibrated_ped"], "valor embutido")  # arquivo ausente
 
+    def test_pause_and_resume_only_while_running(self) -> None:
+        for action in (self.runner.pause, self.runner.resume):
+            with self.assertRaises(ValueError):
+                action()
+        self.runner.start(StartRequest())
+        self.runner.pause()
+        self.assertEqual((self.runner.state["paused"], self.runner.state["status"]), (True, "pausado"))
+        self.assertFalse(self.runner._resume.is_set())
+        self.runner.resume()
+        self.assertEqual((self.runner.state["paused"], self.runner.state["status"]), (False, "rodando"))
+
+    def test_stop_releases_a_paused_episode(self) -> None:
+        self.runner.start(StartRequest())
+        self.runner.pause()
+        waiter = threading.Thread(target=self.runner._wait_while_paused)
+        waiter.start()
+        waiter.join(timeout=0.5)
+        self.assertTrue(waiter.is_alive())  # pausado: o laço espera
+        self.runner.stop()
+        waiter.join(timeout=1.0)
+        self.assertFalse(waiter.is_alive())
+
     def test_v1_heuristic_needs_no_checkpoint(self) -> None:
         self.runner.v1_1_checkpoint = BASE_DIR / "nao-existe.pt"
         self.runner.start(StartRequest(version="v1"))

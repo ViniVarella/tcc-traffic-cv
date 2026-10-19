@@ -78,6 +78,7 @@ connectWS();
 // ============================================
 // vision = o que a IA vê pelas câmeras; ground_truth = medido pelo simulador, só para mostrar.
 let isRunning = false;
+let isPaused = false;
 let lastSimTime = null;
 let lastError = null;
 // waitingTimesAt: instante de cada ponto de espera (a série só começa no primeiro veículo concluído).
@@ -171,14 +172,17 @@ function updateTelemetry(data) {
     const running = data.is_running === true;
     const t = data.telemetry;
 
-    if (running) setBadge(sumoDot, 'online', data.status === 'rodando' ? 'Em execução' : 'Iniciando');
+    const paused = running && data.paused === true;
+    if (paused) setBadge(sumoDot, 'warning', 'Pausada');
+    else if (running) setBadge(sumoDot, 'online', data.status === 'rodando' ? 'Em execução' : 'Iniciando');
     else setBadge(sumoDot, 'warning', 'Parada');
     if (t && t.vision) setBadge(unityDot, 'online', 'Recebendo imagens');
     else if (running && t) setBadge(unityDot, 'warning', 'Sem imagens');
     else setBadge(unityDot, 'offline', 'Aguardando');
 
-    if (running !== isRunning) {
+    if (running !== isRunning || paused !== isPaused) {
         isRunning = running;
+        isPaused = paused;
         updateButtons();
     }
     if (data.error !== lastError) {
@@ -308,8 +312,14 @@ function showMessage(text) {
     document.getElementById('control-message').textContent = text;
 }
 
+const ICON_PLAY = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+const ICON_PAUSE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+
+// Parado: Iniciar (verde). Rodando: Pausar (amarelo). Pausado: Retomar (amarelo).
 function updateButtons() {
-    btnStart.disabled = isRunning;
+    const [icon, label] = !isRunning ? [ICON_PLAY, 'Iniciar'] : isPaused ? [ICON_PLAY, 'Retomar'] : [ICON_PAUSE, 'Pausar'];
+    btnStart.innerHTML = `${icon} ${label}`;
+    btnStart.classList.toggle('btn-pause', isRunning);
     btnStop.disabled = !isRunning;
     btnEmergency.disabled = !isRunning;
     [selScenario, selVersion, selPreemption].forEach(el => { el.disabled = isRunning; });
@@ -362,13 +372,31 @@ function resetCharts() {
 
 selScenario.addEventListener('change', () => { updateReferenceLabels(); renderCharts(); });
 
+// Zera os cartões de Resultados ao iniciar outra rodada, para nunca misturar amostras.
+function resetKpis() {
+    for (const [id, text] of [['kpi-total-steps', '0:00'], ['kpi-avg-wait', '—'], ['kpi-reduction-val', '—'],
+                              ['kpi-pending', 'fila de entrada: —'], ['kpi-reduction-note', 'aguardando amostra']]) {
+        document.getElementById(id).textContent = text;
+    }
+}
+
 btnStart.addEventListener('click', async () => {
     try {
+        if (isRunning) {
+            // Pausa ou retoma: o SUMO só avança quando o Python pede o próximo passo.
+            await post(isPaused ? '/api/resume' : '/api/pause');
+            isPaused = !isPaused;
+            showMessage(isPaused ? 'Simulação pausada. Os dados ficam na tela para análise.' : 'Simulação retomada.');
+            updateButtons();
+            return;
+        }
         await post('/api/start', { scenario: selScenario.value, version: selVersion.value, preemption: selPreemption.value });
         lastRunScenario = selScenario.value;
         resetCharts();
+        resetKpis();
         showMessage('Iniciando a simulação. As imagens serão exibidas em alguns segundos.');
         isRunning = true;
+        isPaused = false;
         updateButtons();
     } catch (e) {
         showMessage(e.message);

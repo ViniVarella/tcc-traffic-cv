@@ -117,12 +117,15 @@ class EpisodeRunner:
         self.announce_before_s = EmergencySettings.from_config(self.config).announce_before_s
         self.fixed_time_reference, self.fixed_time_reference_source = load_fixed_time_reference(
             settings.base_dir.parent / "results" / "evaluation")
-        self.state: dict[str, Any] = {"is_running": False, "status": "parado", "request": None, "telemetry": None,
+        self.state: dict[str, Any] = {"is_running": False, "paused": False, "status": "parado", "request": None, "telemetry": None,
                                       "dispatched": [], "error": None, "last_summary": None}
         self.frames: dict[str, bytes | None] = {camera: None for camera in APPROACHES}
         self._pending: queue.Queue[StartRequest] = queue.Queue(maxsize=1)
         self._dispatch: queue.Queue[tuple[str, str | None]] = queue.Queue()
         self._stop_episode = threading.Event()
+        # Liberado = rodando; limpo = pausado (o laço espera no on_step, antes do próximo step).
+        self._resume = threading.Event()
+        self._resume.set()
         self._shutdown = threading.Event()
         self._thread: threading.Thread | None = None
         self._debugger: VisualDebugger | None = None
@@ -147,12 +150,32 @@ class EpisodeRunner:
         self._clear_dispatches()
         self.frames = {camera: None for camera in APPROACHES}
         self._stop_episode.clear()
+        self._resume.set()
         self._pending.put(request)
-        self.state = {**self.state, "is_running": True, "status": "iniciando", "request": request.model_dump(),
+        self.state = {**self.state, "is_running": True, "paused": False, "status": "iniciando", "request": request.model_dump(),
                       "telemetry": None, "dispatched": [], "error": None}
 
     def stop(self) -> None:
         self._stop_episode.set()
+        self._resume.set()  # um episódio pausado precisa voltar ao laço para encerrar
+
+    def pause(self) -> None:
+        """Congela a simulação: o SUMO só avança quando o Python pede o próximo step."""
+        if not self.state["is_running"]:
+            raise ValueError("Não há demonstração em execução para pausar.")
+        self._resume.clear()
+        self.state = {**self.state, "paused": True, "status": "pausado"}
+
+    def resume(self) -> None:
+        if not self.state["is_running"]:
+            raise ValueError("Não há demonstração em execução para retomar.")
+        self.state = {**self.state, "paused": False, "status": "rodando"}
+        self._resume.set()
+
+    def _wait_while_paused(self) -> None:
+        while not self._resume.wait(timeout=0.2):
+            if self._stop_episode.is_set():
+                break
 
     def _clear_dispatches(self) -> None:
         while not self._dispatch.empty():
@@ -181,6 +204,7 @@ class EpisodeRunner:
         """Para o episódio e espera a thread fechar o TraCI e os sockets."""
         self._shutdown.set()
         self._stop_episode.set()
+        self._resume.set()
         if self._thread is not None:
             self._thread.join(timeout=timeout_s)
 
@@ -209,7 +233,7 @@ class EpisodeRunner:
                     self.state = {**self.state, "error": str(error)}
                 finally:
                     self._clear_dispatches()
-                    self.state = {**self.state, "is_running": False, "status": "parado"}
+                    self.state = {**self.state, "is_running": False, "paused": False, "status": "parado"}
         finally:
             bridge.close()
 
@@ -226,6 +250,7 @@ class EpisodeRunner:
         last_results: list[Any] = [None]
 
         def on_step(info: dict[str, Any]) -> None:
+            self._wait_while_paused()
             if self._stop_episode.is_set():
                 raise InterruptedError("Episódio interrompido pelo painel.")
             traffic = environment.emergency_traffic
@@ -235,7 +260,8 @@ class EpisodeRunner:
                 vehicle_id = traffic.dispatch(approach, float(info["sim_time"]), to_edge=to_edge)
                 self.state = {**self.state, "dispatched": [*self.state["dispatched"], {
                     "id": vehicle_id, "approach": approach, "exit": exit_name, "sim_time": info["sim_time"]}]}
-            self.state = {**self.state, "status": "rodando", "telemetry": build_telemetry(info)}
+            self.state = {**self.state, "status": "pausado" if self.state["paused"] else "rodando",
+                          "telemetry": build_telemetry(info)}
             results = getattr(observer, "last_results", None)
             if results is not None and results is not last_results[0]:
                 last_results[0] = results
@@ -311,6 +337,22 @@ def create_app(settings: PanelSettings) -> FastAPI:
     @app.post("/api/stop")
     async def stop() -> dict[str, Any]:
         runner.stop()
+        return {"status": "ok"}
+
+    @app.post("/api/pause")
+    async def pause() -> dict[str, Any]:
+        try:
+            runner.pause()
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        return {"status": "ok"}
+
+    @app.post("/api/resume")
+    async def resume() -> dict[str, Any]:
+        try:
+            runner.resume()
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
         return {"status": "ok"}
 
     @app.post("/api/emergency")

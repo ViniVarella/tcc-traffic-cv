@@ -740,6 +740,16 @@ body {
     box-shadow: 0 4px 16px rgba(45, 212, 160, 0.3);
 }
 
+/* Rodando ou pausada: o Iniciar vira Pausar/Retomar, em amarelo. */
+.btn-start.btn-pause {
+    background: var(--amber);
+    color: #1f1606;
+}
+.btn-start.btn-pause:hover:not(:disabled) {
+    background: #e2a23a;
+    box-shadow: 0 4px 16px rgba(240, 176, 69, 0.3);
+}
+
 .btn-stop {
     background: transparent;
     color: var(--red);
