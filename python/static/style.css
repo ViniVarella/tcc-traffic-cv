@@ -1190,6 +1190,7 @@ body {
 .text-green { color: var(--green) !important; }
 .text-siren { color: var(--siren) !important; }
 .text-amber { color: var(--amber) !important; }
+.text-muted { color: var(--text-muted) !important; }
 .text-red { color: var(--red) !important; }
 .font-semibold { font-weight: 600; }
 

@@ -599,15 +599,25 @@ function updateReduction(meanWait, sampled) {
     const reference = fixedTimeReference();
     value.className = 'kpi-value text-green';
     value.textContent = '—';
+    note.className = 'kpi-subtext text-green font-semibold';
+    note.textContent = '';
     if (runningRequest && runningRequest.version === 'baseline') {
         note.textContent = 'o tempo fixo é a própria referência';
-    } else if (reference == null || meanWait == null || sampled < minSampleS) {
-        note.textContent = `faltam ${Math.max(1, Math.ceil((minSampleS - sampled) / 60))} min de amostra`;
-    } else {
-        const pct = (reference - meanWait) / reference * 100;
-        value.textContent = (pct >= 0 ? '−' : '+') + Math.abs(pct).toFixed(0) + '%';
-        if (pct < 0) value.className = 'kpi-value text-amber';
-        note.textContent = 'estimativa desta demonstração (1 seed), contra o tempo fixo na avaliação (3 seeds)';
+        return;
+    }
+    if (reference == null || meanWait == null) {
+        note.textContent = 'aguardando os primeiros veículos';
+        return;
+    }
+    const pct = (reference - meanWait) / reference * 100;
+    value.textContent = (pct >= 0 ? '−' : '+') + Math.abs(pct).toFixed(0) + '%';
+    if (sampled < minSampleS) {
+        // Com pouca amostra a média ainda oscila: o número aparece, mas em cinza.
+        value.className = 'kpi-value text-muted';
+        note.className = 'kpi-subtext text-muted';
+        note.textContent = `preliminar · faltam ${Math.max(1, Math.ceil((minSampleS - sampled) / 60))} min de amostra`;
+    } else if (pct < 0) {
+        value.className = 'kpi-value text-amber';
     }
 }
 
