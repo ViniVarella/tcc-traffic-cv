@@ -165,22 +165,24 @@ function formatClock(seconds) {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-function updateCameras(t) {
-    const priority = PRIORITY_APPROACHES[t.preempt_target] || [];
+// live: rodada em andamento e já no tempo de teste. Fora disso as câmeras mostram o
+// ícone de espera, e moldura, luz e contagem ficam neutras para não sugerir imagens.
+function updateCameras(t, live) {
+    const priority = live ? PRIORITY_APPROACHES[t.preempt_target] || [] : [];
     for (const approach of APPROACHES) {
-        const color = t.signals ? t.signals[approach] : '';
+        const color = live && t.signals ? t.signals[approach] : '';
         const card = document.querySelector(`.camera-card[data-camera="${approach}"]`);
         card.classList.remove('signal-green', 'signal-yellow', 'signal-red');
         if (color) card.classList.add('signal-' + color);
         card.classList.toggle('priority', priority.includes(approach));
         document.getElementById('signal-' + approach).className = 'signal-light ' + (color || '');
         // Parados vistos pela câmera ("—" num instante sem imagem).
-        const stopped = t.vision ? t.vision[approach].stopped : null;
+        const stopped = live && t.vision ? t.vision[approach].stopped : null;
         const count = document.getElementById('stopped-' + approach);
         count.textContent = stopped == null ? '—' : stopped;
         count.nextSibling.textContent = stopped === 1 ? ' parado' : ' parados';
     }
-    if (modalCamera && t.signals) {
+    if (modalCamera && live && t.signals) {
         document.getElementById('modal-signal').className = 'signal-light ' + t.signals[modalCamera];
     }
 }
@@ -220,13 +222,13 @@ function updateTelemetry(data) {
     document.getElementById('sim-clock').textContent = warming ? 'Aguarde…' : formatClock(testTime);
     renderAmbulances(t.emergencies, t.sim_time || 0, runningRequest && runningRequest.preemption !== 'none');
     updateAmbulanceCounts(t.emergencies);
-    updateCameras(t);
+    updateCameras(t, running && !warming);
     const gt = t.ground_truth;
     document.getElementById('val-halting').textContent = gt.halting_vehicles;
     document.getElementById('val-wait').textContent = gt.mean_wait_per_stopped_s.toFixed(1) + ' s';
-    document.getElementById('phase-name').textContent = PHASE_LABELS[t.phase] || t.phase;
+    document.getElementById('phase-name').textContent = running && !warming ? PHASE_LABELS[t.phase] || t.phase : '—';
     const priority = PRIORITY_APPROACHES[t.preempt_target];
-    document.getElementById('preempt-name').textContent = priority
+    document.getElementById('preempt-name').textContent = priority && running && !warming
         ? '🚑 verde para ' + priority.map(a => APPROACH_LABELS[a]).join(' e ') : '—';
 
     // As imagens só aparecem quando o tempo de teste começa (depois do aquecimento).
