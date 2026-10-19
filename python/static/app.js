@@ -474,16 +474,17 @@ function drawLineChart(canvasId, data, color, label, yLabel, baselineVal = null,
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // Handle high DPI
-    const rect = canvas.parentElement.getBoundingClientRect();
+    // Alta densidade de pixels. A largura é a do próprio canvas na tela (o .chart-body
+    // tem padding): desenho e coordenadas do mouse ficam na mesma escala.
+    const width = canvas.clientWidth || canvas.parentElement.clientWidth;
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
+    canvas.width = width * dpr;
     canvas.height = 260 * dpr;
-    canvas.style.width = rect.width + 'px';
+    canvas.style.width = width + 'px';
     canvas.style.height = '260px';
     ctx.scale(dpr, dpr);
 
-    const W = rect.width;
+    const W = width;
     const H = 260;
     const pad = { top: 24, right: 20, bottom: 36, left: 56 };
     const plotW = W - pad.left - pad.right;
