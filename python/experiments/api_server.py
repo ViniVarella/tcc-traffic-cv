@@ -12,7 +12,9 @@ experimento junto.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Sequence
 from pathlib import Path
+import sys
 
 import uvicorn
 
@@ -31,22 +33,36 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+# Classes COCO do detector genérico: carro, ônibus e caminhão. Motos (3) ficam
+# de fora, como na demanda calibrada; não há classe de viatura.
+GENERIC_CLASSES = "2,5,7"
+
+
+def choose_detector(args: argparse.Namespace, argv: Sequence[str], generic: Path) -> bool:
+    """Confere o detector; devolve True se caiu no genérico (COCO).
+
+    O genérico só entra quando ``--model`` não foi passado e o detector ajustado
+    padrão não existe; um ``--model`` explícito ausente encerra com erro, e um
+    ``--classes`` explícito nunca é trocado.
+    """
+    if Path(args.model).exists():
+        return False
+    explicit = {item.split("=", 1)[0] for item in argv if item.startswith("--")}
+    if "--model" in explicit or not generic.exists():
+        raise SystemExit(f"Detector YOLO não encontrado: {args.model} (rode a partir de python/ ou passe --model).")
+    print(f"aviso detector_ajustado_ausente={args.model} usando={generic.name} "
+          "(sem detecção visual de ambulâncias; prioridade só pelo V2I)")
+    args.model = str(generic)
+    if "--classes" not in explicit:
+        args.classes = GENERIC_CLASSES
+    return True
+
+
 def main() -> None:
     args = parse_args()
-    model = Path(args.model)
-    if not model.exists():
-        # Fallback para o yolov8n.pt local se o detector customizado não estiver presente
-        local_yolo = Path(__file__).resolve().parents[1] / "yolov8n.pt"
-        if local_yolo.exists():
-            print(f"Aviso: detector ajustado ({model}) não encontrado.")
-            print(f"Utilizando modelo local de fallback: {local_yolo.name} com classes COCO (2,3,5,7).")
-            args.model = str(local_yolo)
-            args.classes = "2,3,5,7"
-            model = local_yolo
-        else:
-            raise SystemExit(f"Detector YOLO não encontrado: {model} (rode a partir de python/ ou passe --model).")
     base_dir = Path(__file__).resolve().parents[1]
-    app = create_app(PanelSettings(base_dir, args, args.warmup_seconds, args.control_seconds))
+    generic = choose_detector(args, sys.argv[1:], base_dir / "yolov8n.pt")
+    app = create_app(PanelSettings(base_dir, args, args.warmup_seconds, args.control_seconds, generic_detector=generic))
     uvicorn.run(app, host=args.host, port=args.port)
 
 

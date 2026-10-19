@@ -447,30 +447,30 @@
                     <p class="page-subtitle">Comparativo de desempenho entre o semáforo convencional e a inteligência adaptativa TraffIQ</p>
                 </div>
                 <div class="dash-controls">
-                    <button class="btn btn-sm btn-outline" id="btn-reset-charts">Limpar amostragem</button>
+                    <button class="btn btn-sm btn-outline" id="btn-reset-charts" title="Limpa os gráficos; os indicadores valem para a demonstração inteira">Limpar gráficos</button>
                 </div>
             </div>
 
             <div class="kpi-row">
                 <div class="kpi-card">
                     <div class="kpi-value" id="kpi-total-steps">0:00</div>
-                    <div class="kpi-label">Tempo de demonstração</div>
-                    <div class="kpi-subtext">Duração da amostragem</div>
+                    <div class="kpi-label">Tempo de amostra</div>
+                    <div class="kpi-subtext">Simulado, depois do aquecimento</div>
                 </div>
                 <div class="kpi-card accent-amber">
-                    <div class="kpi-value" id="kpi-avg-wait">0.0 s</div>
-                    <div class="kpi-label">Tempo médio de espera</div>
-                    <div class="kpi-subtext" id="kpi-baseline-ref">vs 20.8 s (tempo fixo)</div>
+                    <div class="kpi-value" id="kpi-avg-wait">—</div>
+                    <div class="kpi-label">Espera média por veículo</div>
+                    <div class="kpi-subtext" id="kpi-baseline-ref">tempo fixo na avaliação: —</div>
                 </div>
                 <div class="kpi-card accent-green">
                     <div class="kpi-value text-green" id="kpi-reduction-val">—</div>
                     <div class="kpi-label">Redução na espera</div>
-                    <div class="kpi-subtext text-green font-semibold">nesta demonstração, contra a média do tempo fixo</div>
+                    <div class="kpi-subtext text-green font-semibold" id="kpi-reduction-note">aguardando amostra</div>
                 </div>
                 <div class="kpi-card accent-siren">
                     <div class="kpi-value text-siren" id="kpi-emergency-val">0</div>
                     <div class="kpi-label">Ambulâncias acionadas</div>
-                    <div class="kpi-subtext text-siren" id="kpi-emergency-sub">nesta demonstração</div>
+                    <div class="kpi-subtext text-siren">nesta demonstração</div>
                 </div>
             </div>
 
@@ -478,13 +478,13 @@
                 <div class="chart-card wide">
                     <div class="chart-header">
                         <div>
-                            <h3>Tempo médio de espera: TraffIQ vs Semáforo Convencional</h3>
-                            <span class="chart-subtitle">Evolução do tempo de espera com linha de referência do tempo fixo</span>
+                            <h3>Espera média por veículo: demonstração vs tempo fixo</h3>
+                            <span class="chart-subtitle">Média desde o aquecimento; a linha tracejada é o tempo fixo na avaliação oficial</span>
                         </div>
                         <div class="chart-header-actions">
                             <div class="chart-legend">
-                                <span class="legend-item"><span class="legend-badge-line baseline"></span> Tempo fixo (<span id="legend-baseline-val">20.8s</span>)</span>
-                                <span class="legend-item"><span class="legend-badge-line live-line"></span> TraffIQ (IA)</span>
+                                <span class="legend-item"><span class="legend-badge-line baseline"></span> Tempo fixo na avaliação (<span id="legend-baseline-val">—</span>)</span>
+                                <span class="legend-item"><span class="legend-badge-line live-line"></span> Esta demonstração</span>
                             </div>
                             <span class="chart-badge live">AO VIVO</span>
                         </div>
@@ -512,7 +512,7 @@
                     <div class="chart-header">
                         <div>
                             <h3>Divisão do tempo do semáforo por fase</h3>
-                            <span class="chart-subtitle">Alocação dinâmica do verde conforme a demanda visual real</span>
+                            <span class="chart-subtitle">Tempo de verde de cada fase nesta demonstração</span>
                         </div>
                     </div>
                     <div class="chart-body">
@@ -545,7 +545,7 @@
                     <div class="chart-header">
                         <div>
                             <h3>Ganhos Operacionais e de Segurança</h3>
-                            <span class="chart-subtitle">Benefícios medidos no cruzamento</span>
+                            <span class="chart-subtitle">Resultados da avaliação oficial (cenário com pedestres)</span>
                         </div>
                     </div>
                     <div class="chart-body">

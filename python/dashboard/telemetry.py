@@ -71,4 +71,6 @@ def build_telemetry(info: Mapping[str, Any]) -> dict[str, Any]:
         "preempt_target": info.get("preempt_target"),
         "vision": approach_features(info.get("lane_features")),
         "ground_truth": ground_truth_metrics(info["lane_metrics"]),
+        # Espera média por veículo desde o aquecimento: a métrica das avaliações.
+        "trip": info.get("trip_metrics"),
     }

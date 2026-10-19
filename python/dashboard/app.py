@@ -42,6 +42,16 @@ SCENARIOS = ("calibrated", "calibrated_ped", "original")
 # não aparece aqui.
 VERSIONS = ("v2", "baseline", "v1", "max_pressure")
 PREEMPTION_SOURCES = ("none", *EMERGENCY_DETECTIONS)
+# Espera média por veículo do ciclo fixo em cada cenário, na avaliação oficial
+# (compare_versions, seeds 201–203, 300 s + 1800 s; README e
+# results/evaluation/versoes-<cenário>-*.json). O ciclo fixo não depende da
+# percepção. É a referência da "redução" do painel, que mede ao vivo a mesma
+# métrica (ExperimentMetricsCollector.progress).
+FIXED_TIME_REFERENCE_S = {"calibrated": 13.0, "calibrated_ped": 20.8, "original": 14.9}
+# Amostra mínima (s simulados depois do aquecimento) antes de mostrar a redução.
+MIN_SAMPLE_S = 600.0
+# Com o detector genérico (COCO) a câmera não reconhece viaturas.
+VISUAL_PREEMPTION = ("vision", "both")
 VERSION_LABELS = {"v2": "TraffIQ (IA, v4)", "baseline": "Tempo fixo (convencional)", "v1": "Regra de fila (v1)",
                   "max_pressure": "Max-pressure (referência acadêmica)"}
 
@@ -68,6 +78,8 @@ class PanelSettings:
     vision_args: Any
     warmup_s: float = 30.0
     control_s: float = 36000.0
+    # True quando o api_server caiu no detector genérico (COCO, sem a classe de viatura).
+    generic_detector: bool = False
 
 
 class EpisodeRunner:
@@ -101,6 +113,8 @@ class EpisodeRunner:
     def start(self, request: StartRequest) -> None:
         if request.scenario not in SCENARIOS or request.version not in VERSIONS or request.preemption not in PREEMPTION_SOURCES:
             raise ValueError("Cenário, versão ou fonte de preempção desconhecidos.")
+        if self.settings.generic_detector and request.preemption in VISUAL_PREEMPTION:
+            raise ValueError("O detector genérico não reconhece ambulâncias: use a prioridade só pelo V2I (GPS) ou desligada.")
         checkpoint = self.checkpoints.get(request.version)
         if checkpoint is not None and not checkpoint.exists():
             raise ValueError(f"Checkpoint não encontrado: {checkpoint}")
@@ -255,7 +269,9 @@ def create_app(settings: PanelSettings) -> FastAPI:
     async def options() -> dict[str, Any]:
         return {"scenarios": list(SCENARIOS), "versions": [{"id": key, "label": VERSION_LABELS[key]} for key in VERSIONS],
                 "preemption": list(PREEMPTION_SOURCES), "approaches": list(APPROACHES),
-                "emergency_routes": runner.emergency_routes(), "announce_before_s": runner.announce_before_s}
+                "emergency_routes": runner.emergency_routes(), "announce_before_s": runner.announce_before_s,
+                "fixed_time_reference_s": FIXED_TIME_REFERENCE_S, "min_sample_s": MIN_SAMPLE_S,
+                "generic_detector": settings.generic_detector}
 
     @app.get("/api/state")
     async def state() -> dict[str, Any]:

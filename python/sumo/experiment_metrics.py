@@ -29,6 +29,8 @@ class ExperimentMetricsCollector:
     arrivals_after_warmup: int = 0
     started_at: float | None = None
     ended_at: float | None = None
+    # Soma de completed_waiting_times, para o progresso ao vivo sem refazer a média.
+    completed_waiting_total: float = 0.0
 
     def observe(
         self,
@@ -67,6 +69,19 @@ class ExperimentMetricsCollector:
                 continue
             self.completed_travel_times.append(max(0.0, current_time - departed_at))
             self.completed_waiting_times.append(self.last_waiting_times.pop(vehicle_id, 0.0))
+            self.completed_waiting_total += self.completed_waiting_times[-1]
+
+    def progress(self, sim_time: float) -> dict[str, float | int | None]:
+        """Espera média por veículo até agora: a mesma ``mean_waiting_time_seconds`` do ``summary``.
+
+        Para acompanhar um episódio em andamento (painel); ``None`` antes do primeiro veículo.
+        """
+        completed = len(self.completed_waiting_times)
+        return {
+            "completed_vehicles": completed,
+            "mean_waiting_time_s": self.completed_waiting_total / completed if completed else None,
+            "sampled_s": max(0.0, float(sim_time) - self.warmup_until_s),
+        }
 
     def summary(self) -> dict[str, float | int]:
         """Resume o experimento com métricas comparáveis entre políticas."""

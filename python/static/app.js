@@ -84,13 +84,25 @@ let chartData = { timestamps: [], waitingTimes: [], haltingVehicles: [], phaseCo
 const MAX_CHART_POINTS = 300;
 const APPROACHES = ['west', 'south', 'east'];
 
-const SCENARIO_BASELINES = {
-    calibrated_ped: 20.8,
-    calibrated: 13.0,
-    original: 15.0
-};
-let currentScenario = 'calibrated_ped';
-let recordedBaselineWait = null;
+// Espera por veículo do tempo fixo na avaliação oficial, por cenário, e a amostra
+// mínima antes de mostrar a redução: vêm de /api/options (fonte única no backend).
+let fixedTimeReferenceS = {};
+let minSampleS = 600;
+let runningRequest = null;  // cenário e controlador em execução (data.request)
+let lastDispatchedCount = -1;
+
+/** Referência do tempo fixo do cenário em execução ou, parado, do selecionado. */
+function fixedTimeReference() {
+    const scenario = isRunning && runningRequest ? runningRequest.scenario : selScenario.value;
+    return fixedTimeReferenceS[scenario] ?? null;
+}
+
+function updateReferenceLabels() {
+    const reference = fixedTimeReference();
+    const text = reference == null ? '—' : reference.toFixed(1) + ' s';
+    document.getElementById('legend-baseline-val').textContent = text;
+    document.getElementById('kpi-baseline-ref').textContent = `tempo fixo na avaliação: ${text}`;
+}
 
 const PHASE_LABELS = {
     EAST_WEST_GREEN: 'Verde para Leste e Oeste', EAST_WEST_YELLOW: 'Amarelo para Leste e Oeste',
@@ -169,14 +181,14 @@ function updateTelemetry(data) {
         if (data.error) showMessage('Erro: ' + data.error);
     }
     const dispatchedList = data.dispatched || [];
-    document.getElementById('val-dispatched').textContent = dispatchedList.length;
-    if (!running) pendingAmbulance = null;
-    if (!t) return;
-
-    if (data.request && data.request.scenario) {
-        currentScenario = data.request.scenario;
+    if (dispatchedList.length !== lastDispatchedCount) {
+        lastDispatchedCount = dispatchedList.length;
+        document.getElementById('val-dispatched').textContent = lastDispatchedCount;
+        document.getElementById('kpi-emergency-val').textContent = lastDispatchedCount;
     }
-    const currentVersion = data.request ? data.request.version : null;
+    if (!running) pendingAmbulance = null;
+    runningRequest = running ? data.request : null;
+    if (!t) return;
 
     document.getElementById('sim-clock').textContent = formatClock(t.sim_time || 0);
     updateAmbulanceCountdown(dispatchedList, t.sim_time || 0);
@@ -194,59 +206,23 @@ function updateTelemetry(data) {
     // Um ponto por instante novo da simulação (a telemetria pode repetir o mesmo).
     if (t.sim_time === lastSimTime) return;
     lastSimTime = t.sim_time;
+    // Espera por veículo desde o aquecimento: a mesma métrica da avaliação oficial.
+    const trip = t.trip || {};
+    const meanWait = trip.mean_waiting_time_s;
     chartData.timestamps.push(t.sim_time);
-    chartData.waitingTimes.push(gt.mean_wait_per_stopped_s);
+    if (meanWait != null) chartData.waitingTimes.push(meanWait);
     chartData.haltingVehicles.push(gt.halting_vehicles);
     chartData.phaseCounters[t.phase] = (chartData.phaseCounters[t.phase] || 0) + 1;
-    if (chartData.timestamps.length > MAX_CHART_POINTS) {
-        chartData.timestamps.shift();
-        chartData.waitingTimes.shift();
-        chartData.haltingVehicles.shift();
+    for (const series of [chartData.timestamps, chartData.waitingTimes, chartData.haltingVehicles]) {
+        if (series.length > MAX_CHART_POINTS) series.shift();
     }
 
-    // Se estiver rodando o baseline ao vivo, registra a média observada
-    if (currentVersion === 'baseline' && chartData.waitingTimes.length > 5) {
-        recordedBaselineWait = chartData.waitingTimes.reduce((a, b) => a + b, 0) / chartData.waitingTimes.length;
-    }
-
-    const baseline = recordedBaselineWait || SCENARIO_BASELINES[currentScenario] || 20.8;
-    const legendBaseline = document.getElementById('legend-baseline-val');
-    if (legendBaseline) legendBaseline.textContent = baseline.toFixed(1) + 's';
-    const baselineRef = document.getElementById('kpi-baseline-ref');
-    if (baselineRef) baselineRef.textContent = `vs ${baseline.toFixed(1)} s (tempo fixo)`;
-
-    const points = chartData.timestamps.length;
-    const followed = chartData.timestamps[points - 1] - chartData.timestamps[0];
+    updateReferenceLabels();
+    const sampled = trip.sampled_s || 0;
     document.getElementById('kpi-total-steps').textContent =
-        `${Math.floor(followed / 60)}:${String(Math.floor(followed % 60)).padStart(2, '0')}`;
-    const avgWait = chartData.waitingTimes.reduce((a, b) => a + b, 0) / points;
-    document.getElementById('kpi-avg-wait').textContent = avgWait.toFixed(1) + ' s';
-
-    // Cálculo da economia percentual gerada
-    const reductionElem = document.getElementById('kpi-reduction-val');
-    if (reductionElem) {
-        if (points >= 3 && baseline > 0) {
-            const reductionPct = ((baseline - avgWait) / baseline) * 100;
-            if (reductionPct >= 0) {
-                reductionElem.textContent = '−' + reductionPct.toFixed(1) + '%';
-                reductionElem.className = 'kpi-value text-green';
-            } else {
-                reductionElem.textContent = '+' + Math.abs(reductionPct).toFixed(1) + '%';
-                reductionElem.className = 'kpi-value text-amber';
-            }
-        } else {
-            reductionElem.textContent = '—';
-            reductionElem.className = 'kpi-value text-green';
-        }
-    }
-
-    // Status de Ambulâncias
-    const emergVal = document.getElementById('kpi-emergency-val');
-    if (emergVal) emergVal.textContent = dispatchedList.length;
-    const emergSub = document.getElementById('kpi-emergency-sub');
-    if (emergSub) {
-        emergSub.textContent = 'nesta demonstração';
-    }
+        `${Math.floor(sampled / 60)}:${String(Math.floor(sampled % 60)).padStart(2, '0')}`;
+    document.getElementById('kpi-avg-wait').textContent = meanWait == null ? '—' : meanWait.toFixed(1) + ' s';
+    updateReduction(meanWait, sampled);
 
     requestAnimationFrame(renderCharts);
     updatePhaseDistribution();
@@ -330,7 +306,19 @@ async function loadOptions() {
         selVersion.innerHTML = options.versions.map(v => `<option value="${v.id}">${v.label}</option>`).join('');
         emergencyRoutes = options.emergency_routes || {};
         announceBeforeS = options.announce_before_s;
+        fixedTimeReferenceS = options.fixed_time_reference_s || {};
+        minSampleS = options.min_sample_s ?? minSampleS;
+        if (options.generic_detector) {
+            // Sem a classe de viatura, a câmera não pede prioridade: só o V2I.
+            for (const option of selPreemption.options) {
+                if (option.value === 'vision' || option.value === 'both') option.disabled = true;
+            }
+            selPreemption.value = 'v2i';
+            showMessage('Detector genérico em uso: sem detecção visual de ambulâncias (prioridade só pelo V2I).');
+        }
         syncExitOptions();
+        updateReferenceLabels();
+        renderCharts();
     } catch (e) {
         showMessage('Não foi possível conectar ao servidor do painel.');
     }
@@ -347,21 +335,16 @@ async function post(url, body) {
     }
 }
 
+// Limpa só os gráficos: os indicadores vêm do coletor da rodada inteira no servidor
+// e se atualizam na próxima telemetria.
 function resetCharts() {
     chartData = { timestamps: [], waitingTimes: [], haltingVehicles: [], phaseCounters: {} };
     lastSimTime = null;
     renderCharts();
     updatePhaseDistribution();
-    document.getElementById('kpi-total-steps').textContent = '0:00';
-    document.getElementById('kpi-avg-wait').textContent = '0.0 s';
-    const reductionElem = document.getElementById('kpi-reduction-val');
-    if (reductionElem) {
-        reductionElem.textContent = '—';
-        reductionElem.className = 'kpi-value text-green';
-    }
-    const emergVal = document.getElementById('kpi-emergency-val');
-    if (emergVal) emergVal.textContent = '0';
 }
+
+selScenario.addEventListener('change', () => { updateReferenceLabels(); renderCharts(); });
 
 btnStart.addEventListener('click', async () => {
     try {
@@ -546,9 +529,28 @@ function drawLineChart(canvasId, data, color, label, yLabel, baselineVal = null)
     }
 }
 
+/** Redução da espera contra o tempo fixo do cenário: só com amostra suficiente e
+ *  nunca para o próprio tempo fixo (seria comparar a referência com ela mesma). */
+function updateReduction(meanWait, sampled) {
+    const value = document.getElementById('kpi-reduction-val');
+    const note = document.getElementById('kpi-reduction-note');
+    const reference = fixedTimeReference();
+    value.className = 'kpi-value text-green';
+    value.textContent = '—';
+    if (runningRequest && runningRequest.version === 'baseline') {
+        note.textContent = 'o tempo fixo é a própria referência';
+    } else if (reference == null || meanWait == null || sampled < minSampleS) {
+        note.textContent = `aguardando ${Math.round(minSampleS / 60)} min de amostra (${Math.floor(sampled / 60)} min)`;
+    } else {
+        const pct = (reference - meanWait) / reference * 100;
+        value.textContent = (pct >= 0 ? '−' : '+') + Math.abs(pct).toFixed(0) + '%';
+        if (pct < 0) value.className = 'kpi-value text-amber';
+        note.textContent = 'estimativa desta demonstração, contra o tempo fixo na avaliação';
+    }
+}
+
 function renderCharts() {
-    const baseline = recordedBaselineWait || SCENARIO_BASELINES[currentScenario] || 20.8;
-    drawLineChart('chart-waiting', chartData.waitingTimes, '#2dd4a0', 'Espera', 's', baseline);
+    drawLineChart('chart-waiting', chartData.waitingTimes, '#2dd4a0', 'Espera', 's', fixedTimeReference());
     drawLineChart('chart-halting', chartData.haltingVehicles, '#4f8ff7', 'Veículos', '');
 }
 

@@ -33,6 +33,18 @@ class ExperimentMetricsCollectorTests(unittest.TestCase):
         self.assertEqual((summary["mean_pending_vehicles"], summary["max_pending_vehicles"], summary["final_pending_vehicles"]), (3.0, 4, 2))
         self.assertEqual((summary["teleported_vehicles"], summary["warmup_seconds"]), (1, 10.0))
 
+    def test_progress_tracks_the_summary_waiting_time(self) -> None:
+        collector = ExperimentMetricsCollector(warmup_until_s=10.0)
+        self.assertEqual(collector.progress(5.0), {"completed_vehicles": 0, "mean_waiting_time_s": None, "sampled_s": 0.0})
+        collector.observe(11, {"departed": ["a", "b"], "arrived": []},
+                          {"a": {"speed": 0.0, "accumulated_waiting_time": 4.0}, "b": {"speed": 0.0, "accumulated_waiting_time": 8.0}})
+        collector.observe(12, {"departed": [], "arrived": ["a"]}, {"b": {"speed": 0.0, "accumulated_waiting_time": 9.0}})
+        self.assertEqual(collector.progress(12.0), {"completed_vehicles": 1, "mean_waiting_time_s": 4.0, "sampled_s": 2.0})
+        collector.observe(13, {"departed": [], "arrived": ["b"]}, {})
+        progress = collector.progress(13.0)
+        self.assertAlmostEqual(progress["mean_waiting_time_s"], collector.summary()["mean_waiting_time_seconds"])
+        self.assertEqual(progress["completed_vehicles"], 2)
+
     def test_pending_metrics_are_omitted_when_not_observed(self) -> None:
         collector = ExperimentMetricsCollector()
         collector.observe(1, {"departed": [], "arrived": []}, {})

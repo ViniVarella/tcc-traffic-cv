@@ -7,7 +7,8 @@ from pathlib import Path
 import threading
 import unittest
 
-from dashboard.app import EpisodeRunner, PanelSettings, StartRequest
+from dashboard.app import FIXED_TIME_REFERENCE_S, SCENARIOS, EpisodeRunner, PanelSettings, StartRequest
+from experiments.api_server import GENERIC_CLASSES, choose_detector
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -49,6 +50,19 @@ class EpisodeRunnerValidationTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.runner.dispatch_emergency(approach, exit_name)
 
+    def test_generic_detector_refuses_visual_preemption(self) -> None:
+        runner = EpisodeRunner(PanelSettings(BASE_DIR, argparse.Namespace(), generic_detector=True))
+        runner.checkpoints, runner._thread = self.runner.checkpoints, threading.current_thread()
+        runner._bridge_ready.set()
+        for source in ("vision", "both"):
+            with self.assertRaisesRegex(ValueError, "V2I"):
+                runner.start(StartRequest(preemption=source))
+        runner.start(StartRequest(preemption="v2i"))
+        self.assertTrue(runner.state["is_running"])
+
+    def test_every_scenario_has_a_fixed_time_reference(self) -> None:
+        self.assertEqual(set(FIXED_TIME_REFERENCE_S), set(SCENARIOS))
+
     def test_v1_heuristic_needs_no_checkpoint(self) -> None:
         self.runner.v1_1_checkpoint = BASE_DIR / "nao-existe.pt"
         self.runner.start(StartRequest(version="v1"))
@@ -71,6 +85,39 @@ class EpisodeRunnerValidationTests(unittest.TestCase):
     def test_emergency_routes_follow_the_config(self) -> None:
         self.assertEqual(self.runner.emergency_routes(),
                          {"south": ["east", "north", "west"], "east": ["north", "west"], "west": ["east"]})
+
+
+class DetectorChoiceTests(unittest.TestCase):
+    TUNED = str(BASE_DIR / "configs" / "sp.yaml")  # um arquivo que existe
+    MISSING = str(BASE_DIR / "nao-existe.pt")
+    GENERIC = BASE_DIR / "configs" / "sp.yaml"
+
+    def args(self, model: str, classes: str = "0,1") -> argparse.Namespace:
+        return argparse.Namespace(model=model, classes=classes)
+
+    def test_tuned_detector_is_kept(self) -> None:
+        args = self.args(self.TUNED)
+        self.assertFalse(choose_detector(args, [], self.GENERIC))
+        self.assertEqual((args.model, args.classes), (self.TUNED, "0,1"))
+
+    def test_default_missing_falls_back_to_generic_without_motorcycles(self) -> None:
+        args = self.args(self.MISSING)
+        self.assertTrue(choose_detector(args, [], self.GENERIC))
+        self.assertEqual((args.model, args.classes), (str(self.GENERIC), GENERIC_CLASSES))
+        self.assertNotIn("3", GENERIC_CLASSES.split(","))
+
+    def test_explicit_classes_are_never_replaced(self) -> None:
+        args = self.args(self.MISSING, classes="2,7")
+        self.assertTrue(choose_detector(args, ["--classes", "2,7"], self.GENERIC))
+        self.assertEqual(args.classes, "2,7")
+
+    def test_explicit_missing_model_still_fails(self) -> None:
+        with self.assertRaises(SystemExit):
+            choose_detector(self.args(self.MISSING), ["--model", self.MISSING], self.GENERIC)
+        with self.assertRaises(SystemExit):
+            choose_detector(self.args(self.MISSING), [f"--model={self.MISSING}"], self.GENERIC)
+        with self.assertRaises(SystemExit):
+            choose_detector(self.args(self.MISSING), [], BASE_DIR / "tambem-nao-existe.pt")
 
 
 if __name__ == "__main__":
