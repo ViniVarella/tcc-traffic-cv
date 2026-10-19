@@ -35,15 +35,28 @@ class ExperimentMetricsCollectorTests(unittest.TestCase):
 
     def test_progress_tracks_the_summary_waiting_time(self) -> None:
         collector = ExperimentMetricsCollector(warmup_until_s=10.0)
-        self.assertEqual(collector.progress(5.0), {"completed_vehicles": 0, "mean_waiting_time_s": None, "sampled_s": 0.0})
+        empty = collector.progress(5.0)
+        self.assertEqual((empty["completed_vehicles"], empty["mean_waiting_time_s"], empty["sampled_s"]), (0, None, 0.0))
         collector.observe(11, {"departed": ["a", "b"], "arrived": []},
-                          {"a": {"speed": 0.0, "accumulated_waiting_time": 4.0}, "b": {"speed": 0.0, "accumulated_waiting_time": 8.0}})
-        collector.observe(12, {"departed": [], "arrived": ["a"]}, {"b": {"speed": 0.0, "accumulated_waiting_time": 9.0}})
-        self.assertEqual(collector.progress(12.0), {"completed_vehicles": 1, "mean_waiting_time_s": 4.0, "sampled_s": 2.0})
-        collector.observe(13, {"departed": [], "arrived": ["b"]}, {})
-        progress = collector.progress(13.0)
-        self.assertAlmostEqual(progress["mean_waiting_time_s"], collector.summary()["mean_waiting_time_seconds"])
-        self.assertEqual(progress["completed_vehicles"], 2)
+                          {"a": {"speed": 0.0, "accumulated_waiting_time": 4.0}, "b": {"speed": 0.0, "accumulated_waiting_time": 8.0}},
+                          pending_vehicles=3)
+        collector.observe(12, {"departed": [], "arrived": ["a"]}, {"b": {"speed": 0.0, "accumulated_waiting_time": 9.0}}, pending_vehicles=2)
+        progress = collector.progress(12.0)
+        self.assertEqual((progress["completed_vehicles"], progress["mean_waiting_time_s"], progress["sampled_s"]), (1, 4.0, 2.0))
+        # A fila de inserção e os veículos ainda na rede vão à parte, não na média.
+        self.assertEqual((progress["pending_vehicles"], progress["active_vehicles"]), (2, 1))
+        collector.observe(13, {"departed": [], "arrived": ["b"]}, {}, pending_vehicles=0)
+        self.assertEqual(collector.progress(13.0)["mean_waiting_time_s"], collector.summary()["mean_waiting_time_seconds"])
+
+    def test_progress_can_leave_emergency_vehicles_out(self) -> None:
+        collector = ExperimentMetricsCollector()
+        collector.observe(1, {"departed": ["car", "emergency_0", "emergency_manual_0"], "arrived": []}, {
+            "car": {"speed": 0.0, "accumulated_waiting_time": 6.0},
+            "emergency_0": {"speed": 0.0, "accumulated_waiting_time": 0.0},
+            "emergency_manual_0": {"speed": 0.0, "accumulated_waiting_time": 0.0}})
+        collector.observe(2, {"departed": [], "arrived": ["car", "emergency_0", "emergency_manual_0"]}, {})
+        self.assertEqual(collector.progress(2.0, exclude_prefix="emergency")["mean_waiting_time_s"], 6.0)
+        self.assertEqual(collector.progress(2.0)["mean_waiting_time_s"], collector.summary()["mean_waiting_time_seconds"])
 
     def test_pending_metrics_are_omitted_when_not_observed(self) -> None:
         collector = ExperimentMetricsCollector()

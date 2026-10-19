@@ -29,8 +29,9 @@ class ExperimentMetricsCollector:
     arrivals_after_warmup: int = 0
     started_at: float | None = None
     ended_at: float | None = None
-    # Soma de completed_waiting_times, para o progresso ao vivo sem refazer a média.
-    completed_waiting_total: float = 0.0
+    # Id de cada veículo de completed_waiting_times (mesma ordem), para o progresso
+    # ao vivo poder deixar as viaturas de fora.
+    completed_ids: list[str] = field(default_factory=list)
 
     def observe(
         self,
@@ -69,18 +70,24 @@ class ExperimentMetricsCollector:
                 continue
             self.completed_travel_times.append(max(0.0, current_time - departed_at))
             self.completed_waiting_times.append(self.last_waiting_times.pop(vehicle_id, 0.0))
-            self.completed_waiting_total += self.completed_waiting_times[-1]
+            self.completed_ids.append(vehicle_id)
 
-    def progress(self, sim_time: float) -> dict[str, float | int | None]:
+    def progress(self, sim_time: float, exclude_prefix: str | None = None) -> dict[str, float | int | None]:
         """Espera média por veículo até agora: a mesma ``mean_waiting_time_seconds`` do ``summary``.
 
-        Para acompanhar um episódio em andamento (painel); ``None`` antes do primeiro veículo.
+        Para acompanhar um episódio em andamento (painel). ``exclude_prefix`` deixa de
+        fora veículos por id (ex.: ``"emergency"`` para as viaturas). A fila de inserção
+        e os veículos ainda na rede não entram na média: vão à parte, para o painel
+        mostrá-los. ``None`` antes do primeiro veículo.
         """
-        completed = len(self.completed_waiting_times)
+        waits = [wait for vehicle_id, wait in zip(self.completed_ids, self.completed_waiting_times)
+                 if exclude_prefix is None or not vehicle_id.startswith(exclude_prefix)]
         return {
-            "completed_vehicles": completed,
-            "mean_waiting_time_s": self.completed_waiting_total / completed if completed else None,
+            "completed_vehicles": len(waits),
+            "mean_waiting_time_s": _mean(waits) if waits else None,
             "sampled_s": max(0.0, float(sim_time) - self.warmup_until_s),
+            "pending_vehicles": self.pending_samples[-1] if self.pending_samples else 0,
+            "active_vehicles": self.active_vehicle_samples[-1] if self.active_vehicle_samples else 0,
         }
 
     def summary(self) -> dict[str, float | int]:

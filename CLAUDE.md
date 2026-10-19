@@ -409,6 +409,10 @@ Todos a partir de `python/`:
 # Painel web de demonstração (Unity em Play Mode; http://127.0.0.1:8000/). Mesmo
 # Environment.run e mesmas versões das avaliações; botão de viatura usa
 # EmergencyTraffic.dispatch. Não é avaliação: não use seus números em tabelas.
+# Aquecimento de 300 s, como as avaliações; a "redução" é uma estimativa (1 seed)
+# na mesma métrica (espera por veículo, sem viaturas) contra o tempo fixo de
+# results/evaluation. Sem o detector ajustado, só sobe com --allow-generic-detector
+# (yolov8n.pt COCO, sem detecção visual de ambulâncias).
 ../.venv/bin/python -m experiments.api_server
 
 # Estender ROIs de faixa a partir da borda próxima desenhada na calibração

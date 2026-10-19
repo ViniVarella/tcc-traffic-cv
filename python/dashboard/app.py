@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+import json
 from pathlib import Path
 import queue
 import threading
@@ -42,12 +43,31 @@ SCENARIOS = ("calibrated", "calibrated_ped", "original")
 # não aparece aqui.
 VERSIONS = ("v2", "baseline", "v1", "max_pressure")
 PREEMPTION_SOURCES = ("none", *EMERGENCY_DETECTIONS)
-# Espera média por veículo do ciclo fixo em cada cenário, na avaliação oficial
-# (compare_versions, seeds 201–203, 300 s + 1800 s; README e
-# results/evaluation/versoes-<cenário>-*.json). O ciclo fixo não depende da
-# percepção. É a referência da "redução" do painel, que mede ao vivo a mesma
-# métrica (ExperimentMetricsCollector.progress).
+# Espera média por veículo do ciclo fixo em cada cenário, na avaliação oficial: a
+# referência da "redução" do painel, que mede ao vivo a mesma métrica
+# (ExperimentMetricsCollector.progress). Lida de results/evaluation; estes valores
+# (README, 2026-10-14) só valem se o arquivo faltar ou for de outro protocolo.
 FIXED_TIME_REFERENCE_S = {"calibrated": 13.0, "calibrated_ped": 20.8, "original": 14.9}
+OFFICIAL_PROTOCOL = {"warmup_s": 300.0, "control_s": 1800.0, "seeds": [201, 202, 203]}
+
+
+def load_fixed_time_reference(results_dir: Path) -> tuple[dict[str, float], dict[str, str]]:
+    """Referência do tempo fixo por cenário e a origem de cada uma ("avaliação" ou "valor embutido").
+
+    Lê ``versoes-<cenário>-oracle.json`` (o ciclo fixo não depende da percepção) e só
+    o aceita no protocolo oficial (seeds 201–203, 300 s + 1800 s).
+    """
+    values, sources = dict(FIXED_TIME_REFERENCE_S), {scenario: "valor embutido" for scenario in FIXED_TIME_REFERENCE_S}
+    for scenario in FIXED_TIME_REFERENCE_S:
+        try:
+            report = json.loads((results_dir / f"versoes-{scenario}-oracle.json").read_text(encoding="utf-8"))
+            if any(report.get(key) != value for key, value in OFFICIAL_PROTOCOL.items()):
+                continue
+            values[scenario] = round(float(report["versions"]["baseline"]["mean"]["mean_waiting_time_seconds"]), 1)
+            sources[scenario] = "avaliação"
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    return values, sources
 # Amostra mínima (s simulados depois do aquecimento) antes de mostrar a redução.
 MIN_SAMPLE_S = 600.0
 # Com o detector genérico (COCO) a câmera não reconhece viaturas.
@@ -76,7 +96,7 @@ EXIT_EDGES = {"north": "E0", "east": "E1", "west": "E5"}
 class PanelSettings:
     base_dir: Path
     vision_args: Any
-    warmup_s: float = 30.0
+    warmup_s: float = 300.0
     control_s: float = 36000.0
     # True quando o api_server caiu no detector genérico (COCO, sem a classe de viatura).
     generic_detector: bool = False
@@ -95,6 +115,8 @@ class EpisodeRunner:
         self.v1_1_checkpoint = models / "visual-dqn-sp-best.pt"
         self.checkpoints = {"v2": models / "dqn-v2-sem-motos-best.pt"}
         self.announce_before_s = EmergencySettings.from_config(self.config).announce_before_s
+        self.fixed_time_reference, self.fixed_time_reference_source = load_fixed_time_reference(
+            settings.base_dir.parent / "results" / "evaluation")
         self.state: dict[str, Any] = {"is_running": False, "status": "parado", "request": None, "telemetry": None,
                                       "dispatched": [], "error": None, "last_summary": None}
         self.frames: dict[str, bytes | None] = {camera: None for camera in APPROACHES}
@@ -270,7 +292,8 @@ def create_app(settings: PanelSettings) -> FastAPI:
         return {"scenarios": list(SCENARIOS), "versions": [{"id": key, "label": VERSION_LABELS[key]} for key in VERSIONS],
                 "preemption": list(PREEMPTION_SOURCES), "approaches": list(APPROACHES),
                 "emergency_routes": runner.emergency_routes(), "announce_before_s": runner.announce_before_s,
-                "fixed_time_reference_s": FIXED_TIME_REFERENCE_S, "min_sample_s": MIN_SAMPLE_S,
+                "fixed_time_reference_s": runner.fixed_time_reference,
+                "fixed_time_reference_source": runner.fixed_time_reference_source, "min_sample_s": MIN_SAMPLE_S,
                 "generic_detector": settings.generic_detector}
 
     @app.get("/api/state")

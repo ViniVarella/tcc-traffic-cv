@@ -80,7 +80,8 @@ connectWS();
 let isRunning = false;
 let lastSimTime = null;
 let lastError = null;
-let chartData = { timestamps: [], waitingTimes: [], haltingVehicles: [], phaseCounters: {} };
+// waitingTimesAt: instante de cada ponto de espera (a série só começa no primeiro veículo concluído).
+let chartData = { timestamps: [], waitingTimes: [], waitingTimesAt: [], haltingVehicles: [], phaseCounters: {} };
 const MAX_CHART_POINTS = 300;
 const APPROACHES = ['west', 'south', 'east'];
 
@@ -89,11 +90,15 @@ const APPROACHES = ['west', 'south', 'east'];
 let fixedTimeReferenceS = {};
 let minSampleS = 600;
 let runningRequest = null;  // cenário e controlador em execução (data.request)
+let lastRunScenario = null;  // cenário dos dados no gráfico (mantido depois do Parar)
 let lastDispatchedCount = -1;
 
-/** Referência do tempo fixo do cenário em execução ou, parado, do selecionado. */
+/** Referência do tempo fixo do cenário dos dados mostrados: o em execução, o da última
+ *  rodada enquanto o gráfico tiver dados dela, ou (sem dados) o selecionado. */
 function fixedTimeReference() {
-    const scenario = isRunning && runningRequest ? runningRequest.scenario : selScenario.value;
+    let scenario = selScenario.value;
+    if (isRunning && runningRequest) scenario = runningRequest.scenario;
+    else if (chartData.waitingTimes.length && lastRunScenario) scenario = lastRunScenario;
     return fixedTimeReferenceS[scenario] ?? null;
 }
 
@@ -188,6 +193,7 @@ function updateTelemetry(data) {
     }
     if (!running) pendingAmbulance = null;
     runningRequest = running ? data.request : null;
+    if (runningRequest) lastRunScenario = runningRequest.scenario;
     if (!t) return;
 
     document.getElementById('sim-clock').textContent = formatClock(t.sim_time || 0);
@@ -210,10 +216,14 @@ function updateTelemetry(data) {
     const trip = t.trip || {};
     const meanWait = trip.mean_waiting_time_s;
     chartData.timestamps.push(t.sim_time);
-    if (meanWait != null) chartData.waitingTimes.push(meanWait);
     chartData.haltingVehicles.push(gt.halting_vehicles);
+    if (meanWait != null) {
+        chartData.waitingTimes.push(meanWait);
+        chartData.waitingTimesAt.push(t.sim_time);
+    }
     chartData.phaseCounters[t.phase] = (chartData.phaseCounters[t.phase] || 0) + 1;
-    for (const series of [chartData.timestamps, chartData.waitingTimes, chartData.haltingVehicles]) {
+    // Cada série anda junto com o próprio eixo do tempo.
+    for (const series of [chartData.timestamps, chartData.haltingVehicles, chartData.waitingTimes, chartData.waitingTimesAt]) {
         if (series.length > MAX_CHART_POINTS) series.shift();
     }
 
@@ -222,6 +232,11 @@ function updateTelemetry(data) {
     document.getElementById('kpi-total-steps').textContent =
         `${Math.floor(sampled / 60)}:${String(Math.floor(sampled % 60)).padStart(2, '0')}`;
     document.getElementById('kpi-avg-wait').textContent = meanWait == null ? '—' : meanWait.toFixed(1) + ' s';
+    // Quem ainda espera para entrar na rede não está na média (só veículos que concluíram o trajeto).
+    const pending = trip.pending_vehicles || 0;
+    const pendingNote = document.getElementById('kpi-pending');
+    pendingNote.textContent = pending ? `fila de entrada: ${pending} veículos (ainda fora da média)` : 'fila de entrada: 0';
+    pendingNote.classList.toggle('text-amber', pending > 0);
     updateReduction(meanWait, sampled);
 
     requestAnimationFrame(renderCharts);
@@ -313,7 +328,8 @@ async function loadOptions() {
             for (const option of selPreemption.options) {
                 if (option.value === 'vision' || option.value === 'both') option.disabled = true;
             }
-            selPreemption.value = 'v2i';
+            // Só troca se a escolha atual ficou indisponível; "Desativada" é mantida.
+            if (selPreemption.selectedOptions[0]?.disabled) selPreemption.value = 'v2i';
             showMessage('Detector genérico em uso: sem detecção visual de ambulâncias (prioridade só pelo V2I).');
         }
         syncExitOptions();
@@ -338,7 +354,7 @@ async function post(url, body) {
 // Limpa só os gráficos: os indicadores vêm do coletor da rodada inteira no servidor
 // e se atualizam na próxima telemetria.
 function resetCharts() {
-    chartData = { timestamps: [], waitingTimes: [], haltingVehicles: [], phaseCounters: {} };
+    chartData = { timestamps: [], waitingTimes: [], waitingTimesAt: [], haltingVehicles: [], phaseCounters: {} };
     lastSimTime = null;
     renderCharts();
     updatePhaseDistribution();
@@ -349,6 +365,7 @@ selScenario.addEventListener('change', () => { updateReferenceLabels(); renderCh
 btnStart.addEventListener('click', async () => {
     try {
         await post('/api/start', { scenario: selScenario.value, version: selVersion.value, preemption: selPreemption.value });
+        lastRunScenario = selScenario.value;
         resetCharts();
         showMessage('Iniciando a simulação. As imagens serão exibidas em alguns segundos.');
         isRunning = true;
@@ -386,7 +403,7 @@ updateButtons();
 // ============================================
 //  Chart Rendering (Canvas-based, no library)
 // ============================================
-function drawLineChart(canvasId, data, color, label, yLabel, baselineVal = null) {
+function drawLineChart(canvasId, data, color, label, yLabel, baselineVal = null, times = chartData.timestamps) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -476,7 +493,7 @@ function drawLineChart(canvasId, data, color, label, yLabel, baselineVal = null)
     for (let i = 0; i < xLabelCount; i++) {
         const idx = Math.floor((data.length - 1) * i / (xLabelCount - 1));
         const x = pad.left + (plotW * idx / (data.length - 1));
-        const t = chartData.timestamps[idx] || 0;
+        const t = times[idx] || 0;
         const m = Math.floor(t / 60);
         const s = Math.floor(t % 60);
         ctx.fillText(`${m}:${String(s).padStart(2, '0')}`, x, H - 8);
@@ -545,12 +562,12 @@ function updateReduction(meanWait, sampled) {
         const pct = (reference - meanWait) / reference * 100;
         value.textContent = (pct >= 0 ? '−' : '+') + Math.abs(pct).toFixed(0) + '%';
         if (pct < 0) value.className = 'kpi-value text-amber';
-        note.textContent = 'estimativa desta demonstração, contra o tempo fixo na avaliação';
+        note.textContent = 'estimativa desta demonstração (1 seed), contra o tempo fixo na avaliação (3 seeds)';
     }
 }
 
 function renderCharts() {
-    drawLineChart('chart-waiting', chartData.waitingTimes, '#2dd4a0', 'Espera', 's', fixedTimeReference());
+    drawLineChart('chart-waiting', chartData.waitingTimes, '#2dd4a0', 'Espera', 's', fixedTimeReference(), chartData.waitingTimesAt);
     drawLineChart('chart-halting', chartData.haltingVehicles, '#4f8ff7', 'Veículos', '');
 }
 

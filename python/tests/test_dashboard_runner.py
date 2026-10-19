@@ -7,8 +7,11 @@ from pathlib import Path
 import threading
 import unittest
 
-from dashboard.app import FIXED_TIME_REFERENCE_S, SCENARIOS, EpisodeRunner, PanelSettings, StartRequest
-from experiments.api_server import GENERIC_CLASSES, choose_detector
+import json
+import tempfile
+
+from dashboard.app import FIXED_TIME_REFERENCE_S, SCENARIOS, EpisodeRunner, PanelSettings, StartRequest, load_fixed_time_reference
+from experiments.api_server import GENERIC_CLASSES, choose_detector, parse_args
 
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -63,6 +66,19 @@ class EpisodeRunnerValidationTests(unittest.TestCase):
     def test_every_scenario_has_a_fixed_time_reference(self) -> None:
         self.assertEqual(set(FIXED_TIME_REFERENCE_S), set(SCENARIOS))
 
+    def test_reference_comes_from_the_official_evaluation_only(self) -> None:
+        def report(warmup: float, wait: float) -> str:
+            return json.dumps({"warmup_s": warmup, "control_s": 1800.0, "seeds": [201, 202, 203],
+                               "versions": {"baseline": {"mean": {"mean_waiting_time_seconds": wait}}}})
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            (folder / "versoes-calibrated-oracle.json").write_text(report(300.0, 12.34), encoding="utf-8")
+            (folder / "versoes-original-oracle.json").write_text(report(30.0, 99.0), encoding="utf-8")  # outro protocolo
+            values, sources = load_fixed_time_reference(folder)
+        self.assertEqual((values["calibrated"], sources["calibrated"]), (12.3, "avaliação"))
+        self.assertEqual((values["original"], sources["original"]), (FIXED_TIME_REFERENCE_S["original"], "valor embutido"))
+        self.assertEqual(sources["calibrated_ped"], "valor embutido")  # arquivo ausente
+
     def test_v1_heuristic_needs_no_checkpoint(self) -> None:
         self.runner.v1_1_checkpoint = BASE_DIR / "nao-existe.pt"
         self.runner.start(StartRequest(version="v1"))
@@ -92,8 +108,8 @@ class DetectorChoiceTests(unittest.TestCase):
     MISSING = str(BASE_DIR / "nao-existe.pt")
     GENERIC = BASE_DIR / "configs" / "sp.yaml"
 
-    def args(self, model: str, classes: str = "0,1") -> argparse.Namespace:
-        return argparse.Namespace(model=model, classes=classes)
+    def args(self, model: str, classes: str = "0,1", allow: bool = True) -> argparse.Namespace:
+        return argparse.Namespace(model=model, classes=classes, allow_generic_detector=allow)
 
     def test_tuned_detector_is_kept(self) -> None:
         args = self.args(self.TUNED)
@@ -110,6 +126,16 @@ class DetectorChoiceTests(unittest.TestCase):
         args = self.args(self.MISSING, classes="2,7")
         self.assertTrue(choose_detector(args, ["--classes", "2,7"], self.GENERIC))
         self.assertEqual(args.classes, "2,7")
+
+    def test_generic_detector_needs_the_explicit_option(self) -> None:
+        # Sem --allow-generic-detector (ex.: servidor aberto fora de python/), falha como antes.
+        with self.assertRaisesRegex(SystemExit, "allow-generic-detector"):
+            choose_detector(self.args(self.MISSING, allow=False), [], self.GENERIC)
+
+    def test_abbreviated_options_are_refused(self) -> None:
+        with self.assertRaises(SystemExit):
+            parse_args(["--mod", self.MISSING])
+        self.assertEqual(parse_args([]).warmup_seconds, 300.0)
 
     def test_explicit_missing_model_still_fails(self) -> None:
         with self.assertRaises(SystemExit):
