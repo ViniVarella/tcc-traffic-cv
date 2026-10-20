@@ -757,7 +757,7 @@ function updateReduction(valueId, noteId, meanWait, reference, sampled, warming 
 }
 
 function renderCharts() {
-    drawLineChart('chart-waiting', chartData.waitingTimes, '#2dd4a0', 'Espera média', 's', fixedTimeReference(), chartData.waitingTimesAt);
+    drawLineChart('chart-waiting', chartData.waitingTimes, '#2dd4a0', 'Espera geral', 's', fixedTimeReference(), chartData.waitingTimesAt);
     drawLineChart('chart-stopped', chartData.stoppedWaits, '#a78bfa', 'Espera parado', 's',
                   fixedTimeReference(fixedTimeStoppedReferenceS), chartData.stoppedWaitsAt);
     drawLineChart('chart-halting', chartData.haltingVehicles, '#4f8ff7', 'Veículos retidos', '');
