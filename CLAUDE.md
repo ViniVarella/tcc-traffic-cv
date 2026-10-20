@@ -83,7 +83,7 @@ python/                 código Python (rodar comandos a partir daqui)
                         páginas em python/static/
   tests/                unittest (test_*.py)
 sumo/sp/                rede, rotas e detectores do cenário SP (Cruzamento.*)
-unity/TrafficVisionUnity/   projeto Unity 6000.0.53f1 (Unity 6, URP, macOS/Metal)
+unity/TraffIQ-TCC/      projeto Unity 6000.0.53f1 (Unity 6, URP, macOS/Metal)
 optimization/SP/        linha paralela E2/Keras (ver acima)
 simjamcv/               dados de drone/SimJamComputerVision (referência de calibração)
 results/, runs/         saídas locais de experimentos e modelos — ignoradas pelo Git

@@ -60,7 +60,7 @@ def parse_class_ids(raw: str) -> list[int]:
 
 def load_calibrations(python_dir: str | Path, camera_ids: Iterable[str]) -> dict[str, CameraCalibration]:
     """Carrega as calibrações exportadas pela Unity para as câmeras informadas."""
-    calibration_dir = Path(python_dir).parent / "unity" / "TrafficVisionUnity" / "Assets" / "Calibration"
+    calibration_dir = Path(python_dir).parent / "unity" / "TraffIQ-TCC" / "Assets" / "Calibration"
     return {
         camera_id: load_camera_calibration(calibration_dir / f"{camera_id}-calibration.json", expected_camera_id=camera_id)
         for camera_id in camera_ids

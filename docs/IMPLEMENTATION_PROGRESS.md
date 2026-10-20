@@ -50,6 +50,14 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Versões do produto TraffIQ (v1 a v4) e painel web para o Eureka:
   2026-10-14 — seção **Versões do produto** abaixo.
 
+## Projeto Unity renomeado (2026-10-20)
+
+A pasta do projeto Unity passou de `unity/TrafficVisionUnity` para
+`unity/TraffIQ-TCC` (é o nome que o Unity Hub mostra), e o nome do produto
+(Player Settings) para "TraffIQ - TCC". Os caminhos citados neste documento
+já usam a pasta nova. No Hub, remova a entrada antiga e adicione a pasta nova
+(*Add → Add project from disk*).
+
 ## Versões do produto TraffIQ (2026-10-14)
 
 Desde 2026-10-14 as versões são do **produto** (decisão do usuário): cada uma
@@ -970,7 +978,7 @@ reiniciado no começo da execução. Em seguida, rode a visão e a comparação:
 ```bash
 ../.venv/bin/python -m experiments.test_unity_vision \
   --frames-root ../results/frames/unity \
-  --calibration-dir ../unity/TrafficVisionUnity/Assets/Calibration \
+  --calibration-dir ../unity/TraffIQ-TCC/Assets/Calibration \
   --output-dir ../results/vision/unity-realistic-prefabs \
   --camera-ids south,east,west \
   --max-steps 100 \
@@ -1013,7 +1021,7 @@ Play Mode, pois trabalha sobre os JPEGs já capturados:
 cd /Users/vmvarella/PycharmProjects/tcc-traffic-cv/python
 ../.venv/bin/python -m experiments.test_unity_vision \
   --frames-root ../results/frames/unity \
-  --calibration-dir ../unity/TrafficVisionUnity/Assets/Calibration \
+  --calibration-dir ../unity/TraffIQ-TCC/Assets/Calibration \
   --output-dir ../results/vision/unity-finetuned-run-002-class0-new-south-camera \
   --model ../runs/results/models/yolov8n-unity-run-002-mask/weights/best.pt \
   --classes 0 \
@@ -1264,7 +1272,7 @@ Entregas realizadas:
 - atualização de `python/bridge/protocol.py`;
 - atualização de `python/bridge/serialization.py`;
 - criação de `python/experiments/test_unity_comm.py`;
-- criação de `unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs`;
+- criação de `unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs`;
 - atualização do `README.md` com instruções mínimas do teste Python -> Unity.
 
 Capacidades disponíveis neste marco:
@@ -1289,7 +1297,7 @@ Validação realizada:
   - `cd python`
   - `..\\.venv\\Scripts\\python.exe -m experiments.test_sumo_traci`
 - Unity 6.3 LTS instalada.
-- projeto Unity criado em `unity/TrafficVisionUnity`.
+- projeto Unity criado em `unity/TraffIQ-TCC`.
 - `PythonStateReceiver.cs` anexado a um `GameObject` na cena.
 - teste executado:
   - `cd python`
@@ -1334,9 +1342,9 @@ Entregas realizadas:
 - atualização de `python/sumo/state_extractor.py` com conversão simples SUMO -> Unity;
 - criação de `python/experiments/test_sumo_to_unity.py`;
 - reutilização de `python/bridge/unity_comm.py` para envio do estado real;
-- atualização de `unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs` para aplicar estado na main thread;
-- criação de `unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/VehicleManager.cs`;
-- criação de `unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/TrafficLightVisualController.cs`;
+- atualização de `unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs` para aplicar estado na main thread;
+- criação de `unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/VehicleManager.cs`;
+- criação de `unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/TrafficLightVisualController.cs`;
 - atualização do `README.md` com instruções do teste SUMO -> Python -> Unity.
 
 Capacidades disponíveis neste marco:
@@ -1392,9 +1400,9 @@ Entregas realizadas:
 
 - criação de `SumoRoadNetworkImporter`, adaptado do importador estático do
   Sumo2Unity, para gerar faixas, cruzamentos e polígonos dentro de
-  `unity/TrafficVisionUnity`;
+  `unity/TraffIQ-TCC`;
 - cópia da rede SP para
-  `unity/TrafficVisionUnity/Assets/Sumo/SP/Cruzamento.net.xml`;
+  `unity/TraffIQ-TCC/Assets/Sumo/SP/Cruzamento.net.xml`;
 - criação da ação de Editor `Traffic Vision > SUMO > Create SP Import Scene`,
   que prepara uma cena com luz, câmera de visão geral e o
   `SumoRoadNetworkImporter` apontando para a rede SP;
@@ -1467,7 +1475,7 @@ Inferência offline de referência, alinhada ao pipeline do SimJamCV:
 cd /Users/vmvarella/PycharmProjects/tcc-traffic-cv/python
 ../.venv/bin/python -m experiments.test_unity_vision \
   --frames-root ../results/frames/unity \
-  --calibration-dir ../unity/TrafficVisionUnity/Assets/Calibration \
+  --calibration-dir ../unity/TraffIQ-TCC/Assets/Calibration \
   --output-dir ../results/vision/unity \
   --camera-ids south,east,west \
   --max-steps 100 \

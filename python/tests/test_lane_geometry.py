@@ -14,7 +14,7 @@ from vision.lane_geometry import LaneHomography, bbox_ground_point, order_lane_q
 
 
 REPO_DIR = Path(__file__).resolve().parents[2]
-CALIBRATION_DIR = REPO_DIR / "unity" / "TrafficVisionUnity" / "Assets" / "Calibration"
+CALIBRATION_DIR = REPO_DIR / "unity" / "TraffIQ-TCC" / "Assets" / "Calibration"
 # Trapézio em perspectiva: borda próxima larga embaixo, borda distante estreita em cima.
 TRAPEZOID = [(0.2, 0.9), (0.6, 0.9), (0.45, 0.2), (0.35, 0.2)]
 

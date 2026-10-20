@@ -297,7 +297,7 @@ tcc-traffic-cv/
 │   └── scenarios/
 │
 ├── unity/
-│   └── TrafficVisionUnity/
+│   └── TraffIQ-TCC/
 │       ├── Assets/
 │       ├── Packages/
 │       └── ProjectSettings/
@@ -699,13 +699,13 @@ Importante: as métricas perfeitas do SUMO podem aparecer no log, mas apenas par
 O projeto Unity deve ficar em:
 
 ```text
-unity/TrafficVisionUnity/
+unity/TraffIQ-TCC/
 ```
 
 Adicionar scripts próprios em:
 
 ```text
-unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/
+unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/
 ```
 
 Scripts sugeridos:

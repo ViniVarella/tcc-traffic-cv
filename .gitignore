@@ -135,7 +135,7 @@ optimization/*/*_last.keras
 # Modelo 3D da ambulância (RigModels.com): licença só para uso pessoal/estudante,
 # não pode ser redistribuído num repositório público. O prefab derivado também
 # fica local. Veja "Modelo da ambulância" no README.
-unity/TrafficVisionUnity/Assets/Art/TrafficModels/Models/Cars/Ambulance/
-unity/TrafficVisionUnity/Assets/Art/TrafficModels/Models/Cars/Ambulance.meta
-unity/TrafficVisionUnity/Assets/Prefabs/Vehicles/Ambulance.prefab
-unity/TrafficVisionUnity/Assets/Prefabs/Vehicles/Ambulance.prefab.meta
+unity/TraffIQ-TCC/Assets/Art/TrafficModels/Models/Cars/Ambulance/
+unity/TraffIQ-TCC/Assets/Art/TrafficModels/Models/Cars/Ambulance.meta
+unity/TraffIQ-TCC/Assets/Prefabs/Vehicles/Ambulance.prefab
+unity/TraffIQ-TCC/Assets/Prefabs/Vehicles/Ambulance.prefab.meta

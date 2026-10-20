@@ -365,7 +365,7 @@ reproduzir:
 
 1. Baixe o modelo "Ambulance" em https://rigmodels.com e copie a pasta, com
    `ambulance.fbx` e as texturas, para
-   `unity/TrafficVisionUnity/Assets/Art/TrafficModels/Models/Cars/Ambulance/`.
+   `unity/TraffIQ-TCC/Assets/Art/TrafficModels/Models/Cars/Ambulance/`.
 2. Na Unity, com `SPImport` aberta, rode *Traffic Vision > Vehicles > Create
    SP Emergency Prefab* e salve a cena.
 3. Para conferir, entre em Play Mode e rode
@@ -389,7 +389,7 @@ Sem o modelo, as viaturas de emergência aparecem como blocos vermelhos.
 - `python/experiments`: scripts de execução, treino e avaliação
   (`python -m experiments.<nome>`).
 - `sumo/sp`: rede, demandas (original e calibrada) e detectores do cenário SP.
-- `unity/TrafficVisionUnity`: projeto Unity 6000.0.53f1 com a cena `SPImport`.
+- `unity/TraffIQ-TCC`: projeto Unity 6000.0.53f1 com a cena `SPImport`.
 - `optimization/SP`: linha paralela de DQN com detectores E2 (Keras),
   independente do pipeline visual.
 - `docs/`: guia de implementação, progresso e integração com o Sumo2Unity.
@@ -490,7 +490,7 @@ cd python
 ```
 
 Na Unity, anexe
-[`PythonStateReceiver.cs`](unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs)
+[`PythonStateReceiver.cs`](unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs)
 a um `GameObject` e rode a cena. O Console deve mostrar os `step`/`step_id`
 recebidos.
 
@@ -505,9 +505,9 @@ cd python
 ```
 
 Na cena `SPImport` a sincronização já está configurada
-([`PythonStateReceiver.cs`](unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs),
-[`VehicleManager.cs`](unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/VehicleManager.cs) e
-[`TrafficLightVisualController.cs`](unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/TrafficLightVisualController.cs)).
+([`PythonStateReceiver.cs`](unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs),
+[`VehicleManager.cs`](unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/VehicleManager.cs) e
+[`TrafficLightVisualController.cs`](unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/TrafficLightVisualController.cs)).
 Entre em Play Mode antes de executar o script. O terminal deve imprimir
 `state_sent step=...`, e os veículos devem se mover na cena.
 

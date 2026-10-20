@@ -17,7 +17,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     """Configura o processamento offline dos conjuntos de frames Unity."""
     parser = argparse.ArgumentParser(description="Executa YOLO + ROIs nos frames capturados da Unity.")
     parser.add_argument("--frames-root", type=Path, default=base_dir.parent / "results" / "frames" / "unity")
-    parser.add_argument("--calibration-dir", type=Path, default=base_dir.parent / "unity" / "TrafficVisionUnity" / "Assets" / "Calibration")
+    parser.add_argument("--calibration-dir", type=Path, default=base_dir.parent / "unity" / "TraffIQ-TCC" / "Assets" / "Calibration")
     parser.add_argument("--output-dir", type=Path, default=base_dir.parent / "results" / "vision" / "unity")
     parser.add_argument("--model", default="yolov8n.pt", help="Modelo Ultralytics local ou identificador compatível.")
     parser.add_argument("--camera-ids", default="south,east,west", help="IDs de câmera separados por vírgula.")
