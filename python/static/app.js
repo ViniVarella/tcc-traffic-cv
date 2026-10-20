@@ -221,7 +221,7 @@ function updateTelemetry(data) {
     }
     if (data.error !== lastError) {
         lastError = data.error;
-        if (data.error) showMessage('Erro: ' + data.error);
+        if (data.error) showMessage('Erro: ' + data.error, 'error');
     }
     runningRequest = running ? data.request : null;
     if (runningRequest) lastRunScenario = runningRequest.scenario;
@@ -347,13 +347,16 @@ function syncExitOptions() {
 }
 selApproach.addEventListener('change', syncExitOptions);
 
-// Mensagens de confirmação somem sozinhas (transient_ms); erros e avisos ficam até
+// Mensagens de confirmação somem sozinhas (transientMs); erros e avisos ficam até
 // a próxima mensagem. "Iniciando…" some quando chegam as primeiras imagens.
+// level: 'info' (cartão neutro), 'warning' (amarelo) ou 'error' (vermelho).
 let messageTimer = null;
 let waitingFirstImages = false;
-function showMessage(text, transientMs = 0) {
+function showMessage(text, level = 'info', transientMs = 0) {
     clearTimeout(messageTimer);
-    document.getElementById('control-message').textContent = text;
+    const message = document.getElementById('control-message');
+    message.textContent = text;
+    message.className = 'control-message' + (level === 'info' ? '' : ' ' + level);
     if (transientMs > 0) messageTimer = setTimeout(() => showMessage(''), transientMs);
 }
 
@@ -387,13 +390,13 @@ async function loadOptions() {
             }
             // Só troca se a escolha atual ficou indisponível; "Desativada" é mantida.
             if (selPreemption.selectedOptions[0]?.disabled) selPreemption.value = 'v2i';
-            showMessage('Detector genérico em uso: sem detecção visual de ambulâncias (prioridade só pelo V2I).');
+            showMessage('Detector genérico em uso: sem detecção visual de ambulâncias (prioridade só pelo V2I).', 'warning');
         }
         syncExitOptions();
         updateReferenceLabels();
         renderCharts();
     } catch (e) {
-        showMessage('Não foi possível conectar ao servidor do painel.');
+        showMessage('Não foi possível conectar ao servidor do painel.', 'error');
     }
 }
 
@@ -439,7 +442,7 @@ btnStart.addEventListener('click', async () => {
             await post(isPaused ? '/api/resume' : '/api/pause');
             isPaused = !isPaused;
             if (isPaused) showMessage('Simulação pausada. Os dados ficam na tela para análise.');
-            else showMessage('Simulação retomada.', 4000);
+            else showMessage('Simulação retomada.', 'info', 4000);
             updateButtons();
             return;
         }
@@ -455,14 +458,14 @@ btnStart.addEventListener('click', async () => {
         isPaused = false;
         updateButtons();
     } catch (e) {
-        showMessage(e.message);
+        showMessage(e.message, 'error');
     }
 });
 
 btnStop.addEventListener('click', async () => {
-    await post('/api/stop').catch(e => showMessage(e.message));
+    await post('/api/stop').catch(e => showMessage(e.message, 'error'));
     waitingFirstImages = false;
-    showMessage('Demonstração encerrada.', 4000);
+    showMessage('Demonstração encerrada.', 'info', 4000);
     setCameraOverlays('idle');
 });
 
@@ -472,7 +475,7 @@ btnEmergency.addEventListener('click', async () => {
         // A lista de ambulâncias a caminho já mostra a nova; só erros viram mensagem.
         await post('/api/emergency', { approach: selApproach.value, exit });
     } catch (e) {
-        showMessage(e.message);
+        showMessage(e.message, 'error');
     }
 });
 

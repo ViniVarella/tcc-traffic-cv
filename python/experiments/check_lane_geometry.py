@@ -134,7 +134,7 @@ def main() -> None:
     base_dir = Path(__file__).resolve().parents[1]
     args = parse_args(base_dir)
     config = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
-    calibration_dir = base_dir.parent / "unity" / "TrafficVisionUnity" / "Assets" / "Calibration"
+    calibration_dir = base_dir.parent / "unity" / "TraffIQ-TCC" / "Assets" / "Calibration"
     report = measure_lane_rois(config, args.net, args.additional, calibration_dir)
     for name, row in report.items():
         print(

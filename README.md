@@ -106,7 +106,7 @@ mínimo permite". A análise posterior encontrou as causas:
   é um nível em [−1, 0] com parados, espera e fila de inserção.
 - **Cenário calibrado.** A demanda foi medida nos vídeos de drone, sem motos
   (andam no corredor e não formam fila): Leste com v/c≈0,58, chegadas
-  Poisson e inserção realista. O checkpoint atual (`dqn-v2-sem-motos-best.pt`) foi
+  Poisson e inserção realista. O checkpoint atual (`dqn-v2-traffiq-best.pt`) foi
   pré-treinado nos cenários calibrado e original.
 - **Correções que valem para todas as versões.** O Python passa a manter o
   controle das fases no SUMO mesmo quando falta um frame (antes o programa
@@ -148,7 +148,7 @@ faziam originalmente.
 
 Demanda medida pelo drone sem motos (andam no corredor e não formam fila):
 Leste 976 veíc/h (v/c 0,58), Sul 727, Oeste 139. Checkpoint do DQN estado v2:
-`dqn-v2-sem-motos-best.pt`. Seeds 201–203, 300 s de aquecimento + 1800 s,
+`dqn-v2-traffiq-best.pt`. Seeds 201–203, 300 s de aquecimento + 1800 s,
 0 frames perdidos na percepção visual.
 
 | Controlador | Espera (visual) | Espera (*ground truth*) | Chegadas (visual) | Fila de inserção |
@@ -294,18 +294,76 @@ O custo é de +0,5 a +1,0 s para os outros veículos e de até +3 s para os
 pedestres.
 
 As tabelas desta seção usam o ambiente atual: câmeras de 60 m, YOLO de duas
-classes, demanda sem motos, DQN estado v2 `dqn-v2-sem-motos-best.pt` e, no
+classes, demanda sem motos, DQN estado v2 `dqn-v2-traffiq-best.pt` e, no
 experimento com pedestres, DQN estado v3 `dqn-v3-fase-curta-best.pt`.
+
+## Como instalar na sua máquina
+
+O repositório já traz tudo o que o projeto usa para rodar: os checkpoints
+`results/models/dqn-v2-traffiq-best.pt` (TraffIQ), `visual-dqn-sp-best.pt`
+(v1.1) e `dqn-v3-fase-curta-best.pt` (experimento), o detector
+`runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`, as
+referências `results/evaluation/versoes-*-oracle.json` e o modelo da
+ambulância na Unity. Os demais resultados e modelos gerados ficam locais. Na
+máquina, é preciso instalar três programas. Os comandos abaixo são para macOS
+(o ambiente usado no projeto); no Linux são iguais, e no Windows o Python do
+ambiente virtual fica em `..\.venv\Scripts\python`.
+
+1. **Clone o repositório** (cerca de 100 MB):
+
+   ```bash
+   git clone https://github.com/ViniVarella/tcc-traffic-cv.git
+   cd tcc-traffic-cv
+   ```
+
+2. **Python 3.12** e as dependências, num ambiente virtual na raiz do
+   repositório (o `torch` e o `ultralytics` levam alguns minutos para baixar):
+
+   ```bash
+   python3.12 -m venv .venv
+   .venv/bin/python -m pip install -r python/requirements.txt
+   ```
+
+3. **SUMO** (1.22 ou mais novo), pelo instalador de
+   https://eclipse.dev/sumo/. Depois, defina `SUMO_HOME` e coloque o `sumo`
+   no `PATH`; no macOS, com o instalador oficial, acrescente ao `~/.zshrc`
+   (troque `1.22.0` pela versão instalada):
+
+   ```bash
+   export SUMO_ROOT="/Library/Frameworks/EclipseSUMO.framework/Versions/1.22.0/EclipseSUMO"
+   export SUMO_HOME="$SUMO_ROOT/share/sumo"
+   export PATH="$SUMO_ROOT/bin:$PATH"
+   ```
+
+   Abra um terminal novo e confira com `sumo --version`.
+
+4. **Unity 6000.0.53f1**, pelo Unity Hub (*Installs → Install Editor →
+   Archive*, se a versão não aparecer na lista). No Hub, use *Add → Add
+   project from disk* e escolha a pasta `unity/TraffIQ-TCC`. A primeira
+   abertura demora, porque a Unity reconstrói a pasta `Library`.
+   Depois, abra a cena `Assets/Scenes/SPImport.unity` (a Unity abre outra cena
+   por padrão).
+
+5. **Confira a instalação**, a partir de `python/`:
+
+   ```bash
+   cd python
+   ../.venv/bin/python -m unittest discover -s tests -p 'test_*.py'      # sem SUMO nem Unity
+   ../.venv/bin/python -m experiments.test_sp_traci --config configs/sp.yaml   # SUMO
+   ```
+
+6. **Rode o painel**: na Unity, com a cena `SPImport` aberta, entre em Play
+   Mode; no terminal, a partir de `python/`, rode
+   `../.venv/bin/python -m experiments.api_server` e abra
+   http://127.0.0.1:8000/. Só um SUMO pode rodar por vez (porta 8873).
 
 ## Como reproduzir
 
-Todos os comandos rodam a partir de `python/`, com o ambiente virtual da raiz.
-Modelos e resultados ficam em `results/` e `runs/`, que são locais (não
-versionados).
+Todos os comandos rodam a partir de `python/`, com o ambiente virtual da raiz
+(veja [Como instalar na sua máquina](#como-instalar-na-sua-máquina)).
 
 ```bash
 cd python
-../.venv/bin/python -m pip install -r requirements.txt
 ../.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
 
 # Pré-treino só no SUMO (percepção ground truth; sem Unity)
@@ -321,14 +379,14 @@ Play Mode (reinicie o Play Mode antes de cada comando):
 
 ```bash
 ../.venv/bin/python -m experiments.run_visual_policy --scenario calibrated --policy dqn \
-  --dqn-model ../results/models/dqn-v2-sem-motos-best.pt --seeds 201,202,203 --control-seconds 1800 \
+  --dqn-model ../results/models/dqn-v2-traffiq-best.pt --seeds 201,202,203 --control-seconds 1800 \
   --step-log-output ../results/logs/teste-visual-dqn.jsonl \
   --output ../results/evaluation/teste-visual-dqn.json
 
 # Diferença visão × ground truth a partir do log por step (sem Unity)
 ../.venv/bin/python -m experiments.evaluate_lane_features \
   --step-log ../results/logs/teste-visual-dqn.jsonl \
-  --dqn-model ../results/models/dqn-v2-sem-motos-best.pt
+  --dqn-model ../results/models/dqn-v2-traffiq-best.pt
 ```
 
 **Painel web** (demonstração ao vivo; Unity em Play Mode, nenhum outro SUMO
@@ -359,20 +417,19 @@ legados da v1. Recall no teste: veículos 100% / 99,5% / 97,2% em 0–20 / 20–
 
 ## Modelo da ambulância
 
-O modelo 3D da ambulância usado na Unity vem do RigModels.com, com licença
-apenas para uso pessoal/estudante, e por isso **não é versionado**. Para
-reproduzir:
+O modelo 3D da ambulância vem do RigModels.com e está em
+`unity/TraffIQ-TCC/Assets/Art/TrafficModels/Models/Cars/Ambulance/`, com o
+prefab em `Assets/Prefabs/Vehicles/Ambulance.prefab`. A licença
+(`License.txt` na mesma pasta) é **apenas para uso pessoal de estudantes**; uso
+comercial exige a assinatura Premium do RigModels.com. Para recriar o prefab:
 
-1. Baixe o modelo "Ambulance" em https://rigmodels.com e copie a pasta, com
-   `ambulance.fbx` e as texturas, para
-   `unity/TrafficVisionUnity/Assets/Art/TrafficModels/Models/Cars/Ambulance/`.
-2. Na Unity, com `SPImport` aberta, rode *Traffic Vision > Vehicles > Create
+1. Na Unity, com `SPImport` aberta, rode *Traffic Vision > Vehicles > Create
    SP Emergency Prefab* e salve a cena.
-3. Para conferir, entre em Play Mode e rode
+2. Para conferir, entre em Play Mode e rode
    `python -m experiments.test_sumo_to_unity --config configs/sp.yaml --steps 120 --send-interval 0.1 --emergency-interval 20`.
    Se a ambulância andar de ré, rode *Flip SP Emergency Prefab*.
 
-Sem o modelo, as viaturas de emergência aparecem como blocos vermelhos.
+Sem o prefab, as viaturas de emergência aparecem como blocos vermelhos.
 
 ## Principais módulos
 
@@ -389,7 +446,7 @@ Sem o modelo, as viaturas de emergência aparecem como blocos vermelhos.
 - `python/experiments`: scripts de execução, treino e avaliação
   (`python -m experiments.<nome>`).
 - `sumo/sp`: rede, demandas (original e calibrada) e detectores do cenário SP.
-- `unity/TrafficVisionUnity`: projeto Unity 6000.0.53f1 com a cena `SPImport`.
+- `unity/TraffIQ-TCC`: projeto Unity 6000.0.53f1 com a cena `SPImport`.
 - `optimization/SP`: linha paralela de DQN com detectores E2 (Keras),
   independente do pipeline visual.
 - `docs/`: guia de implementação, progresso e integração com o Sumo2Unity.
@@ -490,7 +547,7 @@ cd python
 ```
 
 Na Unity, anexe
-[`PythonStateReceiver.cs`](unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs)
+[`PythonStateReceiver.cs`](unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs)
 a um `GameObject` e rode a cena. O Console deve mostrar os `step`/`step_id`
 recebidos.
 
@@ -505,9 +562,9 @@ cd python
 ```
 
 Na cena `SPImport` a sincronização já está configurada
-([`PythonStateReceiver.cs`](unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs),
-[`VehicleManager.cs`](unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/VehicleManager.cs) e
-[`TrafficLightVisualController.cs`](unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/TrafficLightVisualController.cs)).
+([`PythonStateReceiver.cs`](unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs),
+[`VehicleManager.cs`](unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/VehicleManager.cs) e
+[`TrafficLightVisualController.cs`](unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/TrafficLightVisualController.cs)).
 Entre em Play Mode antes de executar o script. O terminal deve imprimir
 `state_sent step=...`, e os veículos devem se mover na cena.
 

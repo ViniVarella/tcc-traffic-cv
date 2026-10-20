@@ -55,7 +55,7 @@ objetos a partir do XML.
 
 ## Adaptação necessária no projeto Unity do TCC
 
-O projeto `unity/TrafficVisionUnity` já tem o receptor UDP
+O projeto `unity/TraffIQ-TCC` já tem o receptor UDP
 `PythonStateReceiver`, além de `VehicleManager` e
 `TrafficLightVisualController`. A integração deve evoluir esses scripts, não
 copiar `ExchangeData` ou `SimulationController` do Sumo2Unity.

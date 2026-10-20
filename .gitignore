@@ -132,10 +132,14 @@ optimization/*/baseline_metrics.csv
 optimization/*/dqn_metrics.csv
 optimization/*/*_last.keras
 
-# Modelo 3D da ambulância (RigModels.com): licença só para uso pessoal/estudante,
-# não pode ser redistribuído num repositório público. O prefab derivado também
-# fica local. Veja "Modelo da ambulância" no README.
-unity/TrafficVisionUnity/Assets/Art/TrafficModels/Models/Cars/Ambulance/
-unity/TrafficVisionUnity/Assets/Art/TrafficModels/Models/Cars/Ambulance.meta
-unity/TrafficVisionUnity/Assets/Prefabs/Vehicles/Ambulance.prefab
-unity/TrafficVisionUnity/Assets/Prefabs/Vehicles/Ambulance.prefab.meta
+# Artefatos versionados para rodar o projeto em outra máquina: checkpoints em
+# uso e referências do tempo fixo do painel. O detector YOLO
+# (runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt) e as
+# texturas .jpg/.png dos modelos 3D entram com "git add -f".
+!results/models/dqn-v2-traffiq-best.pt
+!results/models/dqn-v3-fase-curta-best.pt
+!results/models/visual-dqn-sp-best.pt
+!results/evaluation/versoes-calibrated-oracle.json
+!results/evaluation/versoes-calibrated_ped-oracle.json
+!results/evaluation/versoes-original-oracle.json
+!results/evaluation/versoes-original_ped-oracle.json

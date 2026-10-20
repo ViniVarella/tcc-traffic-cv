@@ -34,7 +34,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--config", type=Path, default=base_dir / "configs" / "sp.yaml")
     parser.add_argument("--net", type=Path, default=base_dir.parent / "sumo" / "sp" / "Cruzamento.net.xml")
     parser.add_argument("--calibration-dir", type=Path,
-                        default=base_dir.parent / "unity" / "TrafficVisionUnity" / "Assets" / "Calibration")
+                        default=base_dir.parent / "unity" / "TraffIQ-TCC" / "Assets" / "Calibration")
     parser.add_argument("--length", type=float, default=60.0, help="Comprimento desejado de cada ROI de faixa (m).")
     parser.add_argument("--cameras", default="south,east,west")
     parser.add_argument("--dry-run", action="store_true", help="Só imprime os novos pontos, sem gravar os JSONs.")

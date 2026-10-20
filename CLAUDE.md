@@ -83,7 +83,7 @@ python/                 código Python (rodar comandos a partir daqui)
                         páginas em python/static/
   tests/                unittest (test_*.py)
 sumo/sp/                rede, rotas e detectores do cenário SP (Cruzamento.*)
-unity/TrafficVisionUnity/   projeto Unity 6000.0.53f1 (Unity 6, URP, macOS/Metal)
+unity/TraffIQ-TCC/      projeto Unity 6000.0.53f1 (Unity 6, URP, macOS/Metal)
 optimization/SP/        linha paralela E2/Keras (ver acima)
 simjamcv/               dados de drone/SimJamComputerVision (referência de calibração)
 results/, runs/         saídas locais de experimentos e modelos — ignoradas pelo Git
@@ -322,15 +322,22 @@ carregam como v1):
   `torch` 2.11.0, `ultralytics` 8.4.48, OpenCV, NumPy, PyYAML).
 - SUMO precisa estar no `PATH` (`SUMO_HOME` definido). Os arquivos da rede foram
   gerados com SUMO 1.26; confira a versão local com `sumo --version`.
-- Modelos e resultados são artefatos locais ignorados (`*.pt`, `runs/`,
-  `results/*`). Verifique se existem antes de rodar experimentos:
+- Modelos e resultados gerados são locais e ignorados (`*.pt`, `runs/`,
+  `results/*`), exceto os necessários para rodar em outra máquina, versionados
+  desde 2026-10-20: os três checkpoints abaixo, o detector YOLO de duas
+  classes, `results/evaluation/versoes-*-oracle.json` (sem os `roi60`) e o
+  modelo da ambulância (RigModels, licença de uso pessoal/estudante). O YOLO e
+  texturas `.jpg`/`.png` entram com `git add -f`. Verifique o resto antes de
+  rodar experimentos:
   - detector YOLO de duas classes (`0 vehicle`, `1 emergency`):
     `runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`, padrão dos
     scripts v2 com `--classes 0,1 --image-size 960` (as duas classes entram nas
     contagens; `--classes 0` apagaria as viaturas). O anterior,
     `yolov8n-unity-run-002-mask` (classe única → `--classes 0`), fica nos scripts
     legados da v1; o padrão `2,3,5,7` é só para pesos COCO;
-  - checkpoints DQN: `results/models/visual-dqn-sp*.pt`.
+  - checkpoints DQN em `results/models/`: `dqn-v2-traffiq-best.pt` (o TraffIQ,
+    DQN estado v2), `dqn-v3-fase-curta-best.pt` (experimento) e
+    `visual-dqn-sp-best.pt` (v1.1); os antigos ficam em `results/models/arquivo/`.
 - `TEMP_*.txt` na raiz são arquivos locais (ignorados) com comandos longos para
   copiar/colar — o usuário prefere esse formato quando a CLI fica extensa.
 
@@ -370,9 +377,9 @@ Todos a partir de `python/`:
 
 # Pré-treino do DQN v2 só com SUMO. Use os dois cenários: treinada só no
 # calibrado, a v2 especializa e piora com demanda equilibrada. Referência
-# (demanda sem motos): dqn-v2-sem-motos-best.pt, padrão dos scripts v2.
+# (demanda sem motos): dqn-v2-traffiq-best.pt, padrão dos scripts v2.
 ../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated,original \
-  --checkpoint-output ../results/models/dqn-v2-sem-motos-last.pt --best-checkpoint-output ../results/models/dqn-v2-sem-motos-best.pt
+  --checkpoint-output ../results/models/dqn-v2-traffiq-last.pt --best-checkpoint-output ../results/models/dqn-v2-traffiq-best.pt
 
 # Gerar a demanda calibrada (sem motos) a partir dos dados do drone
 ../.venv/bin/python -m experiments.build_calibrated_demand

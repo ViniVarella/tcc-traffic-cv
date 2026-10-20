@@ -13,7 +13,7 @@ PlayerSettings:
   useOnDemandResources: 0
   accelerometerFrequency: 60
   companyName: DefaultCompany
-  productName: TrafficVisionUnity
+  productName: TraffIQ - TCC
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -838,14 +838,14 @@ PlayerSettings:
   editorAssembliesCompatibilityLevel: 1
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: TrafficVisionUnity
+  metroPackageName: TraffIQ-TCC
   metroPackageVersion: 
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
-  metroApplicationDescription: TrafficVisionUnity
+  metroApplicationDescription: TraffIQ - TCC
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0
@@ -919,7 +919,7 @@ PlayerSettings:
   cloudProjectId: 9f847d75-2377-4340-be24-998ee4955803
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: TrafficVisionUnity
+  projectName: TraffIQ - TCC
   organizationId: unity_89531712b0b70f24e694
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0

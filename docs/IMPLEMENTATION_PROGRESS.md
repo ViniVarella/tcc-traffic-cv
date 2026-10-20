@@ -50,6 +50,28 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Versões do produto TraffIQ (v1 a v4) e painel web para o Eureka:
   2026-10-14 — seção **Versões do produto** abaixo.
 
+## Projeto Unity renomeado (2026-10-20)
+
+A pasta do projeto Unity passou de `unity/TrafficVisionUnity` para
+`unity/TraffIQ-TCC` (é o nome que o Unity Hub mostra), e o nome do produto
+(Player Settings) para "TraffIQ - TCC". Os caminhos citados neste documento
+já usam a pasta nova. No Hub, remova a entrada antiga e adicione a pasta nova
+(*Add → Add project from disk*).
+
+No mesmo dia, o checkpoint do TraffIQ (DQN estado v2) passou de
+`dqn-v2-sem-motos-best.pt` para **`dqn-v2-traffiq-best.pt`** (mesmo arquivo; o
+cenário com motos não é mais usado), e os checkpoints sem uso foram para
+`results/models/arquivo/`. Os nomes citados nas seções anteriores já usam o
+nome novo.
+
+Também passaram a ser versionados os artefatos necessários para rodar o
+projeto em outra máquina: `dqn-v2-traffiq-best.pt`, `visual-dqn-sp-best.pt`,
+`dqn-v3-fase-curta-best.pt`, o detector
+`yolov8n-unity-cam60-2cls-960/weights/best.pt`, as referências
+`versoes-{calibrated,calibrated_ped,original,original_ped}-oracle.json` e o
+modelo da ambulância (RigModels.com, licença de uso pessoal/estudante, com o
+`License.txt` junto).
+
 ## Versões do produto TraffIQ (2026-10-14)
 
 Desde 2026-10-14 as versões são do **produto** (decisão do usuário): cada uma
@@ -91,7 +113,7 @@ uma rua por fase, e quem precisa de duas espera a fase seguinte na esquina:
 `.ped.net.xml` foi regenerada (`crossing_lengths` no gerador).
 
 **Escolha da variante** (percepção *ground truth*, seeds 201–203, DQN estado v2 com
-`dqn-v2-sem-motos-best.pt` e o DQN estado v3 antigo; espera média de veículos /
+`dqn-v2-traffiq-best.pt` e o DQN estado v3 antigo; espera média de veículos /
 pedestres). Referência: níveis de serviço do HCM 2000 para a espera de
 pedestre em semáforo (A < 10 s, B 10–20, C 20–30, D 30–40, E 40–60, F > 60 s).
 
@@ -226,7 +248,7 @@ o gerador lê dela as proporções de conversão.
 
 ### Retreino e avaliação com a demanda sem motos (percepção *ground truth*, seeds 201–203, 300 s + 1800 s)
 
-Checkpoints novos, padrão dos scripts: v2 = `dqn-v2-sem-motos-best.pt`
+Checkpoints novos, padrão dos scripts: v2 = `dqn-v2-traffiq-best.pt`
 (`--scenarios calibrated,original`, 40 episódios, melhor no 39; ~5 min, pois
 cada episódio leva ~5 s sem saturação) e v3 = `dqn-v3-sem-motos-best.pt`
 (`calibrated_ped,original_ped`, w = 0,3, 100 episódios, seeds 51–150, melhor
@@ -374,7 +396,7 @@ Antes da correção: V2I 1,5 s (máx. 3,2 s), V2I + visão 1,4 s (máx. 3,3 s).
 ### Avaliação visual do cenário original (Unity, 2026-10-12)
 
 Mesmo protocolo (seeds 201–203, 300 s + 1800 s), cenário `original`, v2 =
-`dqn-v2-sem-motos-best.pt`, **0 frames perdidos** e 0 observações perdidas.
+`dqn-v2-traffiq-best.pt`, **0 frames perdidos** e 0 observações perdidas.
 A demanda do `original` não mudou; mudou só o checkpoint da v2. Arquivo:
 `results/evaluation/versoes-original-visual.json` (a rodada com o checkpoint
 anterior ficou em `versoes-original-visual-motos.json`); log em
@@ -970,7 +992,7 @@ reiniciado no começo da execução. Em seguida, rode a visão e a comparação:
 ```bash
 ../.venv/bin/python -m experiments.test_unity_vision \
   --frames-root ../results/frames/unity \
-  --calibration-dir ../unity/TrafficVisionUnity/Assets/Calibration \
+  --calibration-dir ../unity/TraffIQ-TCC/Assets/Calibration \
   --output-dir ../results/vision/unity-realistic-prefabs \
   --camera-ids south,east,west \
   --max-steps 100 \
@@ -1013,7 +1035,7 @@ Play Mode, pois trabalha sobre os JPEGs já capturados:
 cd /Users/vmvarella/PycharmProjects/tcc-traffic-cv/python
 ../.venv/bin/python -m experiments.test_unity_vision \
   --frames-root ../results/frames/unity \
-  --calibration-dir ../unity/TrafficVisionUnity/Assets/Calibration \
+  --calibration-dir ../unity/TraffIQ-TCC/Assets/Calibration \
   --output-dir ../results/vision/unity-finetuned-run-002-class0-new-south-camera \
   --model ../runs/results/models/yolov8n-unity-run-002-mask/weights/best.pt \
   --classes 0 \
@@ -1264,7 +1286,7 @@ Entregas realizadas:
 - atualização de `python/bridge/protocol.py`;
 - atualização de `python/bridge/serialization.py`;
 - criação de `python/experiments/test_unity_comm.py`;
-- criação de `unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs`;
+- criação de `unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs`;
 - atualização do `README.md` com instruções mínimas do teste Python -> Unity.
 
 Capacidades disponíveis neste marco:
@@ -1289,7 +1311,7 @@ Validação realizada:
   - `cd python`
   - `..\\.venv\\Scripts\\python.exe -m experiments.test_sumo_traci`
 - Unity 6.3 LTS instalada.
-- projeto Unity criado em `unity/TrafficVisionUnity`.
+- projeto Unity criado em `unity/TraffIQ-TCC`.
 - `PythonStateReceiver.cs` anexado a um `GameObject` na cena.
 - teste executado:
   - `cd python`
@@ -1334,9 +1356,9 @@ Entregas realizadas:
 - atualização de `python/sumo/state_extractor.py` com conversão simples SUMO -> Unity;
 - criação de `python/experiments/test_sumo_to_unity.py`;
 - reutilização de `python/bridge/unity_comm.py` para envio do estado real;
-- atualização de `unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs` para aplicar estado na main thread;
-- criação de `unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/VehicleManager.cs`;
-- criação de `unity/TrafficVisionUnity/Assets/Scripts/TccTrafficVision/TrafficLightVisualController.cs`;
+- atualização de `unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/PythonStateReceiver.cs` para aplicar estado na main thread;
+- criação de `unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/VehicleManager.cs`;
+- criação de `unity/TraffIQ-TCC/Assets/Scripts/TccTrafficVision/TrafficLightVisualController.cs`;
 - atualização do `README.md` com instruções do teste SUMO -> Python -> Unity.
 
 Capacidades disponíveis neste marco:
@@ -1392,9 +1414,9 @@ Entregas realizadas:
 
 - criação de `SumoRoadNetworkImporter`, adaptado do importador estático do
   Sumo2Unity, para gerar faixas, cruzamentos e polígonos dentro de
-  `unity/TrafficVisionUnity`;
+  `unity/TraffIQ-TCC`;
 - cópia da rede SP para
-  `unity/TrafficVisionUnity/Assets/Sumo/SP/Cruzamento.net.xml`;
+  `unity/TraffIQ-TCC/Assets/Sumo/SP/Cruzamento.net.xml`;
 - criação da ação de Editor `Traffic Vision > SUMO > Create SP Import Scene`,
   que prepara uma cena com luz, câmera de visão geral e o
   `SumoRoadNetworkImporter` apontando para a rede SP;
@@ -1467,7 +1489,7 @@ Inferência offline de referência, alinhada ao pipeline do SimJamCV:
 cd /Users/vmvarella/PycharmProjects/tcc-traffic-cv/python
 ../.venv/bin/python -m experiments.test_unity_vision \
   --frames-root ../results/frames/unity \
-  --calibration-dir ../unity/TrafficVisionUnity/Assets/Calibration \
+  --calibration-dir ../unity/TraffIQ-TCC/Assets/Calibration \
   --output-dir ../results/vision/unity \
   --camera-ids south,east,west \
   --max-steps 100 \
