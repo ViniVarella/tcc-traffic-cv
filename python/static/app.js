@@ -730,8 +730,9 @@ function updateReduction(meanWait, sampled, warming = false) {
         note.className = 'kpi-subtext text-amber';
         note.textContent = `aquecimento diferente da avaliação (${warmupS} s × ${referenceWarmupS} s)`;
     } else if (sampled < minSampleS) {
-        // Com pouca amostra a média ainda oscila: o número aparece, mas em cinza.
-        value.className = 'kpi-value text-muted';
+        // Com pouca amostra a média ainda oscila: o número aparece em branco, como os
+        // outros indicadores, e fica verde quando a amostra basta.
+        value.className = 'kpi-value';
         note.className = 'kpi-subtext text-muted';
         note.textContent = 'Dados preliminares. Aguardando dados concretos...';
     } else if (pct < 0) {
