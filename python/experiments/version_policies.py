@@ -1,23 +1,26 @@
 """Políticas de cada versão do projeto sobre o mesmo ambiente de avaliação.
 
 Aqui "versão" nomeia **controladores** (quem decide), não versões do produto
-TraffIQ: ``v2`` é o DQN estado v2, que decide da v2 à v4 do produto, e ``v3``
-é o experimento DQN estado v3. Nos textos, use a numeração do produto.
+TraffIQ: ``v1`` é a regra de fila (produto v2), ``v1.1`` o DQN estado v1
+(produto v2.1), ``v2`` o DQN estado v2, que decide da v3 à v5 do produto, e
+``v3`` o experimento DQN estado v3. A v1 do produto (prova de conceito com os
+detectores do SUMO, em ``optimization/SP``) não roda aqui. Nos textos, use a
+numeração do produto.
 
 Para que as versões sejam comparáveis, todas recebem a mesma percepção (as
 ``LaneFeatures`` do oráculo TraCI ou da visão), a mesma camada de segurança e o
 mesmo executor de episódios; muda só a lógica de decisão:
 
 - ``baseline``: ciclo fixo 40/40 (nunca pede troca; o verde máximo alterna);
-- ``v1``: heurística da v1 (``QueueBasedPolicy``) sobre as contagens por faixa;
+- ``v1``: regra de fila (``QueueBasedPolicy``) sobre as contagens por faixa;
 - ``v1.1``: DQN do estado v1 (13 entradas: contagens, fase e tempo);
 - ``v2``: DQN do estado v2 (41 entradas);
 - ``max_pressure``: referência adaptativa sobre veículos parados.
 
-Diferença deliberada em relação às execuções originais da v1/v1.1: elas usavam
+Diferença deliberada em relação às execuções originais de ``v1``/``v1.1``: elas usavam
 a contagem pelo centro da bbox com média móvel (``ROICounter`` +
 ``QueueEstimator``); aqui a contagem é ``LaneFeatures.vehicle_count`` da mesma
-percepção usada pela v2. As versões antigas decidiam a cada step após o verde
+percepção usada pelo ``v2``. As versões antigas decidiam a cada step após o verde
 mínimo, por isso usam intervalo de decisão de 1 s.
 """
 
@@ -40,7 +43,7 @@ VERSION_ORDER = ("baseline", "v1", "v1.1", "v2", "max_pressure")
 
 
 def lane_counts(lane_features: Mapping[tuple[str, str], Any]) -> dict[str, dict[str, int]]:
-    """Converte ``LaneFeatures`` no formato de contagens por câmera/faixa da v1."""
+    """Converte ``LaneFeatures`` no formato de contagens por câmera/faixa da regra de fila."""
     counts: dict[str, dict[str, int]] = {}
     for (camera_id, lane_id), features in lane_features.items():
         counts.setdefault(camera_id, {})[lane_id] = int(features.vehicle_count)
@@ -48,7 +51,7 @@ def lane_counts(lane_features: Mapping[tuple[str, str], Any]) -> dict[str, dict[
 
 
 class HeuristicV1Policy:
-    """Regra da v1: troca se o grupo oposto tem fila e supera o atual pela margem."""
+    """Regra de fila (``v1``): troca se o grupo oposto tem fila e supera o atual pela margem."""
 
     def __init__(self, switch_margin: int = 1) -> None:
         self.rule = QueueBasedPolicy(switch_margin=switch_margin)

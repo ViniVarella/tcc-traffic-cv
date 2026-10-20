@@ -12,9 +12,9 @@ quando manter ou trocar o verde. **A política de controle não usa sensores
 perfeitos do SUMO**: os dados internos do SUMO servem para renderização,
 sincronização, recompensa de treino e avaliação.
 
-**Versão atual: v4** — o controle é o DQN estado v2 (cinco features visuais
+**Versão atual: v5** — o controle é o DQN estado v2 (cinco features visuais
 por faixa, pré-treinado só no SUMO e executado com a câmera), com prioridade
-para viaturas (v3) e fase exclusiva de pedestres (v4). No cenário calibrado
+para viaturas (v4) e fase exclusiva de pedestres (v5). No cenário calibrado
 (demanda medida por drone), reduz a espera do ciclo fixo de 13,0 para 4,3 s
 pela câmera, a 0,16 s do resultado com percepção *ground truth*. Com a fase de
 pedestres a cada ciclo, reduz pela câmera a espera dos veículos em 32% e a dos
@@ -54,26 +54,39 @@ cria uma versão; modelos que não entraram no produto ficam como experimentos.
 | Versão | Período | O que acrescenta | Quem decide |
 |---|---|---|---|
 | Linha de base | — | Referência: ciclo fixo 40/40 (nunca pede troca; o verde máximo alterna as fases) | — |
-| **v1** | 2026-09-02 | Primeiro controle em malha fechada pela câmera | Regra de fila (contagem por faixa) |
-| **v1.1** | 2026-09-04 | Primeira política aprendida (colapsou em "trocar sempre") | DQN estado v1 (13 entradas) |
-| **v2** | 2026-09-29 | Features cinemáticas por faixa, pré-treino só no SUMO, decisões só quando têm efeito, cenário calibrado | DQN estado v2 (41 entradas) |
-| **v3** | 2026-09-30 a 10-04 | Prioridade para viaturas: aviso V2I e detecção da viatura pela câmera | DQN estado v2 |
-| **v4** (atual) | 2026-10-05 a 10-13 | Pedestres: fase exclusiva de 7 s + 11 s a cada ciclo | DQN estado v2 |
+| **v1** | 2026-06 a 09-08 | Prova de conceito: primeira IA no semáforo, lendo os detectores do próprio SUMO (sem câmera) | Double DQN em Keras sobre os detectores E2 (`optimization/SP`) |
+| **v2** | 2026-09-02 | Primeiro controle em malha fechada pela câmera | Regra de fila (contagem por faixa) |
+| **v2.1** | 2026-09-04 | Primeira política aprendida com a câmera (colapsou em "trocar sempre") | DQN estado v1 (13 entradas) |
+| **v3** | 2026-09-29 | Features cinemáticas por faixa, pré-treino só no SUMO, decisões só quando têm efeito, cenário calibrado | DQN estado v2 (41 entradas) |
+| **v4** | 2026-09-30 a 10-04 | Prioridade para viaturas: aviso V2I e detecção da viatura pela câmera | DQN estado v2 |
+| **v5** (atual) | 2026-10-05 a 10-13 | Pedestres: fase exclusiva de 7 s + 11 s a cada ciclo | DQN estado v2 |
 
 **Experimento: DQN estado v3** (44 entradas: estado v2 + fases de pedestre +
 verdes até a fase de pedestres; recompensa com a espera dos pedestres).
-Treinado para a v4, empatou com o DQN estado v2 nos veículos e deixou os
+Treinado para a v5, empatou com o DQN estado v2 nos veículos e deixou os
 pedestres esperando 2–3 s a mais, então não entrou no produto. No código, ele é
 a "versão" `v3` de `--versions` e `state_version=3`; ali "versão" nomeia
-controladores.
+controladores. Os ids de controlador do código também não seguem a numeração
+do produto: `v1` é a regra de fila (v2 do produto), `v1.1` é o DQN estado v1
+(v2.1) e `v2` é o DQN estado v2 (v3 a v5).
 
-### v1 — Controle visual heurístico (regra de fila)
+### v1 — Prova de conceito: DQN com os detectores do SUMO
+
+Antes das câmeras, um Double DQN em Keras (`optimization/SP/traci8.DQN.py`,
+ambiente em `sp_env.py`, comparação em `traci9_comp.py`) controlou o semáforo
+lendo direto do SUMO os detectores E2 e as faixas pelo TraCI. Ele já passava
+por amarelo e all-red e respeitava verde mínimo e máximo. Mostrou que a ideia
+era viável e motivou a troca dos sensores perfeitos do SUMO pelas câmeras. Não
+entra nas tabelas de comparação: a percepção (sensores do SUMO) e o protocolo
+são outros.
+
+### v2 — Controle visual heurístico (regra de fila)
 
 `TrafficController` soma as contagens visuais de `South` e de `East + West` e
 troca o verde quando a fila oposta supera a atual por uma margem de 1 veículo,
 ou quando a fila atual está vazia. Verde mínimo e máximo são respeitados.
 
-### v1.1 — DQN visual, estado v1
+### v2.1 — DQN visual, estado v1
 
 DQN em PyTorch (`DqnAgent`, MLP 64×2) com 13 entradas: contagens normalizadas
 das 7 faixas, fase em *one-hot* e tempo da fase. A recompensa era a variação
@@ -89,7 +102,7 @@ mínimo permite". A análise posterior encontrou as causas:
 - A recompensa ficava positiva quando um veículo com espera saía da rede.
 - As transições eram gravadas mesmo quando a ação era ignorada.
 
-### v2 — DQN visual por faixa, estado v2 (decide até a v4)
+### v3 — DQN visual por faixa, estado v2 (decide até a v5)
 
 - **Estado v2 (41 entradas).** Para cada faixa: contagem, parados (< 1,39 m/s
   por ≥ 1 s), ocupação, velocidade média e espera, normalizados pela
@@ -134,14 +147,15 @@ recompensa de treino usa sempre o *ground truth*. No código, a percepção
 *ground truth* se chama `oracle` (`--perception oracle`, arquivos `*-oracle.json`).
 
 Só a lógica de decisão muda. As tabelas comparam **controladores** (quem
-decide), rotulados pelo modelo: a regra de fila é a da v1, o DQN estado v1 é o
-da v1.1 e o DQN estado v2 é o da v2 à v4. As regras de cada controlador estão em
+decide), rotulados pelo modelo: a regra de fila é a da v2, o DQN estado v1 é o
+da v2.1 e o DQN estado v2 é o da v3 à v5. A v1 (prova de conceito com os
+detectores do SUMO) fica de fora, porque usa outra percepção. As regras de cada controlador estão em
 `python/experiments/version_policies.py`, e o comparador é
 `python -m experiments.compare_versions`.
 
-**Diferença deliberada em relação às execuções originais:** a v1 e a v1.1
+**Diferença deliberada em relação às execuções originais:** a v2 e a v2.1
 contavam os veículos pelo centro da bbox com média móvel. Aqui elas recebem a
-mesma contagem por faixa usada pela v2. Também decidem a cada 1 s, como
+mesma contagem por faixa usada pela v3. Também decidem a cada 1 s, como
 faziam originalmente.
 
 ### Ambiente atual, cenário calibrado (demanda sem motos)
@@ -154,9 +168,9 @@ Leste 976 veíc/h (v/c 0,58), Sul 727, Oeste 139. Checkpoint do DQN estado v2:
 | Controlador | Espera (visual) | Espera (*ground truth*) | Chegadas (visual) | Fila de inserção |
 |---|---:|---:|---:|---:|
 | Linha de base (ciclo fixo) | 13,0 s | 13,0 s | 918 | 0 |
-| Regra de fila (v1) | **4,3 s** | 4,4 s | 915 | 0 |
-| DQN estado v1 (v1.1) | 5,7 s | 5,7 s | 916 | 0 |
-| DQN estado v2 (v2–v4) | **4,3 s** | **4,1 s** | 916 | 0 |
+| Regra de fila (v2) | **4,3 s** | 4,4 s | 915 | 0 |
+| DQN estado v1 (v2.1) | 5,7 s | 5,7 s | 916 | 0 |
+| DQN estado v2 (v3–v5) | **4,3 s** | **4,1 s** | 916 | 0 |
 | max-pressure (referência) | 4,8 s | 4,7 s | 916 | 0 |
 
 Pela câmera, os controladores adaptativos reduzem a espera do ciclo fixo em
@@ -167,7 +181,7 @@ truth*, o DQN estado v2 é o melhor. O DQN estado v1 dá o mesmo número nas dua
 percepções porque troca sempre no verde mínimo (129 trocas em 30 min) e não
 depende do que vê.
 
-### Ambiente atual com pedestres (cenário `calibrated_ped`, v4)
+### Ambiente atual com pedestres (cenário `calibrated_ped`, v5)
 
 Mesma demanda e protocolo, com a fase exclusiva de pedestres a cada ciclo
 (L/O → Sul → pedestres): todos os veículos no vermelho, 7 s de verde para
@@ -180,8 +194,8 @@ percepção visual.
 | Controlador | Espera veículos (visual) | Espera veículos (*ground truth*) | Espera pedestres (visual, mediana / p90) | Fila média de inserção (visual) |
 |---|---:|---:|---|---:|
 | Linha de base (ciclo fixo) | 20,8 s | 20,8 s | 56,6 s (47 / 140 s) | 0,9 |
-| Regra de fila (v1) | 24,6 s | 25,3 s | 22,3 s (21 / 53 s) | 9,3 |
-| **DQN estado v2 (v4, atual)** | **14,1 s** | **14,2 s** | 25,0 s (22 / 58 s) | 0,1 |
+| Regra de fila (v2) | 24,6 s | 25,3 s | 22,3 s (21 / 53 s) | 9,3 |
+| **DQN estado v2 (v5, atual)** | **14,1 s** | **14,2 s** | 25,0 s (22 / 58 s) | 0,1 |
 | DQN estado v3 (experimento) | 14,7 s | **14,2 s** | 27,4 s (25 / 60 s) | 0,1 |
 | max-pressure (referência) | 21,0 s | 26,5 s | 24,2 s (23 / 57 s) | 1,9 |
 
@@ -205,9 +219,9 @@ mudou o checkpoint do DQN estado v2. Percepção visual com 0 frames perdidos.
 | Controlador | Espera (*ground truth*) | Espera (visão) | Chegadas (visão) | Fila de inserção final (visão) |
 |---|---:|---:|---:|---:|
 | Linha de base (ciclo fixo) | 14,9 s | 14,9 s | 1431 | 37 |
-| Regra de fila (v1) | 4,7 s | **4,6 s** | 1472 | 0 |
-| DQN estado v1 (v1.1) | 4,6 s | **4,6 s** | 1474 | 0 |
-| DQN estado v2 (v2–v4) | **4,5 s** | 5,2 s | 1474 | 0 |
+| Regra de fila (v2) | 4,7 s | **4,6 s** | 1472 | 0 |
+| DQN estado v1 (v2.1) | 4,6 s | **4,6 s** | 1474 | 0 |
+| DQN estado v2 (v3–v5) | **4,5 s** | 5,2 s | 1474 | 0 |
 | max-pressure (referência) | 4,6 s | 6,1 s | 1471 | 0 |
 
 Com demanda equilibrada, alternar rápido já é quase ótimo: com a percepção
@@ -232,13 +246,13 @@ em [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md).
 - A recompensa de treino vem do TraCI; só a política é exclusivamente visual.
 - A avaliação usou três seeds de teste.
 
-Os resultados originais da v1 e da v1.1, obtidos em protocolos diferentes
+Os resultados originais da v2 e da v2.1, obtidos em protocolos diferentes
 (100 s, antes da correção das fases), estão preservados como registro
 histórico em
 [`docs/IMPLEMENTATION_PROGRESS.md`](docs/IMPLEMENTATION_PROGRESS.md). Eles não
 devem ser comparados com os desta seção.
 
-## Prioridade para veículos de emergência (v3)
+## Prioridade para veículos de emergência (v4)
 
 Viaturas de emergência avisam sua aproximação por V2I (*vehicle-to-infrastructure*,
 comunicação entre o veículo e o controlador do semáforo; como no despacho por
@@ -275,7 +289,7 @@ preempção) para 2,9 s com V2I (*ground truth*: 2,9 s), 4,5 s só com visão e
 tráfego é de +0,3 a +0,9 s.
 
 Com pedestres (`calibrated_ped`, fase de pedestres de 7 s + 11 s a cada
-ciclo; v4), percepção visual, DQN estado v2, 0 frames perdidos:
+ciclo; v5), percepção visual, DQN estado v2, 0 frames perdidos:
 
 | Fonte do pedido | Perda total média (máx.) | Sem parar | Espera do tráfego | Espera dos pedestres |
 |---|---|---|---|---|
@@ -301,7 +315,7 @@ experimento com pedestres, DQN estado v3 `dqn-v3-fase-curta-best.pt`.
 
 O repositório já traz tudo o que o projeto usa para rodar: os checkpoints
 `results/models/dqn-v2-traffiq-best.pt` (TraffIQ), `visual-dqn-sp-best.pt`
-(v1.1) e `dqn-v3-fase-curta-best.pt` (experimento), o detector
+(v2.1) e `dqn-v3-fase-curta-best.pt` (experimento), o detector
 `runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`, as
 referências `results/evaluation/versoes-*-oracle.json` e o modelo da
 ambulância na Unity. Os demais resultados e modelos gerados ficam locais. Na
@@ -409,10 +423,10 @@ avaliações), não uma avaliação: os números das tabelas vêm de `compare_ve
 `evaluate_preemption`.
 
 O detector ajustado (`runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`)
-tem duas classes, `0 vehicle` e `1 emergency`; os scripts v2 já usam esse modelo
+tem duas classes, `0 vehicle` e `1 emergency`; os scripts do DQN estado v2 já usam esse modelo
 com `--classes 0,1` e `--image-size 960` por padrão. O detector anterior
 (`yolov8n-unity-run-002-mask`, uma classe, `--classes 0`) continua nos scripts
-legados da v1. Recall no teste: veículos 100% / 99,5% / 97,2% em 0–20 / 20–40 /
+legados da v2 e da v2.1. Recall no teste: veículos 100% / 99,5% / 97,2% em 0–20 / 20–40 /
 40–60 m da ROI ([detalhes](docs/IMPLEMENTATION_PROGRESS.md)).
 
 ## Modelo da ambulância
@@ -447,8 +461,8 @@ Sem o prefab, as viaturas de emergência aparecem como blocos vermelhos.
   (`python -m experiments.<nome>`).
 - `sumo/sp`: rede, demandas (original e calibrada) e detectores do cenário SP.
 - `unity/TraffIQ-TCC`: projeto Unity 6000.0.53f1 com a cena `SPImport`.
-- `optimization/SP`: linha paralela de DQN com detectores E2 (Keras),
-  independente do pipeline visual.
+- `optimization/SP`: a v1 do TraffIQ, prova de conceito de DQN com os
+  detectores E2 do SUMO (Keras), independente do pipeline visual.
 - `docs/`: guia de implementação, progresso e integração com o Sumo2Unity.
 
 ## Dados de drone (SimJamCV)
@@ -568,7 +582,7 @@ Na cena `SPImport` a sincronização já está configurada
 Entre em Play Mode antes de executar o script. O terminal deve imprimir
 `state_sent step=...`, e os veículos devem se mover na cena.
 
-### Scripts originais da v1 e da v1.1
+### Scripts originais da v2 e da v2.1
 
 Os scripts originais das versões anteriores, com o pipeline de contagem da
 época, continuam disponíveis com a Unity em Play Mode. Para comparar versões,
@@ -587,6 +601,6 @@ cd python
   --output ../results/evaluation/fixed-vs-visual-controller.json
 ```
 
-Sem `--dqn-model`, `run_visual_controller` usa o heurístico (v1); com um
-checkpoint v1 (`--dqn-model ../results/models/visual-dqn-sp-best.pt`), usa o
-DQN v1.1. Checkpoints v2 são recusados de propósito: use `run_visual_policy`.
+Sem `--dqn-model`, `run_visual_controller` usa o heurístico (v2); com um
+checkpoint do estado v1 (`--dqn-model ../results/models/visual-dqn-sp-best.pt`), usa o
+DQN da v2.1. Checkpoints v2 são recusados de propósito: use `run_visual_policy`.

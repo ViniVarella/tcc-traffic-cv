@@ -30,7 +30,7 @@ class EpisodeRunnerValidationTests(unittest.TestCase):
         self.runner._bridge_ready.set()
 
     def test_experiment_is_not_offered(self) -> None:
-        # O DQN estado v3 é experimento: o painel só roda o produto (v2) e as referências.
+        # O DQN estado v3 é experimento: o painel só roda o produto (controlador v2, TraffIQ v5) e as referências.
         with self.assertRaises(ValueError):
             self.runner.start(StartRequest(scenario="calibrated_ped", version="v3"))
         self.runner.start(StartRequest(scenario="calibrated_ped", version="v2"))

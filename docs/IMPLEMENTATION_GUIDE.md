@@ -1168,7 +1168,7 @@ Critério de sucesso:
 
 Status: concluído com um DQN PyTorch cuja política recebe só features visuais.
 A camada de segurança impõe verde mínimo de 10 s, verde máximo de 40 s,
-amarelo de 3 s e *all-red* de 1 s. A versão atual (v2) usa cinco features por
+amarelo de 3 s e *all-red* de 1 s. O controlador atual (DQN estado v2, que decide da v3 à v5 do TraffIQ) usa cinco features por
 faixa (contagem, parados, ocupação, velocidade e espera) e é pré-treinada só
 no SUMO; ver `docs/IMPLEMENTATION_PROGRESS.md`, seção **DQN v2**.
 
@@ -1188,8 +1188,8 @@ Status: concluído com o DQN v2 no cenário calibrado, nas seeds inéditas
 fixo (espera 10,3 s × 16,1 s; 1599 × 1503 chegadas) e o max-pressure visual
 (11,1 s; fila de inserção de 104 veículos × 1). As versões são comparadas no
 mesmo ambiente por `experiments.compare_versions`: com percepção *ground truth* no
-cenário calibrado, a v1 e a v1.1 deixam 250–290 veículos fora da rede, contra
-6 da v2; com percepção visual, 253–289 contra 1. No cenário `original`, as
+cenário calibrado, a regra de fila e o DQN estado v1 deixam 250–290 veículos fora da rede, contra
+6 do DQN estado v2; com percepção visual, 253–289 contra 1. No cenário `original`, as
 versões adaptativas empatam com as duas percepções.
 
 ---
