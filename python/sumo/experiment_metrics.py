@@ -32,6 +32,8 @@ class ExperimentMetricsCollector:
     # Soma e contagem das esperas concluídas (todas e sem viaturas), para o progresso
     # ao vivo em tempo constante; só observe() acrescenta veículos concluídos.
     _waiting_totals: dict[bool, list[float]] = field(default_factory=lambda: {True: [0.0, 0], False: [0.0, 0]}, init=False, repr=False)
+    # O mesmo, só dos veículos que pararam (espera > 0).
+    _stopped_totals: dict[bool, list[float]] = field(default_factory=lambda: {True: [0.0, 0], False: [0.0, 0]}, init=False, repr=False)
 
     def observe(
         self,
@@ -73,9 +75,12 @@ class ExperimentMetricsCollector:
             self.completed_waiting_times.append(wait)
             for include_emergencies in (True, False):
                 if include_emergencies or not vehicle_id.startswith(EMERGENCY_PREFIX):
-                    totals = self._waiting_totals[include_emergencies]
-                    totals[0] += wait
-                    totals[1] += 1
+                    groups = [self._waiting_totals[include_emergencies]]
+                    if wait > 0:
+                        groups.append(self._stopped_totals[include_emergencies])
+                    for totals in groups:
+                        totals[0] += wait
+                        totals[1] += 1
 
     def progress(self, sim_time: float, exclude_emergencies: bool = False) -> dict[str, float | int | None]:
         """Espera média por veículo até agora: a mesma ``mean_waiting_time_seconds`` do ``summary``.
@@ -83,12 +88,17 @@ class ExperimentMetricsCollector:
         Para acompanhar um episódio em andamento (painel), em tempo constante.
         ``exclude_emergencies`` deixa as viaturas de fora. A fila de inserção e os
         veículos ainda na rede não entram na média: vão à parte, para o painel
-        mostrá-los. ``None`` antes do primeiro veículo.
+        mostrá-los. ``None`` antes do primeiro veículo. A espera de quem parou é a
+        ``mean_waiting_time_stopped_seconds`` do ``summary``.
         """
         total, count = self._waiting_totals[not exclude_emergencies]
+        stopped_total, stopped = self._stopped_totals[not exclude_emergencies]
         return {
             "completed_vehicles": int(count),
             "mean_waiting_time_s": total / count if count else None,
+            "stopped_vehicles": int(stopped),
+            "mean_waiting_time_stopped_s": stopped_total / stopped if stopped else None,
+            "stopped_share": stopped / count if count else None,
             "sampled_s": max(0.0, float(sim_time) - self.warmup_until_s),
             "pending_vehicles": self.pending_samples[-1] if self.pending_samples else 0,
             "active_vehicles": self.active_vehicle_samples[-1] if self.active_vehicle_samples else 0,
@@ -99,6 +109,7 @@ class ExperimentMetricsCollector:
         duration = 0.0 if self.started_at is None or self.ended_at is None else max(0.0, self.ended_at - self.started_at)
         departed = sum(time > self.warmup_until_s for time in self.departure_times.values())
         completed = len(self.completed_waiting_times)
+        stopped = [wait for wait in self.completed_waiting_times if wait > 0]
         arrived = self.arrivals_after_warmup
         summary: dict[str, float | int] = {
             "simulation_seconds": duration,
@@ -107,6 +118,9 @@ class ExperimentMetricsCollector:
             "unfinished_vehicles": max(0, departed - completed),
             "mean_travel_time_seconds": _mean(self.completed_travel_times),
             "mean_waiting_time_seconds": _mean(self.completed_waiting_times),
+            # Só quem chegou a parar (espera > 0): quem passou no verde fica de fora.
+            "mean_waiting_time_stopped_seconds": _mean(stopped),
+            "stopped_vehicle_share": len(stopped) / completed if completed else 0.0,
             "mean_queue_length": _mean(self.queue_samples),
             "max_queue_length": max(self.queue_samples, default=0),
             "mean_active_vehicles": _mean(self.active_vehicle_samples),

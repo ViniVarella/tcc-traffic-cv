@@ -72,6 +72,63 @@ projeto em outra máquina: `dqn-v2-traffiq-best.pt`, `visual-dqn-sp-best.pt`,
 modelo da ambulância (RigModels.com, licença de uso pessoal/estudante, com o
 `License.txt` junto).
 
+## Espera parado: só os veículos que pararam (2026-10-20)
+
+A espera média por veículo (`mean_waiting_time_seconds`) conta também quem
+passou no verde com 0 s; por isso o TraffIQ mostra ~4 s no calibrado, embora
+quem para espere bem mais. `ExperimentMetricsCollector` passou a medir também
+a **espera parado** (`mean_waiting_time_stopped_seconds`: média só dos veículos
+com espera > 0) e a parcela que parou (`stopped_vehicle_share`). As duas
+entraram em `SUMMARY_KEYS` e no progresso ao vivo do painel.
+
+`compare_versions --perception oracle` foi rodado de novo nos três cenários da
+tese (seeds 201–203, 300 s + 1800 s): todas as métricas anteriores saíram
+idênticas, e os `versoes-*-oracle.json` ganharam as duas novas. Tempo fixo →
+TraffIQ (DQN estado v2):
+
+| Cenário | Espera média por veículo | Espera parado | Veículos que param |
+|---|---|---|---|
+| `calibrated` | 13,0 s → 4,1 s (−68%) | 23,1 s → 7,9 s (−66%) | 56% → 53% |
+| `calibrated_ped` | 20,8 s → 14,2 s (−32%) | 34,3 s → 18,2 s (−47%) | 61% → 78% |
+| `original` | 14,9 s → 4,5 s (−70%) | 22,7 s → 7,2 s (−68%) | 66% → 62% |
+
+Sem pedestres, quase a mesma parcela de veículos para; o ganho está em quanto
+tempo eles ficam parados. Com pedestres, o TraffIQ faz mais veículos pararem
+(a fase de pedestres vem a cada ciclo, e os ciclos dele são mais curtos), mas
+quem para espera quase metade. O `versoes-original_ped-oracle.json` (fora da
+tese) também foi regravado: o anterior era de antes da fase curta de pedestres
+(2026-10-13), e por isso todos os números dele mudaram.
+
+No painel de Resultados, os cards do meio passaram a destacar a **redução**:
+"Espera geral" (com a espera desta demonstração e a do tempo fixo) e
+"Espera parado", com o percentual de redução em destaque; a espera parado ganhou também um gráfico
+próprio. A referência do tempo fixo vem desses arquivos
+(`FIXED_TIME_STOPPED_REFERENCE_S` é a reserva).
+
+## Amostra mínima da redução no painel: 5 min (2026-10-20)
+
+A "Redução na espera" do painel aparece em cinza (prévia) até a amostra
+mínima (`MIN_SAMPLE_S` em `python/dashboard/app.py`), que passou de 10 para
+**5 min** de teste. Para escolher, a média acumulada da espera do tempo fixo
+(só veículos que entraram depois do aquecimento e concluíram o trajeto, como
+no painel) foi comparada com a média de 30 min, nas seeds 201–203:
+
+| Tempo de teste | Veículos | `calibrated_ped` | `calibrated` |
+|---|---|---|---|
+| 1 min | ~12 | −56% a −92% | −92% a −97% |
+| 3 min | ~75 | −14% a −25% | −8% a −19% |
+| 5 min | ~140 | −6% a −12% | −3% a −7% |
+| 10 min | ~290 | +4% a −11% | 0% a −9% |
+| 20 min | ~600 | 0% a −3% | 0% a +1% |
+
+No começo a média fica baixa demais: os primeiros a concluir o trajeto são os
+que pegaram verde. De 5 para 10 min a margem quase não muda (~10%). Os
+primeiros veículos concluem o trajeto ~40 s depois do aquecimento (percurso
+mediano de ~180 m; mediana de 39 s de viagem com pedestres). As médias de
+30 min (≈ 21 s e ≈ 13 s) batem com as referências do painel (20,8 s e
+13,0 s). É uma rodada do SUMO sem TraCI, com o programa estático; o número
+do painel continua sendo uma estimativa de uma seed.
+
 ## Versões do produto TraffIQ (2026-10-14)
 
 Desde 2026-10-14 as versões são do **produto** (decisão do usuário): cada uma
