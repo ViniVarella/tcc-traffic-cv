@@ -279,7 +279,7 @@ function updateTelemetry(data) {
     const pendingNote = document.getElementById('kpi-pending');
     pendingNote.textContent = pending ? `fila de entrada: ${pending} veículos (ainda fora da média)` : 'fila de entrada: 0';
     pendingNote.classList.toggle('text-amber', pending > 0);
-    updateReduction(meanWait, sampled);
+    updateReduction(meanWait, sampled, warming);
 
     requestAnimationFrame(renderCharts);
     updatePhaseDistribution();
@@ -428,7 +428,7 @@ tglAutoEmergencies.addEventListener('change', () => {
 // Zera os cartões de Resultados ao iniciar outra rodada, para nunca misturar amostras.
 function resetKpis() {
     for (const [id, text] of [['kpi-total-steps', '0:00'], ['kpi-time-note', 'aguardando o início'], ['kpi-avg-wait', '—'], ['kpi-reduction-val', '—'],
-                              ['kpi-pending', 'fila de entrada: —'], ['kpi-reduction-note', 'aguardando amostra']]) {
+                              ['kpi-pending', 'fila de entrada: —'], ['kpi-reduction-note', 'Aguardando amostra...']]) {
         document.getElementById(id).textContent = text;
     }
     updateAmbulanceCounts(null);
@@ -695,7 +695,7 @@ for (const canvasId of ['chart-waiting', 'chart-halting']) {
 
 /** Redução da espera contra o tempo fixo do cenário: só com amostra suficiente e
  *  nunca para o próprio tempo fixo (seria comparar a referência com ela mesma). */
-function updateReduction(meanWait, sampled) {
+function updateReduction(meanWait, sampled, warming = false) {
     const value = document.getElementById('kpi-reduction-val');
     const note = document.getElementById('kpi-reduction-note');
     const reference = fixedTimeReference();
@@ -707,8 +707,14 @@ function updateReduction(meanWait, sampled) {
         note.textContent = 'o tempo fixo é a própria referência';
         return;
     }
+    if (warming) {
+        note.textContent = 'Aguardando aquecimento...';
+        return;
+    }
     if (reference == null || meanWait == null) {
-        note.textContent = 'aguardando os primeiros veículos';
+        // Nos primeiros ~40 s de teste nenhum veículo que entrou depois do aquecimento
+        // concluiu o trajeto ainda.
+        note.textContent = 'Encerrando aquecimento...';
         return;
     }
     const pct = (reference - meanWait) / reference * 100;
@@ -722,7 +728,7 @@ function updateReduction(meanWait, sampled) {
         // Com pouca amostra a média ainda oscila: o número aparece, mas em cinza.
         value.className = 'kpi-value text-muted';
         note.className = 'kpi-subtext text-muted';
-        note.textContent = `preliminar até ${minutesClock(minSampleS)} de teste`;
+        note.textContent = 'Dados preliminares. Aguardando dados concretos...';
     } else if (pct < 0) {
         value.className = 'kpi-value text-amber';
     }
