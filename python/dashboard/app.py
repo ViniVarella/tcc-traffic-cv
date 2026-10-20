@@ -126,7 +126,7 @@ class EpisodeRunner:
         # é a heurística (sem checkpoint); o da v1.1 só é lido se ela for pedida,
         # e o painel não a oferece.
         self.v1_1_checkpoint = models / "visual-dqn-sp-best.pt"
-        self.checkpoints = {"v2": models / "dqn-v2-sem-motos-best.pt"}
+        self.checkpoints = {"v2": models / "dqn-v2-traffiq-best.pt"}
         self.announce_before_s = EmergencySettings.from_config(self.config).announce_before_s
         self.fixed_time_reference, self.fixed_time_reference_source = load_fixed_time_reference(
             settings.base_dir.parent / "results" / "evaluation")

@@ -58,6 +58,12 @@ A pasta do projeto Unity passou de `unity/TrafficVisionUnity` para
 já usam a pasta nova. No Hub, remova a entrada antiga e adicione a pasta nova
 (*Add → Add project from disk*).
 
+No mesmo dia, o checkpoint do TraffIQ (DQN estado v2) passou de
+`dqn-v2-sem-motos-best.pt` para **`dqn-v2-traffiq-best.pt`** (mesmo arquivo; o
+cenário com motos não é mais usado), e os checkpoints sem uso foram para
+`results/models/arquivo/`. Os nomes citados nas seções anteriores já usam o
+nome novo.
+
 ## Versões do produto TraffIQ (2026-10-14)
 
 Desde 2026-10-14 as versões são do **produto** (decisão do usuário): cada uma
@@ -99,7 +105,7 @@ uma rua por fase, e quem precisa de duas espera a fase seguinte na esquina:
 `.ped.net.xml` foi regenerada (`crossing_lengths` no gerador).
 
 **Escolha da variante** (percepção *ground truth*, seeds 201–203, DQN estado v2 com
-`dqn-v2-sem-motos-best.pt` e o DQN estado v3 antigo; espera média de veículos /
+`dqn-v2-traffiq-best.pt` e o DQN estado v3 antigo; espera média de veículos /
 pedestres). Referência: níveis de serviço do HCM 2000 para a espera de
 pedestre em semáforo (A < 10 s, B 10–20, C 20–30, D 30–40, E 40–60, F > 60 s).
 
@@ -234,7 +240,7 @@ o gerador lê dela as proporções de conversão.
 
 ### Retreino e avaliação com a demanda sem motos (percepção *ground truth*, seeds 201–203, 300 s + 1800 s)
 
-Checkpoints novos, padrão dos scripts: v2 = `dqn-v2-sem-motos-best.pt`
+Checkpoints novos, padrão dos scripts: v2 = `dqn-v2-traffiq-best.pt`
 (`--scenarios calibrated,original`, 40 episódios, melhor no 39; ~5 min, pois
 cada episódio leva ~5 s sem saturação) e v3 = `dqn-v3-sem-motos-best.pt`
 (`calibrated_ped,original_ped`, w = 0,3, 100 episódios, seeds 51–150, melhor
@@ -382,7 +388,7 @@ Antes da correção: V2I 1,5 s (máx. 3,2 s), V2I + visão 1,4 s (máx. 3,3 s).
 ### Avaliação visual do cenário original (Unity, 2026-10-12)
 
 Mesmo protocolo (seeds 201–203, 300 s + 1800 s), cenário `original`, v2 =
-`dqn-v2-sem-motos-best.pt`, **0 frames perdidos** e 0 observações perdidas.
+`dqn-v2-traffiq-best.pt`, **0 frames perdidos** e 0 observações perdidas.
 A demanda do `original` não mudou; mudou só o checkpoint da v2. Arquivo:
 `results/evaluation/versoes-original-visual.json` (a rodada com o checkpoint
 anterior ficou em `versoes-original-visual-motos.json`); log em

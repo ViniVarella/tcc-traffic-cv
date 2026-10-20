@@ -106,7 +106,7 @@ mínimo permite". A análise posterior encontrou as causas:
   é um nível em [−1, 0] com parados, espera e fila de inserção.
 - **Cenário calibrado.** A demanda foi medida nos vídeos de drone, sem motos
   (andam no corredor e não formam fila): Leste com v/c≈0,58, chegadas
-  Poisson e inserção realista. O checkpoint atual (`dqn-v2-sem-motos-best.pt`) foi
+  Poisson e inserção realista. O checkpoint atual (`dqn-v2-traffiq-best.pt`) foi
   pré-treinado nos cenários calibrado e original.
 - **Correções que valem para todas as versões.** O Python passa a manter o
   controle das fases no SUMO mesmo quando falta um frame (antes o programa
@@ -148,7 +148,7 @@ faziam originalmente.
 
 Demanda medida pelo drone sem motos (andam no corredor e não formam fila):
 Leste 976 veíc/h (v/c 0,58), Sul 727, Oeste 139. Checkpoint do DQN estado v2:
-`dqn-v2-sem-motos-best.pt`. Seeds 201–203, 300 s de aquecimento + 1800 s,
+`dqn-v2-traffiq-best.pt`. Seeds 201–203, 300 s de aquecimento + 1800 s,
 0 frames perdidos na percepção visual.
 
 | Controlador | Espera (visual) | Espera (*ground truth*) | Chegadas (visual) | Fila de inserção |
@@ -294,7 +294,7 @@ O custo é de +0,5 a +1,0 s para os outros veículos e de até +3 s para os
 pedestres.
 
 As tabelas desta seção usam o ambiente atual: câmeras de 60 m, YOLO de duas
-classes, demanda sem motos, DQN estado v2 `dqn-v2-sem-motos-best.pt` e, no
+classes, demanda sem motos, DQN estado v2 `dqn-v2-traffiq-best.pt` e, no
 experimento com pedestres, DQN estado v3 `dqn-v3-fase-curta-best.pt`.
 
 ## Como reproduzir
@@ -321,14 +321,14 @@ Play Mode (reinicie o Play Mode antes de cada comando):
 
 ```bash
 ../.venv/bin/python -m experiments.run_visual_policy --scenario calibrated --policy dqn \
-  --dqn-model ../results/models/dqn-v2-sem-motos-best.pt --seeds 201,202,203 --control-seconds 1800 \
+  --dqn-model ../results/models/dqn-v2-traffiq-best.pt --seeds 201,202,203 --control-seconds 1800 \
   --step-log-output ../results/logs/teste-visual-dqn.jsonl \
   --output ../results/evaluation/teste-visual-dqn.json
 
 # Diferença visão × ground truth a partir do log por step (sem Unity)
 ../.venv/bin/python -m experiments.evaluate_lane_features \
   --step-log ../results/logs/teste-visual-dqn.jsonl \
-  --dqn-model ../results/models/dqn-v2-sem-motos-best.pt
+  --dqn-model ../results/models/dqn-v2-traffiq-best.pt
 ```
 
 **Painel web** (demonstração ao vivo; Unity em Play Mode, nenhum outro SUMO
