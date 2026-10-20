@@ -448,8 +448,8 @@ tglAutoEmergencies.addEventListener('change', () => {
 // Zera os cartões de Resultados ao iniciar outra rodada, para nunca misturar amostras.
 function resetKpis() {
     for (const [id, text] of [['kpi-total-steps', '0:00'], ['kpi-time-note', 'Aguardando o início'], ['kpi-avg-wait', 'Agora: —'],
-                              ['kpi-reduction-val', '—'], ['kpi-pending', 'Fila de entrada: —'], ['kpi-reduction-note', 'Aguardando amostra...'],
-                              ['kpi-stopped-wait', 'Agora: —'], ['kpi-stopped-reduction-val', '—'], ['kpi-stopped-note', 'Aguardando amostra...']]) {
+                              ['kpi-reduction-val', '— %'], ['kpi-pending', 'Fila de entrada: —'], ['kpi-reduction-note', 'Aguardando amostra...'],
+                              ['kpi-stopped-wait', 'Agora: —'], ['kpi-stopped-reduction-val', '— %'], ['kpi-stopped-note', 'Aguardando amostra...']]) {
         document.getElementById(id).textContent = text;
     }
     updateAmbulanceCounts(null);
@@ -721,7 +721,8 @@ function updateReduction(valueId, noteId, meanWait, reference, sampled, warming 
     const value = document.getElementById(valueId);
     const note = document.getElementById(noteId);
     value.className = 'kpi-value text-green';
-    value.textContent = '—';
+    // Sem percentual (antes dos dados ou no próprio tempo fixo): "— %".
+    value.textContent = '— %';
     note.className = 'kpi-subtext kpi-note text-green font-semibold';
     note.textContent = '';
     if (runningRequest && runningRequest.version === 'baseline') {
