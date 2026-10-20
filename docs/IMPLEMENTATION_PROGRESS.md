@@ -100,8 +100,8 @@ tese) também foi regravado: o anterior era de antes da fase curta de pedestres
 (2026-10-13), e por isso todos os números dele mudaram.
 
 No painel de Resultados, os cards do meio passaram a destacar a **redução**:
-"Redução na espera média" (com a espera desta demonstração e a do tempo fixo)
-e "Redução na espera parado"; a espera parado ganhou também um gráfico
+"Espera geral" (com a espera desta demonstração e a do tempo fixo) e
+"Espera parado", com o percentual de redução em destaque; a espera parado ganhou também um gráfico
 próprio. A referência do tempo fixo vem desses arquivos
 (`FIXED_TIME_STOPPED_REFERENCE_S` é a reserva).
 
