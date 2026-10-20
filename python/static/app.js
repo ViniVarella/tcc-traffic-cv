@@ -81,14 +81,16 @@ let isRunning = false;
 let isPaused = false;
 let lastSimTime = null;
 let lastError = null;
-// waitingTimesAt: instante de cada ponto de espera (a série só começa no primeiro veículo concluído).
-let chartData = { timestamps: [], waitingTimes: [], waitingTimesAt: [], haltingVehicles: [], phaseCounters: {} };
+// waitingTimesAt: instante de cada ponto de espera (a série só começa no primeiro veículo concluído);
+// stoppedWaits/stoppedWaitsAt: o mesmo, só dos veículos que pararam.
+let chartData = { timestamps: [], waitingTimes: [], waitingTimesAt: [], stoppedWaits: [], stoppedWaitsAt: [], haltingVehicles: [], phaseCounters: {} };
 const MAX_CHART_POINTS = 300;
 const APPROACHES = ['west', 'south', 'east'];
 
 // Espera por veículo do tempo fixo na avaliação oficial, por cenário, e a amostra
 // mínima antes de mostrar a redução: vêm de /api/options (fonte única no backend).
 let fixedTimeReferenceS = {};
+let fixedTimeStoppedReferenceS = {};  // o mesmo, só de quem parou
 let minSampleS = 300;
 let warmupS = 300;
 let referenceWarmupS = 300;  // aquecimento da avaliação oficial (a referência)
@@ -97,18 +99,21 @@ let lastRunScenario = null;  // cenário dos dados no gráfico (mantido depois d
 
 /** Referência do tempo fixo do cenário dos dados mostrados: o em execução, o da última
  *  rodada enquanto o gráfico tiver dados dela, ou (sem dados) o selecionado. */
-function fixedTimeReference() {
+function fixedTimeReference(values = fixedTimeReferenceS) {
     let scenario = selScenario.value;
     if (isRunning && runningRequest) scenario = runningRequest.scenario;
     else if (chartData.waitingTimes.length && lastRunScenario) scenario = lastRunScenario;
-    return fixedTimeReferenceS[scenario] ?? null;
+    return values[scenario] ?? null;
 }
 
 function updateReferenceLabels() {
-    const reference = fixedTimeReference();
-    const text = reference == null ? '—' : decimal(reference) + ' s';
-    document.getElementById('legend-baseline-val').textContent = text;
-    document.getElementById('kpi-baseline-ref').textContent = `tempo fixo na avaliação: ${text}`;
+    for (const [values, legend, card] of [[fixedTimeReferenceS, 'legend-baseline-val', 'kpi-baseline-ref'],
+                                          [fixedTimeStoppedReferenceS, 'legend-stopped-baseline-val', 'kpi-stopped-ref']]) {
+        const reference = fixedTimeReference(values);
+        const text = reference == null ? '—' : decimal(reference) + ' s';
+        document.getElementById(legend).textContent = text;
+        document.getElementById(card).textContent = `Tempo fixo na avaliação: ${text}`;
+    }
 }
 
 const PHASE_LABELS = {
@@ -150,7 +155,7 @@ function updateAmbulanceCounts(board) {
     document.getElementById('val-dispatched').textContent = total;
     document.getElementById('kpi-emergency-val').textContent = total;
     document.getElementById('kpi-emergency-sub').textContent = counts.automatic
-        ? `${counts.manual} pelo botão · ${counts.automatic} automáticas` : 'nesta demonstração';
+        ? `${counts.manual} pelo botão · ${counts.automatic} automáticas` : 'Nesta demonstração';
 }
 
 // Números na tela com vírgula decimal, como em português.
@@ -258,6 +263,7 @@ function updateTelemetry(data) {
     // Espera por veículo desde o aquecimento: a mesma métrica da avaliação oficial.
     const trip = t.trip || {};
     const meanWait = trip.mean_waiting_time_s;
+    const stoppedWait = trip.mean_waiting_time_stopped_s;
     // O aquecimento não entra nos gráficos nem na divisão por fase: só o tempo de teste.
     if (!warming) {
         chartData.timestamps.push(testTime);
@@ -266,10 +272,15 @@ function updateTelemetry(data) {
             chartData.waitingTimes.push(meanWait);
             chartData.waitingTimesAt.push(testTime);
         }
+        if (stoppedWait != null) {
+            chartData.stoppedWaits.push(stoppedWait);
+            chartData.stoppedWaitsAt.push(testTime);
+        }
         chartData.phaseCounters[t.phase] = (chartData.phaseCounters[t.phase] || 0) + 1;
     }
     // Cada série anda junto com o próprio eixo do tempo.
-    for (const series of [chartData.timestamps, chartData.haltingVehicles, chartData.waitingTimes, chartData.waitingTimesAt]) {
+    for (const series of [chartData.timestamps, chartData.haltingVehicles, chartData.waitingTimes, chartData.waitingTimesAt,
+                          chartData.stoppedWaits, chartData.stoppedWaitsAt]) {
         if (series.length > MAX_CHART_POINTS) series.shift();
     }
 
@@ -277,14 +288,17 @@ function updateTelemetry(data) {
     // O mesmo tempo de teste do Ao vivo e do eixo dos gráficos.
     const sampled = trip.sampled_s || 0;
     document.getElementById('kpi-total-steps').textContent = warming ? '0:00' : minutesClock(testTime);
-    document.getElementById('kpi-time-note').textContent = warming ? 'preparando o cruzamento…' : 'desde o início do teste';
-    document.getElementById('kpi-avg-wait').textContent = meanWait == null ? '—' : decimal(meanWait) + ' s';
+    document.getElementById('kpi-time-note').textContent = warming ? 'Preparando o cruzamento…' : 'Desde o início do teste';
+    document.getElementById('kpi-avg-wait').textContent = 'Agora: ' + (meanWait == null ? '—' : decimal(meanWait) + ' s');
+    document.getElementById('kpi-stopped-wait').textContent = 'Agora: ' + (stoppedWait == null ? '—' : decimal(stoppedWait) + ' s');
     // Quem ainda espera para entrar na rede não está na média (só veículos que concluíram o trajeto).
     const pending = trip.pending_vehicles || 0;
     const pendingNote = document.getElementById('kpi-pending');
-    pendingNote.textContent = pending ? `fila de entrada: ${pending} veículos (ainda fora da média)` : 'fila de entrada: 0';
+    pendingNote.textContent = pending ? `Fila de entrada: ${pending} veículos (ainda fora da média)` : 'Fila de entrada: 0';
     pendingNote.classList.toggle('text-amber', pending > 0);
-    updateReduction(meanWait, sampled, warming);
+    updateReduction('kpi-reduction-val', 'kpi-reduction-note', meanWait, fixedTimeReference(), sampled, warming);
+    updateReduction('kpi-stopped-reduction-val', 'kpi-stopped-note', stoppedWait, fixedTimeReference(fixedTimeStoppedReferenceS),
+                    sampled, warming);
 
     requestAnimationFrame(renderCharts);
     updatePhaseDistribution();
@@ -385,6 +399,7 @@ async function loadOptions() {
         selVersion.innerHTML = options.versions.map(v => `<option value="${v.id}">${v.label}</option>`).join('');
         emergencyRoutes = options.emergency_routes || {};
         fixedTimeReferenceS = options.fixed_time_reference_s || {};
+        fixedTimeStoppedReferenceS = options.fixed_time_stopped_reference_s || {};
         minSampleS = options.min_sample_s ?? minSampleS;
         warmupS = options.warmup_s ?? warmupS;
         referenceWarmupS = options.reference_warmup_s ?? referenceWarmupS;
@@ -419,7 +434,7 @@ async function post(url, body) {
 // Limpa só os gráficos: os indicadores vêm do coletor da rodada inteira no servidor
 // e se atualizam na próxima telemetria.
 function resetCharts() {
-    chartData = { timestamps: [], waitingTimes: [], waitingTimesAt: [], haltingVehicles: [], phaseCounters: {} };
+    chartData = { timestamps: [], waitingTimes: [], waitingTimesAt: [], stoppedWaits: [], stoppedWaitsAt: [], haltingVehicles: [], phaseCounters: {} };
     lastSimTime = null;
     renderCharts();
     updatePhaseDistribution();
@@ -432,8 +447,9 @@ tglAutoEmergencies.addEventListener('change', () => {
 
 // Zera os cartões de Resultados ao iniciar outra rodada, para nunca misturar amostras.
 function resetKpis() {
-    for (const [id, text] of [['kpi-total-steps', '0:00'], ['kpi-time-note', 'aguardando o início'], ['kpi-avg-wait', '—'], ['kpi-reduction-val', '—'],
-                              ['kpi-pending', 'fila de entrada: —'], ['kpi-reduction-note', 'Aguardando amostra...']]) {
+    for (const [id, text] of [['kpi-total-steps', '0:00'], ['kpi-time-note', 'Aguardando o início'], ['kpi-avg-wait', 'Agora: —'],
+                              ['kpi-reduction-val', '—'], ['kpi-pending', 'Fila de entrada: —'], ['kpi-reduction-note', 'Aguardando amostra...'],
+                              ['kpi-stopped-wait', 'Agora: —'], ['kpi-stopped-reduction-val', '—'], ['kpi-stopped-note', 'Aguardando amostra...']]) {
         document.getElementById(id).textContent = text;
     }
     updateAmbulanceCounts(null);
@@ -685,7 +701,7 @@ function drawLineChart(canvasId, data, color, label, yLabel, baselineVal = null,
     ctx.restore();
 }
 
-for (const canvasId of ['chart-waiting', 'chart-halting']) {
+for (const canvasId of ['chart-waiting', 'chart-stopped', 'chart-halting']) {
     const canvas = document.getElementById(canvasId);
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
@@ -698,18 +714,18 @@ for (const canvasId of ['chart-waiting', 'chart-halting']) {
     });
 }
 
-/** Redução da espera contra o tempo fixo do cenário: só com amostra suficiente e
- *  nunca para o próprio tempo fixo (seria comparar a referência com ela mesma). */
-function updateReduction(meanWait, sampled, warming = false) {
-    const value = document.getElementById('kpi-reduction-val');
-    const note = document.getElementById('kpi-reduction-note');
-    const reference = fixedTimeReference();
+/** Redução de uma espera (média ou parado) contra o tempo fixo do cenário: só com
+ *  amostra suficiente e nunca para o próprio tempo fixo (seria comparar a referência
+ *  com ela mesma). */
+function updateReduction(valueId, noteId, meanWait, reference, sampled, warming = false) {
+    const value = document.getElementById(valueId);
+    const note = document.getElementById(noteId);
     value.className = 'kpi-value text-green';
     value.textContent = '—';
-    note.className = 'kpi-subtext text-green font-semibold';
+    note.className = 'kpi-subtext kpi-note text-green font-semibold';
     note.textContent = '';
     if (runningRequest && runningRequest.version === 'baseline') {
-        note.textContent = 'o tempo fixo é a própria referência';
+        note.textContent = 'O tempo fixo é a própria referência';
         return;
     }
     if (warming) {
@@ -727,12 +743,12 @@ function updateReduction(meanWait, sampled, warming = false) {
     if (warmupS !== referenceWarmupS) {
         // Outro aquecimento: a média ao vivo não é comparável com a referência.
         value.className = 'kpi-value text-muted';
-        note.className = 'kpi-subtext text-amber';
-        note.textContent = `aquecimento diferente da avaliação (${warmupS} s × ${referenceWarmupS} s)`;
+        note.className = 'kpi-subtext kpi-note text-amber';
+        note.textContent = `Aquecimento diferente da avaliação (${warmupS} s × ${referenceWarmupS} s)`;
     } else if (sampled < minSampleS) {
         // Com pouca amostra a média ainda oscila: o número aparece, mas em cinza.
         value.className = 'kpi-value text-muted';
-        note.className = 'kpi-subtext text-muted';
+        note.className = 'kpi-subtext kpi-note text-muted';
         note.textContent = 'Dados preliminares. Aguardando dados concretos...';
     } else if (pct < 0) {
         value.className = 'kpi-value text-amber';
@@ -741,6 +757,8 @@ function updateReduction(meanWait, sampled, warming = false) {
 
 function renderCharts() {
     drawLineChart('chart-waiting', chartData.waitingTimes, '#2dd4a0', 'Espera média', 's', fixedTimeReference(), chartData.waitingTimesAt);
+    drawLineChart('chart-stopped', chartData.stoppedWaits, '#a78bfa', 'Espera parado', 's',
+                  fixedTimeReference(fixedTimeStoppedReferenceS), chartData.stoppedWaitsAt);
     drawLineChart('chart-halting', chartData.haltingVehicles, '#4f8ff7', 'Veículos retidos', '');
 }
 

@@ -48,6 +48,23 @@ class ExperimentMetricsCollectorTests(unittest.TestCase):
         collector.observe(13, {"departed": [], "arrived": ["b"]}, {}, pending_vehicles=0)
         self.assertEqual(collector.progress(13.0)["mean_waiting_time_s"], collector.summary()["mean_waiting_time_seconds"])
 
+    def test_stopped_wait_leaves_out_vehicles_that_never_stopped(self) -> None:
+        collector = ExperimentMetricsCollector()
+        self.assertEqual(collector.progress(0.0)["mean_waiting_time_stopped_s"], None)
+        collector.observe(1, {"departed": ["a", "b", "c", "emergency_0"], "arrived": []}, {
+            "a": {"speed": 0.0, "accumulated_waiting_time": 6.0}, "b": {"speed": 0.0, "accumulated_waiting_time": 10.0},
+            "c": {"speed": 9.0, "accumulated_waiting_time": 0.0}, "emergency_0": {"speed": 0.0, "accumulated_waiting_time": 20.0}})
+        collector.observe(2, {"departed": [], "arrived": ["a", "b", "c", "emergency_0"]}, {})
+        summary = collector.summary()
+        self.assertEqual((summary["mean_waiting_time_seconds"], summary["mean_waiting_time_stopped_seconds"]), (9.0, 12.0))
+        self.assertEqual(summary["stopped_vehicle_share"], 0.75)
+        progress = collector.progress(2.0)
+        self.assertEqual((progress["mean_waiting_time_stopped_s"], progress["stopped_share"], progress["stopped_vehicles"]), (12.0, 0.75, 3))
+        # Sem viaturas: a, b e c; quem passou no verde (c) só entra na média geral.
+        progress = collector.progress(2.0, exclude_emergencies=True)
+        self.assertEqual((progress["mean_waiting_time_s"], progress["mean_waiting_time_stopped_s"]), (16.0 / 3, 8.0))
+        self.assertAlmostEqual(progress["stopped_share"], 2 / 3)
+
     def test_progress_can_leave_emergency_vehicles_out(self) -> None:
         collector = ExperimentMetricsCollector()
         collector.observe(1, {"departed": ["car", "emergency_0", "emergency_manual_0"], "arrived": []}, {

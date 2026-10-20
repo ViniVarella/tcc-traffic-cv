@@ -1258,8 +1258,12 @@ body {
 
 .kpi-subtext {
     font-size: 11.5px;
+    line-height: 1.45;
     color: var(--text-muted);
 }
+/* Nota da etapa (prévia, aquecimento…), separada das linhas de dados. */
+.kpi-subtext.kpi-note { margin-top: 8px; }
+.kpi-subtext.kpi-note:empty { display: none; }
 
 .kpi-trend {
     font-size: 12px;
@@ -1288,6 +1292,10 @@ body {
 .chart-card.wide {
     /* already handled by grid */
 }
+
+/* As duas esperas e os veículos retidos lado a lado; o cabeçalho quebra em duas linhas. */
+.charts-row.thirds { grid-template-columns: repeat(3, 1fr); }
+.charts-row.thirds .chart-header { flex-wrap: wrap; }
 
 .chart-header {
     display: flex;
@@ -1345,6 +1353,10 @@ body {
 
 .legend-badge-line.live-line {
     background: #2dd4a0;
+}
+
+.legend-badge-line.stopped-line {
+    background: #a78bfa;
 }
 
 .chart-badge {
@@ -1647,7 +1659,7 @@ body {
     .kpi-row {
         grid-template-columns: repeat(2, 1fr);
     }
-    .charts-row {
+    .charts-row, .charts-row.thirds {
         grid-template-columns: 1fr;
     }
     .benchmark-grid {

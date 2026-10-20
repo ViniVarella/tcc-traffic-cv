@@ -48,22 +48,25 @@ PREEMPTION_SOURCES = ("none", *EMERGENCY_DETECTIONS)
 # (ExperimentMetricsCollector.progress). Lida de results/evaluation; estes valores
 # (README, 2026-10-14) só valem se o arquivo faltar ou for de outro protocolo.
 FIXED_TIME_REFERENCE_S = {"calibrated": 13.0, "calibrated_ped": 20.8, "original": 14.9}
+# O mesmo para a espera só de quem parou (mean_waiting_time_stopped_seconds; 2026-10-20).
+FIXED_TIME_STOPPED_REFERENCE_S = {"calibrated": 23.1, "calibrated_ped": 34.3, "original": 22.7}
 OFFICIAL_PROTOCOL = {"warmup_s": 300.0, "control_s": 1800.0, "seeds": [201, 202, 203]}
 
 
-def load_fixed_time_reference(results_dir: Path) -> tuple[dict[str, float], dict[str, str]]:
+def load_fixed_time_reference(results_dir: Path, metric: str = "mean_waiting_time_seconds",
+                              fallback: dict[str, float] = FIXED_TIME_REFERENCE_S) -> tuple[dict[str, float], dict[str, str]]:
     """Referência do tempo fixo por cenário e a origem de cada uma ("avaliação" ou "valor embutido").
 
-    Lê ``versoes-<cenário>-oracle.json`` (o ciclo fixo não depende da percepção) e só
-    o aceita no protocolo oficial (seeds 201–203, 300 s + 1800 s).
+    Lê ``metric`` em ``versoes-<cenário>-oracle.json`` (o ciclo fixo não depende da
+    percepção) e só o aceita no protocolo oficial (seeds 201–203, 300 s + 1800 s).
     """
-    values, sources = dict(FIXED_TIME_REFERENCE_S), {scenario: "valor embutido" for scenario in FIXED_TIME_REFERENCE_S}
-    for scenario in FIXED_TIME_REFERENCE_S:
+    values, sources = dict(fallback), {scenario: "valor embutido" for scenario in fallback}
+    for scenario in fallback:
         try:
             report = json.loads((results_dir / f"versoes-{scenario}-oracle.json").read_text(encoding="utf-8"))
             if any(report.get(key) != value for key, value in OFFICIAL_PROTOCOL.items()):
                 continue
-            values[scenario] = round(float(report["versions"]["baseline"]["mean"]["mean_waiting_time_seconds"]), 1)
+            values[scenario] = round(float(report["versions"]["baseline"]["mean"][metric]), 1)
             sources[scenario] = "avaliação"
         except (OSError, ValueError, KeyError, TypeError):
             continue
@@ -129,8 +132,10 @@ class EpisodeRunner:
         self.v1_1_checkpoint = models / "visual-dqn-sp-best.pt"
         self.checkpoints = {"v2": models / "dqn-v2-traffiq-best.pt"}
         self.announce_before_s = EmergencySettings.from_config(self.config).announce_before_s
-        self.fixed_time_reference, self.fixed_time_reference_source = load_fixed_time_reference(
-            settings.base_dir.parent / "results" / "evaluation")
+        evaluation_dir = settings.base_dir.parent / "results" / "evaluation"
+        self.fixed_time_reference, self.fixed_time_reference_source = load_fixed_time_reference(evaluation_dir)
+        self.fixed_time_stopped_reference, _ = load_fixed_time_reference(
+            evaluation_dir, "mean_waiting_time_stopped_seconds", FIXED_TIME_STOPPED_REFERENCE_S)
         self.state: dict[str, Any] = {"is_running": False, "paused": False, "status": "parado", "request": None, "telemetry": None,
                                       "error": None, "last_summary": None}
         # As rotas da API (event loop) e o on_step (thread do episódio) reescrevem o
@@ -353,7 +358,8 @@ def create_app(settings: PanelSettings) -> FastAPI:
                 "preemption": list(PREEMPTION_SOURCES), "approaches": list(APPROACHES),
                 "emergency_routes": runner.emergency_routes(), "announce_before_s": runner.announce_before_s,
                 "fixed_time_reference_s": runner.fixed_time_reference,
-                "fixed_time_reference_source": runner.fixed_time_reference_source, "min_sample_s": MIN_SAMPLE_S, "warmup_s": settings.warmup_s,
+                "fixed_time_reference_source": runner.fixed_time_reference_source,
+                "fixed_time_stopped_reference_s": runner.fixed_time_stopped_reference, "min_sample_s": MIN_SAMPLE_S, "warmup_s": settings.warmup_s,
                 "reference_warmup_s": OFFICIAL_PROTOCOL["warmup_s"],
                 "generic_detector": settings.generic_detector}
 

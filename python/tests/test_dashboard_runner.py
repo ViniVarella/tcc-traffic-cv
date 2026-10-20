@@ -12,8 +12,8 @@ import tempfile
 
 from types import SimpleNamespace
 
-from dashboard.app import (FIXED_TIME_REFERENCE_S, SCENARIOS, EpisodeRunner, PanelSettings, StartRequest, emergency_board,
-                           load_fixed_time_reference)
+from dashboard.app import (FIXED_TIME_REFERENCE_S, FIXED_TIME_STOPPED_REFERENCE_S, SCENARIOS, EpisodeRunner, PanelSettings,
+                           StartRequest, emergency_board, load_fixed_time_reference)
 from experiments.api_server import GENERIC_CLASSES, choose_detector, parse_args
 
 
@@ -68,6 +68,19 @@ class EpisodeRunnerValidationTests(unittest.TestCase):
 
     def test_every_scenario_has_a_fixed_time_reference(self) -> None:
         self.assertEqual(set(FIXED_TIME_REFERENCE_S), set(SCENARIOS))
+        self.assertEqual(set(FIXED_TIME_STOPPED_REFERENCE_S), set(SCENARIOS))
+        # Quem parou espera mais que a média de todos (que inclui quem passou no verde).
+        self.assertTrue(all(FIXED_TIME_STOPPED_REFERENCE_S[name] > FIXED_TIME_REFERENCE_S[name] for name in SCENARIOS))
+
+    def test_stopped_reference_reads_its_own_metric(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            (folder / "versoes-calibrated-oracle.json").write_text(json.dumps(
+                {"warmup_s": 300.0, "control_s": 1800.0, "seeds": [201, 202, 203], "versions": {"baseline": {"mean": {
+                    "mean_waiting_time_seconds": 12.34, "mean_waiting_time_stopped_seconds": 23.06}}}}), encoding="utf-8")
+            values, sources = load_fixed_time_reference(folder, "mean_waiting_time_stopped_seconds", FIXED_TIME_STOPPED_REFERENCE_S)
+        self.assertEqual((values["calibrated"], sources["calibrated"]), (23.1, "avaliação"))
+        self.assertEqual(values["original"], FIXED_TIME_STOPPED_REFERENCE_S["original"])
 
     def test_reference_comes_from_the_official_evaluation_only(self) -> None:
         def report(warmup: float, wait: float) -> str:
