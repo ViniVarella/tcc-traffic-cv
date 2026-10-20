@@ -106,7 +106,7 @@ function fixedTimeReference() {
 
 function updateReferenceLabels() {
     const reference = fixedTimeReference();
-    const text = reference == null ? '—' : reference.toFixed(1) + ' s';
+    const text = reference == null ? '—' : decimal(reference) + ' s';
     document.getElementById('legend-baseline-val').textContent = text;
     document.getElementById('kpi-baseline-ref').textContent = `tempo fixo na avaliação: ${text}`;
 }
@@ -151,6 +151,11 @@ function updateAmbulanceCounts(board) {
     document.getElementById('kpi-emergency-val').textContent = total;
     document.getElementById('kpi-emergency-sub').textContent = counts.automatic
         ? `${counts.manual} pelo botão · ${counts.automatic} automáticas` : 'nesta demonstração';
+}
+
+// Números na tela com vírgula decimal, como em português.
+function decimal(value, digits = 1) {
+    return value.toFixed(digits).replace('.', ',');
 }
 
 function minutesClock(seconds) {
@@ -238,7 +243,7 @@ function updateTelemetry(data) {
     // Indicadores do simulador: só no tempo de teste, junto com as câmeras.
     const live = running && !warming;
     document.getElementById('val-halting').textContent = live ? gt.halting_vehicles : '—';
-    document.getElementById('val-wait').textContent = live ? gt.mean_wait_per_stopped_s.toFixed(1) + ' s' : '—';
+    document.getElementById('val-wait').textContent = live ? decimal(gt.mean_wait_per_stopped_s) + ' s' : '—';
     document.getElementById('phase-name').textContent = running && !warming ? PHASE_LABELS[t.phase] || t.phase : '—';
     const priority = PRIORITY_APPROACHES[t.preempt_target];
     document.getElementById('preempt-name').textContent = priority && running && !warming
@@ -273,7 +278,7 @@ function updateTelemetry(data) {
     const sampled = trip.sampled_s || 0;
     document.getElementById('kpi-total-steps').textContent = warming ? '0:00' : minutesClock(testTime);
     document.getElementById('kpi-time-note').textContent = warming ? 'preparando o cruzamento…' : 'desde o início do teste';
-    document.getElementById('kpi-avg-wait').textContent = meanWait == null ? '—' : meanWait.toFixed(1) + ' s';
+    document.getElementById('kpi-avg-wait').textContent = meanWait == null ? '—' : decimal(meanWait) + ' s';
     // Quem ainda espera para entrar na rede não está na média (só veículos que concluíram o trajeto).
     const pending = trip.pending_vehicles || 0;
     const pendingNote = document.getElementById('kpi-pending');
@@ -551,7 +556,7 @@ function drawLineChart(canvasId, data, color, label, yLabel, baselineVal = null,
         ctx.fillStyle = '#6b778d';
         ctx.font = '11px JetBrains Mono, monospace';
         ctx.textAlign = 'right';
-        ctx.fillText(val.toFixed(1), pad.left - 8, y + 4);
+        ctx.fillText(decimal(val), pad.left - 8, y + 4);
     }
 
     // Baseline horizontal line
@@ -570,7 +575,7 @@ function drawLineChart(canvasId, data, color, label, yLabel, baselineVal = null,
         ctx.fillStyle = '#f06565';
         ctx.font = '600 11px JetBrains Mono, monospace';
         ctx.textAlign = 'right';
-        ctx.fillText(`Tempo fixo: ${baselineVal.toFixed(1)}s`, W - pad.right - 8, baselineY - 6);
+        ctx.fillText(`Tempo fixo: ${decimal(baselineVal)} s`, W - pad.right - 8, baselineY - 6);
         ctx.restore();
     }
 
@@ -656,7 +661,7 @@ function drawLineChart(canvasId, data, color, label, yLabel, baselineVal = null,
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    const value = yLabel ? `${data[idx].toFixed(1)} ${yLabel}` : `${Math.round(data[idx])}`;
+    const value = yLabel ? `${decimal(data[idx])} ${yLabel}` : `${Math.round(data[idx])}`;
     const lines = [`${label}: ${value}`, `tempo de teste ${minutesClock(times[idx] || 0)}`];
     ctx.font = '600 12px Inter, sans-serif';
     const boxW = Math.max(...lines.map(line => ctx.measureText(line).width)) + 20;
