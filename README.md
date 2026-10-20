@@ -297,19 +297,73 @@ As tabelas desta seção usam o ambiente atual: câmeras de 60 m, YOLO de duas
 classes, demanda sem motos, DQN estado v2 `dqn-v2-traffiq-best.pt` e, no
 experimento com pedestres, DQN estado v3 `dqn-v3-fase-curta-best.pt`.
 
+## Como instalar na sua máquina
+
+O repositório já traz tudo o que o projeto usa para rodar: os checkpoints
+`results/models/dqn-v2-traffiq-best.pt` (TraffIQ), `visual-dqn-sp-best.pt`
+(v1.1) e `dqn-v3-fase-curta-best.pt` (experimento), o detector
+`runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`, as
+referências `results/evaluation/versoes-*-oracle.json` e o modelo da
+ambulância na Unity. Os demais resultados e modelos gerados ficam locais. Na
+máquina, é preciso instalar três programas. Os comandos abaixo são para macOS
+(o ambiente usado no projeto); no Linux são iguais, e no Windows o Python do
+ambiente virtual fica em `..\.venv\Scripts\python`.
+
+1. **Clone o repositório** (cerca de 100 MB):
+
+   ```bash
+   git clone https://github.com/ViniVarella/tcc-traffic-cv.git
+   cd tcc-traffic-cv
+   ```
+
+2. **Python 3.12** e as dependências, num ambiente virtual na raiz do
+   repositório (o `torch` e o `ultralytics` levam alguns minutos para baixar):
+
+   ```bash
+   python3.12 -m venv .venv
+   .venv/bin/python -m pip install -r python/requirements.txt
+   ```
+
+3. **SUMO** (1.22 ou mais novo), pelo instalador de
+   https://eclipse.dev/sumo/. Depois, defina `SUMO_HOME` e coloque o `sumo`
+   no `PATH`; no macOS, com o instalador oficial, acrescente ao `~/.zshrc`
+   (troque `1.22.0` pela versão instalada):
+
+   ```bash
+   export SUMO_ROOT="/Library/Frameworks/EclipseSUMO.framework/Versions/1.22.0/EclipseSUMO"
+   export SUMO_HOME="$SUMO_ROOT/share/sumo"
+   export PATH="$SUMO_ROOT/bin:$PATH"
+   ```
+
+   Abra um terminal novo e confira com `sumo --version`.
+
+4. **Unity 6000.0.53f1**, pelo Unity Hub (*Installs → Install Editor →
+   Archive*, se a versão não aparecer na lista). No Hub, use *Add → Add
+   project from disk* e escolha a pasta `unity/TraffIQ-TCC`. A primeira
+   abertura demora, porque a Unity reconstrói a pasta `Library`.
+   Depois, abra a cena `Assets/Scenes/SPImport.unity` (a Unity abre outra cena
+   por padrão).
+
+5. **Confira a instalação**, a partir de `python/`:
+
+   ```bash
+   cd python
+   ../.venv/bin/python -m unittest discover -s tests -p 'test_*.py'      # sem SUMO nem Unity
+   ../.venv/bin/python -m experiments.test_sp_traci --config configs/sp.yaml   # SUMO
+   ```
+
+6. **Rode o painel**: na Unity, com a cena `SPImport` aberta, entre em Play
+   Mode; no terminal, a partir de `python/`, rode
+   `../.venv/bin/python -m experiments.api_server` e abra
+   http://127.0.0.1:8000/. Só um SUMO pode rodar por vez (porta 8873).
+
 ## Como reproduzir
 
-Todos os comandos rodam a partir de `python/`, com o ambiente virtual da raiz.
-Os artefatos necessários para rodar o painel e as avaliações já vêm no
-repositório: os checkpoints `results/models/dqn-v2-traffiq-best.pt` (TraffIQ),
-`visual-dqn-sp-best.pt` (v1.1) e `dqn-v3-fase-curta-best.pt` (experimento), o
-detector `runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`, as
-referências `results/evaluation/versoes-*-oracle.json` e o modelo da
-ambulância na Unity. Os demais resultados e modelos gerados ficam locais.
+Todos os comandos rodam a partir de `python/`, com o ambiente virtual da raiz
+(veja [Como instalar na sua máquina](#como-instalar-na-sua-máquina)).
 
 ```bash
 cd python
-../.venv/bin/python -m pip install -r requirements.txt
 ../.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
 
 # Pré-treino só no SUMO (percepção ground truth; sem Unity)
