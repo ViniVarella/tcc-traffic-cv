@@ -926,9 +926,26 @@ body {
 /* Sem mensagem e sem ambulâncias, o bloco não ocupa espaço (nem o gap do layout). */
 .status-area:not(:has(.control-message:not(:empty), .ambulance-list:not([hidden]))) { display: none; }
 
+/* Mensagens no mesmo cartão das ambulâncias: neutro (informação), amarelo (aviso)
+   e vermelho (erro). */
 .control-message {
+    align-self: flex-start;
     font-size: 13px;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+}
+.control-message.warning {
     color: var(--amber);
+    background: var(--amber-soft);
+    border-color: rgba(240, 176, 69, 0.35);
+}
+.control-message.error {
+    color: var(--red);
+    background: var(--red-soft);
+    border-color: rgba(240, 101, 101, 0.35);
 }
 
 .policy-value {
