@@ -14,12 +14,17 @@ de São Paulo (cenário `sp`), integrando SUMO, Unity, YOLOv8, ByteTrack e DQN.
 
 O produto se chama **TraffIQ** (TCC do Instituto Mauá de
 Tecnologia). Nos textos (README, `docs/`, painel, tese), "versão" é do
-**produto**: v1 regra de fila → v1.1 DQN estado v1 → v2 DQN estado v2 → v3
-prioridade para viaturas → **v4 (atual)** fase de pedestres; da v2 à v4 quem
-decide é o DQN estado v2. O **DQN estado v3** é experimento, nunca versão.
-Tabelas de resultado rotulam controladores pelo modelo ("DQN estado v2"). No
-código, `--versions baseline,v1,v1.1,v2,v3,max_pressure` e `state_version`
-nomeiam controladores e estados; não renomeie.
+**produto**: v1 prova de conceito (DQN Keras sobre os detectores E2 do SUMO,
+`optimization/SP`) → v2 regra de fila → v2.1 DQN estado v1 → v3 DQN estado v2
+→ v4 prioridade para viaturas → **v5 (atual)** fase de pedestres; da v3 à v5
+quem decide é o DQN estado v2 (`dqn-v2-traffiq-best.pt`; o nome do arquivo
+segue o estado do DQN, não o produto). Até 2026-10-20 a numeração não tinha a
+prova de conceito (regra de fila era a v1 e a atual, a v4). O **DQN estado v3**
+é experimento, nunca versão. Tabelas de resultado rotulam controladores pelo
+modelo ("DQN estado v2"). No código, `--versions baseline,v1,v1.1,v2,v3,max_pressure`
+e `state_version` nomeiam controladores e estados, e não seguem o produto
+(`v1` = regra de fila, `v1.1` = DQN estado v1, `v2` = DQN estado v2, `v3` =
+experimento DQN estado v3); não renomeie.
 
 ## Arquitetura
 
@@ -46,9 +51,9 @@ SUMO ──TraCI──> Python ──UDP/JSON (estado)──> Unity (veículos, 
 | Linha | Local | Estado | Framework |
 |---|---|---|---|
 | **Principal (visual)** | `python/` | contagens visuais por faixa (YOLO/ROI) + fase | PyTorch |
-| Paralela (E2/TraCI) | `optimization/SP/` (`sp_env.py`, `traci8.DQN.py`, `traci9_comp.py`) | detectores E2 + lanes via TraCI | Keras |
+| Prova de conceito (E2/TraCI; produto v1) | `optimization/SP/` (`sp_env.py`, `traci8.DQN.py`, `traci9_comp.py`) | detectores E2 + lanes via TraCI | Keras |
 
-`optimization/SP` é um experimento separado e não é substituto de
+`optimization/SP` é a v1 do produto (prova de conceito) e não é substituto de
 `python/experiments/train_visual_dqn.py`. Não reutilize seus comandos no
 pipeline `python/` sem revisão. `optimization/Teste` e `optimization/EUA` são
 protótipos antigos.
@@ -56,7 +61,8 @@ protótipos antigos.
 ### Separação estado × recompensa
 
 - A **política** observa apenas dados visuais. E2 e demais dados perfeitos do
-  SUMO **não** entram na decisão.
+  SUMO **não** entram na decisão (a exceção é a v1, a prova de conceito em
+  `optimization/SP`, que não faz parte do pipeline `python/`).
 - A **recompensa de treino** usa *ground truth* do TraCI (espera dos
   veículos). Relatórios devem declarar isso; não chame o loop de "visão pura".
 - E2 serve apenas para avaliação offline visão × *ground truth*
@@ -334,10 +340,10 @@ carregam como v1):
     scripts v2 com `--classes 0,1 --image-size 960` (as duas classes entram nas
     contagens; `--classes 0` apagaria as viaturas). O anterior,
     `yolov8n-unity-run-002-mask` (classe única → `--classes 0`), fica nos scripts
-    legados da v1; o padrão `2,3,5,7` é só para pesos COCO;
+    legados da v2 e da v2.1; o padrão `2,3,5,7` é só para pesos COCO;
   - checkpoints DQN em `results/models/`: `dqn-v2-traffiq-best.pt` (o TraffIQ,
-    DQN estado v2), `dqn-v3-fase-curta-best.pt` (experimento) e
-    `visual-dqn-sp-best.pt` (v1.1); os antigos ficam em `results/models/arquivo/`.
+    DQN estado v2, produto v5), `dqn-v3-fase-curta-best.pt` (experimento) e
+    `visual-dqn-sp-best.pt` (DQN estado v1, produto v2.1); os antigos ficam em `results/models/arquivo/`.
 - `TEMP_*.txt` na raiz são arquivos locais (ignorados) com comandos longos para
   copiar/colar — o usuário prefere esse formato quando a CLI fica extensa.
 
@@ -388,7 +394,7 @@ Todos a partir de `python/`:
 ../.venv/bin/python -m experiments.evaluate_policies_sumo --scenario calibrated \
   --dqn-model ../results/models/dqn-v2-pretrain-best.pt --output ../results/evaluation/policies-sumo-oracle-calibrated.json
 
-# Todas as versões (linha de base, v1, v1.1, v2, max-pressure) no mesmo ambiente
+# Todos os controladores (ids do código: baseline, v1, v1.1, v2, max_pressure) no mesmo ambiente
 ../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception oracle   # só SUMO
 ../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception visual   # Unity em Play Mode
 

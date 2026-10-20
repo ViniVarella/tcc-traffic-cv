@@ -49,6 +49,33 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
   percepções.
 - Versões do produto TraffIQ (v1 a v4) e painel web para o Eureka:
   2026-10-14 — seção **Versões do produto** abaixo.
+- Prova de conceito com os detectores do SUMO vira a v1 do produto, e as
+  demais sobem um número (atual: v5): 2026-10-20 — seção **Numeração do
+  produto com a prova de conceito** abaixo.
+
+## Numeração do produto com a prova de conceito (2026-10-20)
+
+A primeira IA do projeto, o Double DQN em Keras de `optimization/SP`
+(`traci8.DQN.py`, `sp_env.py`, `traci9_comp.py`, desde 2026-06), lia direto do
+SUMO os detectores E2 e as faixas pelo TraCI, sem câmera. Por decisão do
+usuário, ela passou a ser a **v1** do produto, e as outras versões subiram um
+número:
+
+| Versão nova | Versão antiga | O que é | Quem decide (id no código) |
+|---|---|---|---|
+| v1 | — | Prova de conceito com os detectores do SUMO | Double DQN Keras (`optimization/SP`, fora de `compare_versions`) |
+| v2 | v1 | Controle em malha fechada pela câmera | Regra de fila (`v1`) |
+| v2.1 | v1.1 | Primeira política aprendida com a câmera | DQN estado v1 (`v1.1`) |
+| v3 | v2 | Features cinemáticas por faixa, pré-treino só no SUMO | DQN estado v2 (`v2`) |
+| v4 | v3 | Prioridade para viaturas | DQN estado v2 (`v2`) |
+| **v5** (atual) | v4 | Fase exclusiva de pedestres | DQN estado v2 (`v2`) |
+
+Mudaram o painel (linha do tempo com a v1, "TraffIQ (IA, v5)", "Regra de
+fila (v2)"), o README, o CLAUDE.md e os comentários do código. Os ids de
+controlador (`--versions`), as chaves dos `versoes-*.json`, o `state_version`
+e o nome do checkpoint (`dqn-v2-traffiq-best.pt`, que segue o estado do DQN)
+**não** mudaram. As seções abaixo desta são registro e usam a numeração da
+época (até 2026-10-20: v1 regra de fila … v4 atual).
 
 ## Projeto Unity renomeado (2026-10-20)
 

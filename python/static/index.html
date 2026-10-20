@@ -194,7 +194,15 @@
                     <div class="timeline-item">
                         <div class="timeline-marker"></div>
                         <div class="timeline-content">
-                            <div class="timeline-tag">v1 · set/2026</div>
+                            <div class="timeline-tag">v1 · jun/2026</div>
+                            <h4>Prova de conceito com IA</h4>
+                            <p>Uma primeira IA controlou o semáforo da simulação lendo os sensores do próprio simulador, os detectores de fila de cada faixa. Serviu para validar a ideia antes de trocar esses sensores pelas câmeras.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-tag">v2 · set/2026</div>
                             <h4>Controle por câmera</h4>
                             <p>As câmeras contam os veículos e uma regra fixa define a troca: o sinal muda quando a fila da outra via é maior.</p>
                         </div>
@@ -202,15 +210,15 @@
                     <div class="timeline-item">
                         <div class="timeline-marker"></div>
                         <div class="timeline-content">
-                            <div class="timeline-tag">v1.1 · set/2026</div>
-                            <h4>Primeira versão com IA</h4>
-                            <p>O primeiro modelo de IA passou a trocar o sinal sempre no tempo mínimo, independentemente do tráfego. O resultado orientou a definição das informações que o modelo precisava receber.</p>
+                            <div class="timeline-tag">v2.1 · set/2026</div>
+                            <h4>Primeira IA com câmeras</h4>
+                            <p>O primeiro modelo de IA alimentado pelas câmeras passou a trocar o sinal sempre no tempo mínimo, independentemente do tráfego. O resultado orientou a definição das informações que o modelo precisava receber.</p>
                         </div>
                     </div>
                     <div class="timeline-item">
                         <div class="timeline-marker"></div>
                         <div class="timeline-content">
-                            <div class="timeline-tag">v2 · set/2026</div>
+                            <div class="timeline-tag">v3 · set/2026</div>
                             <h4>IA com informações por faixa</h4>
                             <p>O modelo passa a receber, para cada faixa, o número de veículos, os veículos parados e o tempo de espera. O tempo de espera dos veículos é 67% menor que no tempo fixo, em cenário sem pedestres.</p>
                         </div>
@@ -218,7 +226,7 @@
                     <div class="timeline-item">
                         <div class="timeline-marker"></div>
                         <div class="timeline-content">
-                            <div class="timeline-tag">v3 · out/2026</div>
+                            <div class="timeline-tag">v4 · out/2026</div>
                             <h4>Prioridade para ambulâncias</h4>
                             <p>A ambulância informa sua aproximação ao semáforo, e as câmeras passam a reconhecê-la. O sinal abre para a via dela, e todas as ambulâncias com aviso de aproximação atravessam sem parar.</p>
                         </div>
@@ -226,7 +234,7 @@
                     <div class="timeline-item active">
                         <div class="timeline-marker"></div>
                         <div class="timeline-content">
-                            <div class="timeline-tag current">v4 · atual</div>
+                            <div class="timeline-tag current">v5 · atual</div>
                             <h4>Fase exclusiva para pedestres</h4>
                             <p>A cada ciclo, todos os veículos param para a travessia de pedestres. Ainda assim, o tempo de espera dos veículos é 32% menor que no tempo fixo.</p>
                         </div>
@@ -624,7 +632,7 @@
 
                 <div class="benchmark-grid">
                     <div class="benchmark-card highlighted">
-                        <div class="benchmark-scenario">Cenário com Pedestres (v4 Atual)</div>
+                        <div class="benchmark-scenario">Cenário com Pedestres (v5 Atual)</div>
                         <div class="benchmark-metric-main">−32%</div>
                         <div class="benchmark-metric-label">no tempo de espera dos veículos</div>
                         <div class="benchmark-comparison">
