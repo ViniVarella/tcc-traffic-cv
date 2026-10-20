@@ -69,7 +69,8 @@ def load_fixed_time_reference(results_dir: Path) -> tuple[dict[str, float], dict
             continue
     return values, sources
 # Amostra mínima (s simulados depois do aquecimento) antes de mostrar a redução.
-MIN_SAMPLE_S = 600.0
+# Com 5 min a média do tempo fixo fica a ~10% da de 30 min (seeds 201–203).
+MIN_SAMPLE_S = 300.0
 # Com o detector genérico (COCO) a câmera não reconhece viaturas.
 VISUAL_PREEMPTION = ("vision", "both")
 VERSION_LABELS = {"v2": "TraffIQ (IA, v4)", "baseline": "Tempo fixo (convencional)", "v1": "Regra de fila (v1)",

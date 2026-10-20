@@ -72,6 +72,30 @@ projeto em outra máquina: `dqn-v2-traffiq-best.pt`, `visual-dqn-sp-best.pt`,
 modelo da ambulância (RigModels.com, licença de uso pessoal/estudante, com o
 `License.txt` junto).
 
+## Amostra mínima da redução no painel: 5 min (2026-10-20)
+
+A "Redução na espera" do painel aparece em cinza (prévia) até a amostra
+mínima (`MIN_SAMPLE_S` em `python/dashboard/app.py`), que passou de 10 para
+**5 min** de teste. Para escolher, a média acumulada da espera do tempo fixo
+(só veículos que entraram depois do aquecimento e concluíram o trajeto, como
+no painel) foi comparada com a média de 30 min, nas seeds 201–203:
+
+| Tempo de teste | Veículos | `calibrated_ped` | `calibrated` |
+|---|---|---|---|
+| 1 min | ~12 | −56% a −92% | −92% a −97% |
+| 3 min | ~75 | −14% a −25% | −8% a −19% |
+| 5 min | ~140 | −6% a −12% | −3% a −7% |
+| 10 min | ~290 | +4% a −11% | 0% a −9% |
+| 20 min | ~600 | 0% a −3% | 0% a +1% |
+
+No começo a média fica baixa demais: os primeiros a concluir o trajeto são os
+que pegaram verde. De 5 para 10 min a margem quase não muda (~10%). Os
+primeiros veículos concluem o trajeto ~40 s depois do aquecimento (percurso
+mediano de ~180 m; mediana de 39 s de viagem com pedestres). As médias de
+30 min (≈ 21 s e ≈ 13 s) batem com as referências do painel (20,8 s e
+13,0 s). É uma rodada do SUMO sem TraCI, com o programa estático; o número
+do painel continua sendo uma estimativa de uma seed.
+
 ## Versões do produto TraffIQ (2026-10-14)
 
 Desde 2026-10-14 as versões são do **produto** (decisão do usuário): cada uma

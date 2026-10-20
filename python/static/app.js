@@ -89,7 +89,7 @@ const APPROACHES = ['west', 'south', 'east'];
 // Espera por veículo do tempo fixo na avaliação oficial, por cenário, e a amostra
 // mínima antes de mostrar a redução: vêm de /api/options (fonte única no backend).
 let fixedTimeReferenceS = {};
-let minSampleS = 600;
+let minSampleS = 300;
 let warmupS = 300;
 let referenceWarmupS = 300;  // aquecimento da avaliação oficial (a referência)
 let runningRequest = null;  // cenário e controlador em execução (data.request)
