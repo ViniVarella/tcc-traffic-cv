@@ -300,8 +300,12 @@ experimento com pedestres, DQN estado v3 `dqn-v3-fase-curta-best.pt`.
 ## Como reproduzir
 
 Todos os comandos rodam a partir de `python/`, com o ambiente virtual da raiz.
-Modelos e resultados ficam em `results/` e `runs/`, que são locais (não
-versionados).
+Os artefatos necessários para rodar o painel e as avaliações já vêm no
+repositório: os checkpoints `results/models/dqn-v2-traffiq-best.pt` (TraffIQ),
+`visual-dqn-sp-best.pt` (v1.1) e `dqn-v3-fase-curta-best.pt` (experimento), o
+detector `runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`, as
+referências `results/evaluation/versoes-*-oracle.json` e o modelo da
+ambulância na Unity. Os demais resultados e modelos gerados ficam locais.
 
 ```bash
 cd python
@@ -359,20 +363,19 @@ legados da v1. Recall no teste: veículos 100% / 99,5% / 97,2% em 0–20 / 20–
 
 ## Modelo da ambulância
 
-O modelo 3D da ambulância usado na Unity vem do RigModels.com, com licença
-apenas para uso pessoal/estudante, e por isso **não é versionado**. Para
-reproduzir:
+O modelo 3D da ambulância vem do RigModels.com e está em
+`unity/TraffIQ-TCC/Assets/Art/TrafficModels/Models/Cars/Ambulance/`, com o
+prefab em `Assets/Prefabs/Vehicles/Ambulance.prefab`. A licença
+(`License.txt` na mesma pasta) é **apenas para uso pessoal de estudantes**; uso
+comercial exige a assinatura Premium do RigModels.com. Para recriar o prefab:
 
-1. Baixe o modelo "Ambulance" em https://rigmodels.com e copie a pasta, com
-   `ambulance.fbx` e as texturas, para
-   `unity/TraffIQ-TCC/Assets/Art/TrafficModels/Models/Cars/Ambulance/`.
-2. Na Unity, com `SPImport` aberta, rode *Traffic Vision > Vehicles > Create
+1. Na Unity, com `SPImport` aberta, rode *Traffic Vision > Vehicles > Create
    SP Emergency Prefab* e salve a cena.
-3. Para conferir, entre em Play Mode e rode
+2. Para conferir, entre em Play Mode e rode
    `python -m experiments.test_sumo_to_unity --config configs/sp.yaml --steps 120 --send-interval 0.1 --emergency-interval 20`.
    Se a ambulância andar de ré, rode *Flip SP Emergency Prefab*.
 
-Sem o modelo, as viaturas de emergência aparecem como blocos vermelhos.
+Sem o prefab, as viaturas de emergência aparecem como blocos vermelhos.
 
 ## Principais módulos
 

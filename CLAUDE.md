@@ -322,8 +322,13 @@ carregam como v1):
   `torch` 2.11.0, `ultralytics` 8.4.48, OpenCV, NumPy, PyYAML).
 - SUMO precisa estar no `PATH` (`SUMO_HOME` definido). Os arquivos da rede foram
   gerados com SUMO 1.26; confira a versão local com `sumo --version`.
-- Modelos e resultados são artefatos locais ignorados (`*.pt`, `runs/`,
-  `results/*`). Verifique se existem antes de rodar experimentos:
+- Modelos e resultados gerados são locais e ignorados (`*.pt`, `runs/`,
+  `results/*`), exceto os necessários para rodar em outra máquina, versionados
+  desde 2026-10-20: os três checkpoints abaixo, o detector YOLO de duas
+  classes, `results/evaluation/versoes-*-oracle.json` (sem os `roi60`) e o
+  modelo da ambulância (RigModels, licença de uso pessoal/estudante). O YOLO e
+  texturas `.jpg`/`.png` entram com `git add -f`. Verifique o resto antes de
+  rodar experimentos:
   - detector YOLO de duas classes (`0 vehicle`, `1 emergency`):
     `runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt`, padrão dos
     scripts v2 com `--classes 0,1 --image-size 960` (as duas classes entram nas

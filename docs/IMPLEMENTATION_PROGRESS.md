@@ -64,6 +64,14 @@ cenário com motos não é mais usado), e os checkpoints sem uso foram para
 `results/models/arquivo/`. Os nomes citados nas seções anteriores já usam o
 nome novo.
 
+Também passaram a ser versionados os artefatos necessários para rodar o
+projeto em outra máquina: `dqn-v2-traffiq-best.pt`, `visual-dqn-sp-best.pt`,
+`dqn-v3-fase-curta-best.pt`, o detector
+`yolov8n-unity-cam60-2cls-960/weights/best.pt`, as referências
+`versoes-{calibrated,calibrated_ped,original,original_ped}-oracle.json` e o
+modelo da ambulância (RigModels.com, licença de uso pessoal/estudante, com o
+`License.txt` junto).
+
 ## Versões do produto TraffIQ (2026-10-14)
 
 Desde 2026-10-14 as versões são do **produto** (decisão do usuário): cada uma
