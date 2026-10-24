@@ -960,12 +960,14 @@ body {
 }
 
 /* Mosaico das câmeras em duas linhas: Leste e Oeste em cima, Sul embaixo e
-   centralizada. O mosaico tem a altura da janela (menos uma margem), para as
-   três câmeras caberem juntas na tela; cada quadro é o maior 16:9 que cabe em
+   centralizada. Rolando a página até o fim, o mosaico, a legenda e a margem de
+   baixo cabem juntos na janela (80 px = espaço, legenda e margem abaixo do
+   mosaico, mais uma folga em cima); cada quadro é o maior 16:9 que cabe em
    meia linha e meia altura (cqh = altura do mosaico; 46 px = cabeçalho e
    bordas do quadro). */
+#page-simulation { padding-bottom: 24px; }
 .cameras-grid {
-    height: calc(100vh - 32px);
+    height: calc(100vh - 80px);
     container-type: size;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
