@@ -152,7 +152,6 @@ function renderAmbulances(board, simTime, preemptionOn) {
 function updateAmbulanceCounts(board) {
     const counts = (board && board.counts) || { manual: 0, automatic: 0 };
     const total = counts.manual + counts.automatic;
-    document.getElementById('val-dispatched').textContent = total;
     document.getElementById('kpi-emergency-val').textContent = total;
     document.getElementById('kpi-emergency-sub').textContent = counts.automatic
         ? `${counts.manual} pelo botão · ${counts.automatic} automáticas` : 'Nesta demonstração';
@@ -245,10 +244,6 @@ function updateTelemetry(data) {
     updateAmbulanceCounts(t.emergencies);
     updateCameras(t, running && !warming);
     const gt = t.ground_truth;
-    // Indicadores do simulador: só no tempo de teste, junto com as câmeras.
-    const live = running && !warming;
-    document.getElementById('val-halting').textContent = live ? gt.halting_vehicles : '—';
-    document.getElementById('val-wait').textContent = live ? decimal(gt.mean_wait_per_stopped_s) + ' s' : '—';
     document.getElementById('phase-name').textContent = running && !warming ? PHASE_LABELS[t.phase] || t.phase : '—';
     const priority = PRIORITY_APPROACHES[t.preempt_target];
     document.getElementById('preempt-name').textContent = priority && running && !warming
