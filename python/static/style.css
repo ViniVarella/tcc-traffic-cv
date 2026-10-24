@@ -959,12 +959,19 @@ body {
     color: var(--green);
 }
 
-/* Mosaico das câmeras: três quadros iguais, na ordem do mapa (Oeste, Sul, Leste) */
+/* Mosaico das câmeras em duas linhas, como no mapa: Oeste e Leste em cima, Sul
+   embaixo e centralizada. Os três quadros têm a mesma largura (meia linha). */
 .cameras-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-areas:
+        "west west east east"
+        ".    south south .";
     gap: 16px;
 }
+.camera-card[data-camera="west"] { grid-area: west; }
+.camera-card[data-camera="east"] { grid-area: east; }
+.camera-card[data-camera="south"] { grid-area: south; }
 
 .camera-card {
     background: var(--bg-surface);
@@ -1670,6 +1677,7 @@ body {
 @media (max-width: 900px) {
     .cameras-grid {
         grid-template-columns: 1fr;
+        grid-template-areas: "west" "east" "south";
     }
 }
 
