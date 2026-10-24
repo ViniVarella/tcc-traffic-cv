@@ -960,17 +960,29 @@ body {
 }
 
 /* Mosaico das câmeras em duas linhas: Leste e Oeste em cima, Sul embaixo e
-   centralizada. Os três quadros têm a mesma largura (meia linha). */
+   centralizada. O mosaico tem a altura da janela (menos uma margem), para as
+   três câmeras caberem juntas na tela; cada quadro é o maior 16:9 que cabe em
+   meia linha e meia altura (cqh = altura do mosaico; 46 px = cabeçalho e
+   bordas do quadro). */
 .cameras-grid {
+    height: calc(100vh - 32px);
+    container-type: size;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: 1fr 1fr;
     grid-template-areas:
         "east east west west"
         ".    south south .";
-    gap: 16px;
+    gap: 12px;
 }
-.camera-card[data-camera="west"] { grid-area: west; }
-.camera-card[data-camera="east"] { grid-area: east; }
+.cameras-grid .camera-card {
+    width: min(100%, calc(((100cqh - 12px) / 2 - 46px) * 16 / 9));
+    justify-self: center;
+    align-self: start;
+}
+/* As de cima encostam no centro, alinhadas com a Sul. */
+.camera-card[data-camera="east"] { grid-area: east; justify-self: end; }
+.camera-card[data-camera="west"] { grid-area: west; justify-self: start; }
 .camera-card[data-camera="south"] { grid-area: south; }
 
 .camera-card {
@@ -1157,55 +1169,6 @@ body {
     object-fit: contain;
     background: #000;
     border-radius: var(--radius-md);
-}
-
-/* Metrics Strip */
-.metrics-strip {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-}
-
-.metric-tile {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--radius-md);
-}
-
-.metric-tile.highlight-metric {
-    border-color: rgba(240, 176, 69, 0.2);
-    background: var(--amber-soft);
-}
-
-.metric-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: var(--radius-sm);
-    flex-shrink: 0;
-}
-
-.metric-icon.south { background: linear-gradient(135deg, #4f8ff7, #3a6fd8); }
-.metric-icon.east { background: linear-gradient(135deg, #2dd4a0, #1fb37f); }
-.metric-icon.west { background: linear-gradient(135deg, #a78bfa, #8b6ce0); }
-.metric-icon.wait { background: linear-gradient(135deg, #f0b045, #d89a30); }
-.metric-icon.reward { background: linear-gradient(135deg, #f06565, #d04545); }
-
-.metric-label {
-    font-size: 11px;
-    color: var(--text-muted);
-    display: block;
-    margin-bottom: 2px;
-}
-
-.metric-number {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 20px;
-    font-weight: 700;
-    display: block;
 }
 
 /* ============================================
@@ -1675,10 +1638,15 @@ body {
 }
 
 @media (max-width: 900px) {
+    /* Em tela estreita, uma câmera embaixo da outra, com a largura toda. */
     .cameras-grid {
+        height: auto;
+        container-type: normal;
         grid-template-columns: 1fr;
+        grid-template-rows: none;
         grid-template-areas: "east" "west" "south";
     }
+    .cameras-grid .camera-card { width: 100%; justify-self: stretch; }
 }
 
 @media (max-width: 768px) {
@@ -1706,7 +1674,7 @@ body {
     .page {
         padding: 20px 16px;
     }
-    .steps-grid, .steps-grid.three, .tech-grid, .highlights, .metrics-strip {
+    .steps-grid, .steps-grid.three, .tech-grid, .highlights {
         grid-template-columns: 1fr;
     }
     .benchmark-grid {
