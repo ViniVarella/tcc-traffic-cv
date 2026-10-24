@@ -335,6 +335,16 @@ class EpisodeRunner:
                 print(f"painel_frame_erro camera={camera_id} erro={error}")
 
 
+class NoCacheStaticFiles(StaticFiles):
+    """Arquivos do painel com ``Cache-Control: no-cache``: o navegador sempre confere
+    (ETag) se há versão nova, e um HTML novo nunca roda com um ``app.js`` antigo."""
+
+    async def get_response(self, path: str, scope: Any) -> Any:
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 def create_app(settings: PanelSettings) -> FastAPI:
     runner = EpisodeRunner(settings)
 
@@ -346,7 +356,7 @@ def create_app(settings: PanelSettings) -> FastAPI:
 
     app = FastAPI(title="TraffIQ — painel", lifespan=lifespan)
     app.state.runner = runner
-    app.mount("/dashboard", StaticFiles(directory=settings.base_dir / "static", html=True), name="static")
+    app.mount("/dashboard", NoCacheStaticFiles(directory=settings.base_dir / "static", html=True), name="static")
 
     @app.get("/")
     async def root() -> RedirectResponse:

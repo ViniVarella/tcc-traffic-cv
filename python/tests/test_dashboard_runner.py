@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 from pathlib import Path
 import threading
 import unittest
@@ -12,8 +13,8 @@ import tempfile
 
 from types import SimpleNamespace
 
-from dashboard.app import (FIXED_TIME_REFERENCE_S, FIXED_TIME_STOPPED_REFERENCE_S, SCENARIOS, EpisodeRunner, PanelSettings,
-                           StartRequest, emergency_board, load_fixed_time_reference)
+from dashboard.app import (FIXED_TIME_REFERENCE_S, FIXED_TIME_STOPPED_REFERENCE_S, SCENARIOS, EpisodeRunner, NoCacheStaticFiles,
+                           PanelSettings, StartRequest, emergency_board, load_fixed_time_reference)
 from experiments.api_server import GENERIC_CLASSES, choose_detector, parse_args
 
 
@@ -65,6 +66,14 @@ class EpisodeRunnerValidationTests(unittest.TestCase):
                 runner.start(StartRequest(preemption=source))
         runner.start(StartRequest(preemption="v2i"))
         self.assertTrue(runner.state["is_running"])
+
+    def test_panel_files_are_revalidated_by_the_browser(self) -> None:
+        # Sem isso, o navegador podia juntar um index.html novo com um app.js antigo.
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "app.js").write_text("// painel", encoding="utf-8")
+            files = NoCacheStaticFiles(directory=tmp)
+            response = asyncio.run(files.get_response("app.js", {"type": "http", "method": "GET", "headers": []}))
+        self.assertEqual(response.headers["Cache-Control"], "no-cache")
 
     def test_every_scenario_has_a_fixed_time_reference(self) -> None:
         self.assertEqual(set(FIXED_TIME_REFERENCE_S), set(SCENARIOS))
