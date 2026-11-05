@@ -14,7 +14,7 @@ depois (``after_episode=-1``) mostra o ponto de partida do RL.
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import json
 from pathlib import Path
 from time import perf_counter
@@ -56,7 +56,11 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--control-seconds", type=float, default=1800.0)
     parser.add_argument("--decision-interval", type=float, default=5.0)
     parser.add_argument("--gamma", type=float, default=0.99, help="Desconto por segundo simulado (transições SMDP).")
+    parser.add_argument("--init-checkpoint", type=Path, default=None,
+                        help="Parte deste checkpoint (ex.: o da imitação) em vez de pesos aleatórios.")
     parser.add_argument("--demo-episodes", type=int, default=48, help="Episódios de demonstração do max-pressure (0 desliga).")
+    parser.add_argument("--demo-batch-fraction", type=float, default=0.25, help="Fração do lote vinda das demonstrações.")
+    parser.add_argument("--demo-loss-weight", type=float, default=1.0, help="Peso da perda de margem do DQfD (0 = só TD).")
     parser.add_argument("--demo-seed-start", type=int, default=41)
     parser.add_argument("--demo-pretrain-steps", type=int, default=5_000)
     parser.add_argument("--epsilon-start", type=float, default=0.2, help="Baixo: o RL parte da imitação do max-pressure.")
@@ -85,9 +89,16 @@ def main() -> None:
     if (not scenarios or args.episodes <= 0 or args.demo_episodes < 0 or train_seeds & set(validation_seeds)
             or demo_seeds & (train_seeds | set(validation_seeds))):
         raise ValueError("Requer cenários de treino, episódios positivos e seeds de treino, demonstração e validação disjuntas.")
-    agent = PhaseSelectionAgent(PhaseAgentConfig(max_phases=environment.max_phases, hidden_size=args.hidden_size,
-                                                 gamma=args.gamma, learning_rate=args.learning_rate),
-                                device=args.device, seed=args.seed_start)
+    if args.init_checkpoint is None:
+        agent = PhaseSelectionAgent(PhaseAgentConfig(max_phases=environment.max_phases, hidden_size=args.hidden_size,
+                                                     gamma=args.gamma, learning_rate=args.learning_rate,
+                                                     demo_batch_fraction=args.demo_batch_fraction,
+                                                     demo_loss_weight=args.demo_loss_weight),
+                                    device=args.device, seed=args.seed_start)
+    else:
+        agent = PhaseSelectionAgent.load(args.init_checkpoint, device=args.device)
+        agent.config = replace(agent.config, demo_batch_fraction=args.demo_batch_fraction, demo_loss_weight=args.demo_loss_weight)
+        agent.online.train()
     # ~1 decisão a cada 10 s de controle; a estimativa só dimensiona o decaimento de ε.
     estimated_decisions = int(args.episodes * args.control_seconds / 10.0)
     policy = PhaseDqnPolicy(agent, EpsilonSchedule(args.epsilon_start, args.epsilon_end, int(args.epsilon_decay_fraction * estimated_decisions)))
@@ -98,7 +109,9 @@ def main() -> None:
         "control_s": args.control_seconds, "validation_seeds": validation_seeds,
         "training_scenarios": [scenario.name for scenario in scenarios],
         "demonstrations": {"policy": "max_pressure", "episodes": args.demo_episodes, "seeds": sorted(demo_seeds),
-                           "pretrain_steps": args.demo_pretrain_steps},
+                           "pretrain_steps": args.demo_pretrain_steps, "batch_fraction": args.demo_batch_fraction,
+                           "loss_weight": args.demo_loss_weight},
+        "init_checkpoint": None if args.init_checkpoint is None else str(args.init_checkpoint),
     }
     logs: list[dict[str, Any]] = []
 
@@ -127,8 +140,8 @@ def main() -> None:
                          "demo_replay_size": len(agent.demo_replay), **outcome.summary()})
             print(f"phase_select_demo episode={index} scenario={scenario.name} seed={seed} "
                   f"demo_replay={len(agent.demo_replay)} gradient_steps={agent.training_steps}", flush=True)
-        if args.demo_episodes:
-            for _ in range(args.demo_pretrain_steps):
+        if args.demo_episodes or args.init_checkpoint is not None:
+            for _ in range(args.demo_pretrain_steps if args.demo_episodes else 0):
                 agent.train_step()
             greedy = PhaseDqnPolicy(agent)
             score, switch_rate = validate("dqn", lambda layout: greedy)
