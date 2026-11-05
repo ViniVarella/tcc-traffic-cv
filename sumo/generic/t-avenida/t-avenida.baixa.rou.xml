@@ -1,0 +1,9 @@
+<routes>
+    <!-- Gerado por experiments.build_generic_intersections (t-avenida, demanda baixa). -->
+    <flow id="f_0" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.020833)" from="in_E" to="out_S"/>
+    <flow id="f_1" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.062500)" from="in_E" to="out_W"/>
+    <flow id="f_2" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.062500)" from="in_W" to="out_E"/>
+    <flow id="f_3" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.020833)" from="in_W" to="out_S"/>
+    <flow id="f_4" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.020833)" from="in_S" to="out_E"/>
+    <flow id="f_5" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.020833)" from="in_S" to="out_W"/>
+</routes>

@@ -1,0 +1,15 @@
+<routes>
+    <!-- Gerado por experiments.build_generic_intersections (cruz-2x2, demanda media). -->
+    <flow id="f_0" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.031111)" from="in_E" to="out_N"/>
+    <flow id="f_1" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.031111)" from="in_E" to="out_S"/>
+    <flow id="f_2" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.093333)" from="in_E" to="out_W"/>
+    <flow id="f_3" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.093333)" from="in_W" to="out_E"/>
+    <flow id="f_4" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.031111)" from="in_W" to="out_N"/>
+    <flow id="f_5" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.031111)" from="in_W" to="out_S"/>
+    <flow id="f_6" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.031111)" from="in_N" to="out_E"/>
+    <flow id="f_7" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.093333)" from="in_N" to="out_S"/>
+    <flow id="f_8" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.031111)" from="in_N" to="out_W"/>
+    <flow id="f_9" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.031111)" from="in_S" to="out_E"/>
+    <flow id="f_10" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.093333)" from="in_S" to="out_N"/>
+    <flow id="f_11" departLane="best" departSpeed="max" begin="0.00" end="3600.00" period="exp(0.031111)" from="in_S" to="out_W"/>
+</routes>
