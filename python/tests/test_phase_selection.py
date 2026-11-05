@@ -184,6 +184,22 @@ class PhaseSelectionAgentTests(unittest.TestCase):
         self.assertEqual(loaded.metadata, {"scenarios": ["x"]})
 
 
+class EvaluationStatisticsTests(unittest.TestCase):
+    def test_confidence_interval_uses_student_t(self) -> None:
+        from experiments.evaluate_phase_selection import confidence_interval
+
+        interval = confidence_interval([13.0, 13.3, 12.6])
+        self.assertAlmostEqual(interval["mean"], 12.9667, places=4)
+        self.assertAlmostEqual(interval["ci95_high"] - interval["mean"], 4.303 * 0.351188 / 3 ** 0.5, places=3)
+        self.assertIsNone(confidence_interval([1.0])["ci95_low"])
+
+    def test_reduction_is_paired_by_seed(self) -> None:
+        from experiments.evaluate_phase_selection import paired_reduction
+
+        reduction = paired_reduction([4.0, 5.0], [10.0, 10.0])
+        self.assertAlmostEqual(reduction["mean"], 0.55)
+
+
 class RecordingClient:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str]] = []
