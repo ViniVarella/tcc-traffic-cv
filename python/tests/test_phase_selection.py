@@ -122,12 +122,25 @@ class PhaseStateEncoderTests(unittest.TestCase):
         observation = encoder.encode(lanes, groups, capacities, 0, 20, [0, 50, 200], (True, True, False))
         self.assertEqual(observation.state.shape, (4 * (len(ROW_FEATURE_NAMES) + 1),))
         rows, mask = split_state(observation.state, 4, len(ROW_FEATURE_NAMES))
+        index = {name: position for position, name in enumerate(ROW_FEATURE_NAMES)}
         np.testing.assert_allclose(rows[0, 1, :2], [0.5, 0.5])  # 8 de 16 vagas no grupo b
-        np.testing.assert_allclose(rows[0, 1, 5:7], [0.5, 0.5])  # contexto: fase atual (a)
-        np.testing.assert_allclose(rows[0, :3, 10:13], [[1, 0.5, 0], [0, 0.5, 0.5], [0, 0.5, 1]])
+        np.testing.assert_allclose(rows[0, 1, [index["current_count"], index["current_stopped"]]], [0.5, 0.5])  # fase atual (a)
+        tail = [index["is_current"], index["green_elapsed"], index["red_time"]]
+        np.testing.assert_allclose(rows[0, :3][:, tail], [[1, 0.5, 0], [0, 0.5, 0.5], [0, 0.5, 1]])
         self.assertFalse(rows[0, 3].any())
         self.assertEqual(mask[0].tolist(), [True, True, False, False])
         self.assertEqual((observation.stopped, observation.lane_counts), ((4, 8, 0), (1, 2, 1)))
+
+    def test_absolute_counts_separate_one_lane_from_three(self) -> None:
+        encoder = PhaseStateEncoder(max_phases=2)
+        groups = ((("a", "lane_0"),), (("b", "lane_0"), ("b", "lane_1"), ("b", "lane_2")))
+        lanes = {("a", "lane_0"): features(2), ("b", "lane_0"): features(2), ("b", "lane_1"): features(2), ("b", "lane_2"): features(2)}
+        capacities = {key: 8.0 for group in groups for key in group}
+        rows, _ = split_state(encoder.encode(lanes, groups, capacities, 0, 20, [0, 30], (True, True)).state, 2, len(ROW_FEATURE_NAMES))
+        index = {name: position for position, name in enumerate(ROW_FEATURE_NAMES)}
+        self.assertAlmostEqual(rows[0, 0, index["stopped"]], rows[0, 1, index["stopped"]])  # mesma densidade
+        np.testing.assert_allclose(rows[0, :, index["stopped_vehicles"]], [2 / 16, 6 / 16])
+        np.testing.assert_allclose(rows[0, :, index["lane_count"]], [1 / 4, 3 / 4])
 
     def test_rejects_more_phases_than_supported(self) -> None:
         encoder = PhaseStateEncoder(max_phases=2)
@@ -159,7 +172,7 @@ class PhaseSelectionAgentTests(unittest.TestCase):
     CONFIG = PhaseAgentConfig(max_phases=3, min_replay_size=4, batch_size=4, target_update_interval=2)
 
     def state(self, mask: tuple[bool, ...]) -> np.ndarray:
-        rows = np.random.default_rng(0).random(3 * self.CONFIG.row_size)
+        rows = np.random.default_rng(0).random(3 * self.CONFIG.row_size) + 0.1  # toda fase existe (faixas > 0)
         return np.concatenate([rows, np.asarray(mask, dtype=np.float32)]).astype(np.float32)
 
     def test_actions_respect_the_mask(self) -> None:
@@ -169,6 +182,34 @@ class PhaseSelectionAgentTests(unittest.TestCase):
         self.assertEqual(agent.select_action(state, epsilon=0.0), 1)
         with self.assertRaises(ValueError):
             agent.remember(state, 0, -0.1, state, False)
+
+    def test_scores_follow_the_phase_not_its_position(self) -> None:
+        agent = PhaseSelectionAgent(self.CONFIG, seed=1)
+        rows = np.random.default_rng(3).random((3, self.CONFIG.row_size)).astype(np.float32) + 0.1
+        state = np.concatenate([rows.reshape(-1), np.ones(3, dtype=np.float32)])
+        swapped = np.concatenate([rows[[2, 0, 1]].reshape(-1), np.ones(3, dtype=np.float32)])
+        np.testing.assert_allclose(agent.q_values(swapped), agent.q_values(state)[[2, 0, 1]], rtol=1e-5)
+
+    def test_padding_does_not_change_the_scores(self) -> None:
+        small = PhaseSelectionAgent(PhaseAgentConfig(max_phases=2), seed=1)
+        large = PhaseSelectionAgent(PhaseAgentConfig(max_phases=4), seed=1)
+        large.online.load_state_dict(small.online.state_dict())
+        rows = np.random.default_rng(4).random((2, small.config.row_size)).astype(np.float32) + 0.1
+        padded = np.concatenate([rows, np.zeros((2, small.config.row_size), dtype=np.float32)])
+        q_small = small.q_values(np.concatenate([rows.reshape(-1), np.ones(2, dtype=np.float32)]))
+        q_large = large.q_values(np.concatenate([padded.reshape(-1), np.asarray([1, 1, 0, 0], dtype=np.float32)]))
+        np.testing.assert_allclose(q_large[:2], q_small, rtol=1e-5)
+
+    def test_demonstrations_teach_the_demonstrated_phase(self) -> None:
+        config = PhaseAgentConfig(max_phases=3, min_replay_size=8, batch_size=8, learning_rate=0.01)
+        agent = PhaseSelectionAgent(config, seed=1)
+        state = self.state((True, True, True))
+        for _ in range(16):
+            agent.remember(state, 2, -0.1, state, False, discount=0.9, demo=True)
+        self.assertEqual(len(agent.replay), 0)
+        for _ in range(200):
+            agent.train_step()
+        self.assertEqual(agent.select_action(state, epsilon=0.0), 2)
 
     def test_train_step_save_and_load(self) -> None:
         agent = PhaseSelectionAgent(self.CONFIG, seed=1)

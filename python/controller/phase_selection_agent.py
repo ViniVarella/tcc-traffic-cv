@@ -1,10 +1,18 @@
 """DQN com pesos compartilhados entre fases: uma nota por fase candidata.
 
-A mesma MLP pontua cada linha do estado por fase (``phase_selection_state``) e
-a ação é a fase válida de maior nota, então o modelo serve para cruzamentos com
-qualquer número de fases (até ``max_phases``). Double DQN com máscara: fases
-inexistentes ou proibidas pela camada de segurança nunca são escolhidas nem
-entram no alvo.
+A mesma MLP embute cada linha do estado por fase (``phase_selection_state``);
+a média e o máximo das linhas das fases existentes resumem o cruzamento. Rede
+*dueling*: ``Q(s, fase) = V(resumo) + A(linha, resumo) − média das vantagens
+válidas``, então o modelo serve para qualquer número de fases (até
+``max_phases``) e cada nota sabe o que acontece no resto do cruzamento. Double
+DQN com máscara: fases inexistentes ou proibidas pela camada de segurança
+nunca são escolhidas nem entram no alvo.
+
+Demonstrações (DQfD, Hester et al. 2018): transições de outra política (o
+max-pressure) ficam num replay próprio, permanente; a cada passo uma fração do
+lote vem delas e, nelas, uma perda de margem empurra a ação demonstrada acima
+das outras em ``demo_margin``. O agente começa imitando a demonstração e o
+TD aprende a superá-la.
 """
 
 from __future__ import annotations
@@ -21,7 +29,7 @@ from torch import nn
 from torch.nn import functional as functional
 
 from .dqn_agent import Transition
-from .phase_selection_state import ROW_FEATURE_NAMES, STATE_VERSION
+from .phase_selection_state import LANE_COUNT_INDEX, ROW_FEATURE_NAMES, STATE_VERSION
 
 
 MASKED_Q = -1e9
@@ -39,6 +47,9 @@ class PhaseAgentConfig:
     min_replay_size: int = 256
     target_update_interval: int = 250
     double_dqn: bool = True
+    demo_batch_fraction: float = 0.25
+    demo_margin: float = 0.5
+    demo_loss_weight: float = 1.0
     state_version: str = STATE_VERSION
 
     @property
@@ -47,18 +58,28 @@ class PhaseAgentConfig:
 
 
 class PhaseScoringNetwork(nn.Module):
-    """MLP aplicada a cada linha: ``(B, P, d)`` → notas ``(B, P)``."""
+    """Linhas ``(B, P, d)`` → notas ``(B, P)``, invariante à ordem e ao número de fases."""
 
     def __init__(self, row_size: int, hidden_size: int) -> None:
         super().__init__()
-        self.layers = nn.Sequential(
+        self.embed = nn.Sequential(
             nn.Linear(row_size, hidden_size), nn.ReLU(),
             nn.Linear(hidden_size, hidden_size), nn.ReLU(),
-            nn.Linear(hidden_size, 1),
         )
+        self.value = nn.Sequential(nn.Linear(2 * hidden_size, hidden_size), nn.ReLU(), nn.Linear(hidden_size, 1))
+        self.advantage = nn.Sequential(nn.Linear(3 * hidden_size, hidden_size), nn.ReLU(), nn.Linear(hidden_size, 1))
 
-    def forward(self, rows: torch.Tensor) -> torch.Tensor:
-        return self.layers(rows).squeeze(-1)
+    def forward(self, rows: torch.Tensor, exists: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        embedded = self.embed(rows)
+        present = exists.unsqueeze(-1).to(embedded.dtype)
+        # Saídas da ReLU são ≥ 0: zerar as fases inexistentes não muda o máximo.
+        summary = torch.cat([(embedded * present).sum(1) / present.sum(1).clamp(min=1.0),
+                             (embedded * present).max(1).values], dim=-1)
+        context = summary.unsqueeze(1).expand(-1, rows.shape[1], -1)
+        advantage = self.advantage(torch.cat([embedded, context], dim=-1)).squeeze(-1)
+        valid = mask.to(advantage.dtype)
+        mean_advantage = (advantage * valid).sum(1, keepdim=True) / valid.sum(1, keepdim=True).clamp(min=1.0)
+        return self.value(summary) + advantage - mean_advantage
 
 
 class PhaseSelectionAgent:
@@ -77,14 +98,15 @@ class PhaseSelectionAgent:
         self.target.eval()
         self.optimizer = torch.optim.Adam(self.online.parameters(), lr=config.learning_rate)
         self.replay: Deque[Transition] = deque(maxlen=config.replay_capacity)
+        self.demo_replay: Deque[Transition] = deque(maxlen=config.replay_capacity)
         self.training_steps = 0
         self.metadata: dict[str, Any] = {}
 
     def q_values(self, state: np.ndarray) -> np.ndarray:
         """Notas das fases válidas (as demais ficam em ``MASKED_Q``)."""
-        rows, mask = self._split(torch.as_tensor(self._validate_state(state), device=self.device).unsqueeze(0))
+        rows, exists, mask = self._split(torch.as_tensor(self._validate_state(state), device=self.device).unsqueeze(0))
         with torch.no_grad():
-            values = self.online(rows).masked_fill(~mask, MASKED_Q)
+            values = self.online(rows, exists, mask).masked_fill(~mask, MASKED_Q)
         return values.squeeze(0).cpu().numpy()
 
     def select_action(self, state: np.ndarray, epsilon: float, explore: bool = True) -> int:
@@ -96,37 +118,52 @@ class PhaseSelectionAgent:
         return int(np.argmax(self.q_values(state)))
 
     def remember(self, state: np.ndarray, action: int, reward: float, next_state: np.ndarray, done: bool,
-                 discount: float | None = None) -> None:
+                 discount: float | None = None, demo: bool = False) -> None:
+        """Guarda uma transição; ``demo=True`` a põe no replay permanente de demonstrações."""
         state = self._validate_state(state)
         if action not in self._valid_actions(state):
             raise ValueError(f"Ação {action} fora da máscara do estado.")
         discount = self.config.gamma if discount is None else float(discount)
         if not 0.0 <= discount <= 1.0:
             raise ValueError("discount deve estar entre 0 e 1.")
-        self.replay.append(Transition(state, int(action), float(reward), self._validate_state(next_state), bool(done), discount))
+        buffer = self.demo_replay if demo else self.replay
+        buffer.append(Transition(state, int(action), float(reward), self._validate_state(next_state), bool(done), discount))
 
     def train_step(self) -> float | None:
-        if len(self.replay) < max(self.config.min_replay_size, self.config.batch_size):
+        size = self.config.batch_size
+        if len(self.replay) + len(self.demo_replay) < max(self.config.min_replay_size, size):
             return None
-        batch = self._random.sample(self.replay, self.config.batch_size)
+        demo_count = 0
+        if self.demo_replay:
+            wanted = size if not self.replay else max(1, round(size * self.config.demo_batch_fraction))
+            demo_count = min(len(self.demo_replay), max(wanted, size - len(self.replay)))
+        batch = self._random.sample(self.demo_replay, demo_count) + self._random.sample(self.replay, size - demo_count)
         states = torch.as_tensor(np.stack([item.state for item in batch]), device=self.device)
         next_states = torch.as_tensor(np.stack([item.next_state for item in batch]), device=self.device)
         actions = torch.as_tensor([item.action for item in batch], dtype=torch.int64, device=self.device).unsqueeze(1)
         rewards = torch.as_tensor([item.reward for item in batch], dtype=torch.float32, device=self.device)
         dones = torch.as_tensor([item.done for item in batch], dtype=torch.float32, device=self.device)
         discounts = torch.as_tensor([item.discount for item in batch], dtype=torch.float32, device=self.device)
-        rows, _ = self._split(states)
-        q_values = self.online(rows).gather(1, actions).squeeze(1)
+        rows, exists, mask = self._split(states)
+        all_q = self.online(rows, exists, mask)
+        q_values = all_q.gather(1, actions).squeeze(1)
         with torch.no_grad():
-            next_rows, next_mask = self._split(next_states)
-            target_values = self.target(next_rows).masked_fill(~next_mask, MASKED_Q)
+            next_rows, next_exists, next_mask = self._split(next_states)
+            target_values = self.target(next_rows, next_exists, next_mask).masked_fill(~next_mask, MASKED_Q)
             if self.config.double_dqn:
-                next_actions = self.online(next_rows).masked_fill(~next_mask, MASKED_Q).argmax(dim=1, keepdim=True)
+                next_actions = (self.online(next_rows, next_exists, next_mask).masked_fill(~next_mask, MASKED_Q)
+                                .argmax(dim=1, keepdim=True))
                 next_values = target_values.gather(1, next_actions).squeeze(1)
             else:
                 next_values = target_values.max(dim=1).values
             targets = rewards + discounts * (1.0 - dones) * next_values
         loss = functional.smooth_l1_loss(q_values, targets)
+        if demo_count:
+            # Margem do DQfD: max_a [Q(s, a) + m·(a ≠ a_demo)] − Q(s, a_demo) nas transições demonstradas.
+            demo_q = all_q[:demo_count]
+            margins = torch.full_like(demo_q, self.config.demo_margin).scatter(1, actions[:demo_count], 0.0)
+            best = (demo_q + margins).masked_fill(~mask[:demo_count], MASKED_Q).max(dim=1).values
+            loss = loss + self.config.demo_loss_weight * (best - q_values[:demo_count]).mean()
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.online.parameters(), max_norm=1.0)
@@ -164,10 +201,11 @@ class PhaseSelectionAgent:
         agent.online.eval()
         return agent
 
-    def _split(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def _split(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Linhas ``(B, P, d)``, fases existentes (têm faixas) e máscara de fases escolhíveis."""
         phases, size = self.config.max_phases, self.config.row_size
         rows = states[:, : phases * size].reshape(-1, phases, size)
-        return rows, states[:, phases * size:] > 0.5
+        return rows, rows[..., LANE_COUNT_INDEX] > 0.0, states[:, phases * size:] > 0.5
 
     def _valid_actions(self, state: np.ndarray) -> list[int]:
         mask = state[self.config.max_phases * self.config.row_size:]

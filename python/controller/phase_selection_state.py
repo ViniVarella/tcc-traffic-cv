@@ -2,8 +2,11 @@
 
 Cada fase verde candidata vira uma linha de ``ROW_FEATURE_NAMES``: as
 ``LaneFeatures`` somadas no grupo de faixas da fase (normalizadas pela
-capacidade do grupo), as mesmas features da fase atual como contexto, se a
-fase é a atual, o tempo de verde e há quanto tempo a fase está no vermelho. As
+capacidade do grupo), as contagens absolutas (parados e veículos ÷
+``VEHICLE_REFERENCE``, faixas ÷ ``LANE_REFERENCE``: só a densidade confundia
+uma conversão de 1 faixa com uma via de 3), as mesmas features da fase atual
+como contexto, se a fase é a atual, o tempo de verde e há quanto tempo a fase
+está no vermelho. As
 linhas são completadas até ``max_phases`` e seguidas da máscara das fases que
 a política pode escolher, num vetor plano (o replay e as transições SMDP
 continuam guardando um ``np.ndarray`` por estado).
@@ -18,7 +21,8 @@ from typing import Any
 import numpy as np
 
 
-GROUP_FEATURE_NAMES = ("count", "stopped", "occupancy", "speed", "waiting")
+GROUP_FEATURE_NAMES = ("count", "stopped", "occupancy", "speed", "waiting",
+                       "stopped_vehicles", "vehicles", "lane_count")
 ROW_FEATURE_NAMES = (
     *GROUP_FEATURE_NAMES,
     *(f"current_{name}" for name in GROUP_FEATURE_NAMES),
@@ -26,7 +30,13 @@ ROW_FEATURE_NAMES = (
     "green_elapsed",
     "red_time",
 )
-STATE_VERSION = "phase_select_1"
+STATE_VERSION = "phase_select_2"
+# Escalas das contagens absolutas: duas ROIs de 60 m cheias e 4 faixas.
+VEHICLE_REFERENCE = 16.0
+LANE_REFERENCE = 4.0
+# Teto das features (densidades ficam em [0, 1]; contagens absolutas podem passar de 1).
+FEATURE_CEILING = 3.0
+LANE_COUNT_INDEX = ROW_FEATURE_NAMES.index("lane_count")
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,7 +53,7 @@ class PhaseObservation:
 
 def group_features(lane_features: Mapping[Any, Any], keys: Sequence[Any], capacities: Mapping[Any, float],
                    max_speed_mps: float, waiting_reference_s: float) -> list[float]:
-    """As 5 features de um grupo de faixas, normalizadas pela capacidade somada."""
+    """Features de um grupo de faixas: as 5 densidades (pela capacidade somada) e as contagens absolutas."""
     capacity = sum(capacities[key] for key in keys) or 1.0
     features = [lane_features.get(key) for key in keys]
     present = [item for item in features if item is not None]
@@ -55,6 +65,9 @@ def group_features(lane_features: Mapping[Any, Any], keys: Sequence[Any], capaci
         occupancy,
         1.0 if not speeds else float(np.mean(speeds)) / max_speed_mps,
         sum(item.waiting_time_s for item in present) / (capacity * waiting_reference_s),
+        sum(item.stopped_count for item in present) / VEHICLE_REFERENCE,
+        sum(item.vehicle_count for item in present) / VEHICLE_REFERENCE,
+        len(keys) / LANE_REFERENCE,
     ]
 
 
@@ -99,11 +112,12 @@ class PhaseStateEncoder:
         rows = np.zeros((self.max_phases, self.row_size), dtype=np.float32)
         elapsed = float(green_elapsed_s) / self.max_green_s
         for phase in range(count):
-            red = 0.0 if phase == current else float(red_times_s[phase]) / self.max_red_s
+            # Acima de max_red_s a justiça já força a fase: o tempo no vermelho satura em 1.
+            red = 0.0 if phase == current else min(1.0, float(red_times_s[phase]) / self.max_red_s)
             rows[phase] = [*per_group[phase], *per_group[current], float(phase == current), elapsed, red]
         padded_mask = np.zeros(self.max_phases, dtype=np.float32)
         padded_mask[:count] = np.asarray(mask, dtype=np.float32)
-        state = np.concatenate([np.clip(rows, 0.0, 1.0).reshape(-1), padded_mask])
+        state = np.concatenate([np.clip(rows, 0.0, FEATURE_CEILING).reshape(-1), padded_mask])
         stopped = tuple(sum(lane_features[key].stopped_count for key in keys if key in lane_features) for keys in groups)
         return PhaseObservation(state, int(current), tuple(bool(item) for item in mask), stopped,
                                 tuple(len(keys) for keys in groups), float(green_elapsed_s))
