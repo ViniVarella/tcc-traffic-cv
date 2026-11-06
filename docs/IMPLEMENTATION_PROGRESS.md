@@ -52,6 +52,134 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Prova de conceito com os detectores do SUMO vira a v1 do produto, e as
   demais sobem um número (atual: v5): 2026-10-20 — seção **Numeração do
   produto com a prova de conceito** abaixo.
+- Experimento: um DQN genérico com escolha livre de fase, para qualquer
+  cruzamento, treinado só em cruzamentos sintéticos: 2026-11-05 — seção
+  **Experimento: DQN genérico com seleção livre de fase** abaixo.
+
+## Experimento: DQN genérico com seleção livre de fase (2026-11-05)
+
+Branch `feat/selecao-livre-de-fase`. É **experimento**, não versão do produto:
+o TraffIQ v5 continua com o DQN estado v2 (`dqn-v2-traffiq-best.pt`).
+
+**Pergunta.** Um único modelo, sem treino por cruzamento, controla
+cruzamentos com outros números de faixas e de fases? E ele pode escolher a
+próxima fase verde livremente (por exemplo 1 → 3 → 2), em vez de seguir o
+ciclo?
+
+**Ambiente** (só SUMO, percepção *ground truth*, sem pedestres nem viaturas):
+
+- `sumo/intersection.py` lê o semáforo de qualquer `.net.xml`. As fases verdes
+  são os estados do programa com verde e sem amarelo, e o grupo de cada fase
+  são as faixas de entrada com algum link verde nela. As ROIs são os últimos
+  60 m de cada faixa; no SP, valem as ROIs das câmeras (`sp.yaml`).
+- `controller/phase_selection_controller.py`: a ação é a fase verde
+  escolhida. O amarelo é calculado link a link (só onde o verde acaba),
+  seguido de all-red de 1 s. Os verdes mínimo (10 s) e máximo (40 s) continuam
+  obrigatórios; no verde máximo, a fase atual sai da máscara.
+- **Justiça:** uma fase com veículo parado há mais de
+  `(n − 1)·(verde máx. + amarelo + all-red)` no vermelho vira a única opção.
+  Com isso, nenhuma fase espera mais do que esperaria no tempo fixo.
+- **Cruzamentos sintéticos** (`experiments.build_generic_intersections`,
+  gerados pelo `netconvert`; não edite à mão), cada um com 3 demandas Poisson
+  (baixa, média e desbalanceada):
+
+  | Cruzamento | Fases verdes | Uso |
+  |---|---|---|
+  | `cruz-2x2` | 4 (uma por aproximação) | treino |
+  | `cruz-opostas` | 4 (opostas + conversões protegidas à esquerda) | treino |
+  | `t-3` | 3 | treino |
+  | `t-avenida` | 2 | treino |
+  | `cruz-assimetrico` (1 a 3 faixas por aproximação) | 4 | **teste** |
+  | SP (`calibrated`, `original`) | 2 | **teste** |
+
+- **Portão 1 (aprovado):** no SP, o tempo fixo e o max-pressure por esse
+  ambiente reproduzem os números de `versoes-calibrated-oracle.json`. A
+  comparação com o especialista vale, portanto, no mesmo ambiente.
+
+**Modelo** (estado `phase_select_2`):
+
+- Uma linha por fase, com as features do grupo (densidades e contagens
+  absolutas de parados, veículos e faixas), as da fase atual, o tempo de verde
+  e o tempo no vermelho. A linha é preenchida até 8 fases, com máscara.
+- Rede *dueling* com pesos compartilhados entre fases: a média e o máximo das
+  linhas resumem o cruzamento, e cada fase recebe uma vantagem. A rede não
+  depende da ordem nem do número de fases (há teste para isso).
+- Treino em três etapas, todas só nos cruzamentos de treino:
+  1. 48 episódios de demonstração do max-pressure (DQfD, Hester et al. 2018);
+  2. 480 episódios com a perda de imitação. O resultado foi uma cópia do
+     max-pressure (validação −0,0246 contra −0,0247);
+  3. 480 episódios de RL **sem imitação**, a partir da etapa 2. A validação
+     foi de −0,0246 para −0,0165, enquanto o max-pressure fica em −0,0247 e o
+     tempo fixo em −0,0576.
+
+  O checkpoint é escolhido só pela validação nos cruzamentos de treino.
+- **Primeira tentativa** (estado `phase_select_1`, só densidades, sem
+  demonstrações): dava o mesmo verde a todas as fases e ficava pior que o
+  tempo fixo no cruzamento de teste de 4 fases (53,5 s contra 32,2 s).
+  Registro em `results/models/arquivo/dqn-fase-livre-estado1-*`.
+
+**Resultado nos cruzamentos de teste** (nunca vistos no treino). Seeds
+201–203, 300 s de aquecimento e 1800 s de controle. Os valores são a média e o
+IC de 95% (t de Student, gl = 2); a redução é pareada por seed contra o tempo
+fixo:
+
+| Cenário | Política | Espera média (s) | Espera parado (s) | Fila de inserção (veíc.) | Redução da espera |
+|---|---|---|---|---|---|
+| cruz-assimetrico/baixa | Tempo fixo | 22,6 [17,6; 27,7] | 31,7 [28,1; 35,3] | 0,0 | — |
+| | Max-pressure acíclico | 9,7 [6,5; 12,9] | 14,7 [10,5; 19,0] | 0,0 | 56,7% [33,5; 80,0] |
+| | **DQN genérico** | **6,5 [4,9; 8,0]** | **10,8 [9,1; 12,5]** | 0,0 | **71,2% [58,2; 84,1]** |
+| cruz-assimetrico/media | Tempo fixo | 32,2 [28,4; 36,0] | 38,6 [34,6; 42,7] | 0,0 | — |
+| | Max-pressure acíclico | 19,5 [18,9; 20,1] | 24,2 [22,7; 25,8] | 0,0 | 39,3% [30,5; 48,0] |
+| | **DQN genérico** | **16,4 [10,9; 22,0]** | **20,3 [14,9; 25,7]** | 0,0 | **49,1% [34,5; 63,6]** |
+| cruz-assimetrico/desbalanceada | Tempo fixo | 34,9 [32,0; 37,7] | 41,6 [39,2; 44,0] | 32,5 [8,3; 56,7] | — |
+| | Max-pressure acíclico | **19,9 [18,1; 21,6]** | **24,1 [22,2; 26,1]** | 39,2 [26,3; 52,1] | **43,0% [39,3; 46,7]** |
+| | DQN genérico | 20,8 [18,7; 22,8] | 26,0 [23,6; 28,4] | **24,7 [23,4; 26,0]** | 40,4% [36,4; 44,4] |
+| SP calibrated | Tempo fixo | 13,0 [12,1; 13,8] | 23,1 [20,2; 26,1] | 0,2 | — |
+| | Max-pressure acíclico | 4,7 [3,8; 5,7] | 8,0 [7,0; 8,9] | 0,0 | 63,6% [57,9; 69,3] |
+| | **DQN genérico** | **3,9 [3,3; 4,5]** | 8,0 [7,8; 8,3] | 0,0 | **70,1% [63,7; 76,5]** |
+| | Especialista (DQN estado v2) | 4,1 [3,7; 4,6] | **7,9 [6,9; 8,9]** | 0,0 | 68,0% [62,5; 73,5] |
+| SP original | Tempo fixo | 14,9 [14,8; 15,1] | 22,7 [22,7; 22,7] | 19,0 [14,5; 23,5] | — |
+| | Max-pressure acíclico | 4,6 [4,3; 4,8] | 7,3 [7,1; 7,6] | 0,5 | 69,4% [67,7; 71,1] |
+| | DQN genérico | 4,5 [4,2; 4,9] | 7,3 [7,1; 7,5] | 0,5 | 69,7% [67,0; 72,4] |
+| | Especialista (DQN estado v2) | 4,5 [4,2; 4,8] | 7,2 [6,9; 7,6] | 0,5 | 70,1% [67,9; 72,2] |
+
+**Portão 2 (aprovado):** o DQN genérico vence o tempo fixo em todos os
+cenários de teste e empata com o max-pressure ou fica à frente dele.
+
+- **SP calibrated:** sem nunca ter visto o SP, o genérico alcança 103% da
+  redução do especialista (70,1% contra 68,0%); os ICs se sobrepõem.
+- **cruz-assimetrico/desbalanceada:** a espera média fica 0,9 s acima da do
+  max-pressure (ICs sobrepostos), mas a fila de inserção é 37% menor (24,7
+  contra 39,2 veículos). Quem está na fila de inserção não entra na espera
+  média.
+- Nenhuma política teve teleportes.
+
+**Limitações:**
+
+- São 3 seeds, então os ICs são largos (gl = 2).
+- No SP, com 2 fases, a escolha livre equivale a manter ou trocar.
+- Os cruzamentos sintéticos não têm faixa exclusiva de conversão à direita
+  nem pedestres.
+- A percepção é *ground truth*: nos cruzamentos novos, a visão exigiria
+  calibrar as câmeras.
+- O painel e a Unity não usam este modelo.
+
+**Comandos** (a partir de `python/`; só SUMO):
+
+```bash
+../.venv/bin/python -m experiments.build_generic_intersections
+# etapas 1 e 2: demonstrações + imitação
+../.venv/bin/python -m experiments.pretrain_phase_selection --episodes 480 --validation-interval 48
+# etapa 3: RL sem imitação, a partir da etapa 2 (renomeie o best da etapa 2 para dqn-fase-livre-imitacao-best.pt)
+../.venv/bin/python -m experiments.pretrain_phase_selection --episodes 480 --validation-interval 48 \
+  --init-checkpoint ../results/models/dqn-fase-livre-imitacao-best.pt --demo-episodes 0 \
+  --demo-batch-fraction 0 --demo-loss-weight 0 --epsilon-start 0.2 \
+  --checkpoint-output ../results/models/dqn-fase-livre-rl-last.pt \
+  --best-checkpoint-output ../results/models/dqn-fase-livre-rl-best.pt \
+  --log-output ../results/logs/dqn-fase-livre-rl-pretrain.jsonl
+# avaliação nos cruzamentos de teste (padrão: dqn-fase-livre-rl-best.pt)
+../.venv/bin/python -m experiments.evaluate_phase_selection --output ../results/evaluation/fase-livre-rl-test.json
+```
 
 ## Numeração do produto com a prova de conceito (2026-10-20)
 
