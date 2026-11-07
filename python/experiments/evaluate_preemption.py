@@ -51,6 +51,8 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--v2-dqn-model", type=Path, default=models / "dqn-v2-traffiq-best.pt")
     parser.add_argument("--v3-dqn-model", type=Path, default=models / "dqn-v3-fase-curta-best.pt",
                         help="Checkpoint do estado v3 (só cenários *_ped; inclua v3 em --versions).")
+    parser.add_argument("--global-dqn-model", type=Path, default=models / "dqn-fase-livre-rl-best.pt",
+                        help="Modelo global, experimento de seleção livre de fase (inclua global em --versions).")
     add_vision_arguments(parser)
     parser.add_argument("--step-log-dir", type=Path, default=base_dir.parent / "results" / "logs",
                         help="Com --perception visual, grava um JSONL por versão e modo neste diretório.")
@@ -79,7 +81,8 @@ def main() -> None:
     emergency = EmergencySettings.from_config(config)
     preemption = PreemptionSettings.from_config(config)
     versions = build_version_policies(config, [item.strip() for item in args.versions.split(",") if item.strip()],
-                                      args.v1_dqn_model, args.v2_dqn_model, args.v3_dqn_model)
+                                      args.v1_dqn_model, args.v2_dqn_model, args.v3_dqn_model,
+                                      args.global_dqn_model, base_dir / "configs" / "generic.yaml")
     modes = [] if args.skip_no_preemption else [("sem_preempcao", None, "v2i")]
     modes += [(f"com_preempcao_{item}", preemption, item) for item in detections]
     report: dict[str, Any] = {"perception": args.perception, "detections": detections, "scenario": scenario, "seeds": seeds,
