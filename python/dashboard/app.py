@@ -38,12 +38,12 @@ from vision.visual_debug import VisualDebugger
 
 
 SCENARIOS = ("calibrated", "calibrated_ped", "original")
-# Controladores oferecidos no painel (nomes do código). O produto exibido é o
-# TraffIQ v5, que decide com o DQN estado v2; o DQN estado v3 é experimento e
-# não aparece aqui. O id "v1" do código é a regra de fila (TraffIQ v2). O
-# "global" é o modelo global (experimento: um DQN para qualquer cruzamento,
-# treinado só em cruzamentos sintéticos, com seleção livre de fase).
-VERSIONS = ("v2", "global", "baseline", "v1", "max_pressure")
+# Controladores oferecidos no painel (nomes do código). O atual é o TraffIQ
+# v6.0, o modelo global (id "global": um DQN para qualquer cruzamento, treinado
+# só em cruzamentos sintéticos, com seleção livre de fase); a v5.0 decide com o
+# DQN estado v2 (id "v2"). O id "v1" do código é a regra de fila (TraffIQ
+# v2.0). O DQN estado v3 é experimento e não aparece aqui.
+VERSIONS = ("global", "v2", "baseline", "v1", "max_pressure")
 PREEMPTION_SOURCES = ("none", *EMERGENCY_DETECTIONS)
 # Espera média por veículo do ciclo fixo em cada cenário, na avaliação oficial: a
 # referência da "redução" do painel, que mede ao vivo a mesma métrica
@@ -78,14 +78,14 @@ def load_fixed_time_reference(results_dir: Path, metric: str = "mean_waiting_tim
 MIN_SAMPLE_S = 300.0
 # Com o detector genérico (COCO) a câmera não reconhece viaturas.
 VISUAL_PREEMPTION = ("vision", "both")
-VERSION_LABELS = {"v2": "TraffIQ (IA, v5)", "global": "Modelo global (IA para qualquer cruzamento)",
-                  "baseline": "Tempo fixo (convencional)", "v1": "Regra de fila (v2)",
+VERSION_LABELS = {"global": "TraffIQ (Global, v6.0)", "v2": "TraffIQ (IA, v5.0)",
+                  "baseline": "Tempo fixo (convencional)", "v1": "Regra de fila (v2.0)",
                   "max_pressure": "Max-pressure (referência acadêmica)"}
 
 
 class StartRequest(BaseModel):
     scenario: str = "calibrated"
-    version: str = "v2"
+    version: str = "global"
     preemption: str = "v2i"
     seed: int = 201
     # Agenda automática de viaturas (uma a cada ~5 min, como nas avaliações de
