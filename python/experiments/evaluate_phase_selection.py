@@ -95,7 +95,7 @@ def main() -> None:
         for name, make_policy in policies.items():
             runs[name] = []
             for seed in seeds:
-                outcome = environment.run(scenario, seed, make_policy)
+                outcome = environment.run(scenario, seed, make_policy, state_version=agent.config.state_version)
                 runs[name].append({"seed": seed, "switches": outcome.switches, "decisions": outcome.decisions,
                                    "phase_seconds": dict(outcome.phase_seconds),
                                    **{metric: outcome.metrics.get(metric) for metric in METRICS}})

@@ -82,7 +82,7 @@ def main() -> None:
     preemption = PreemptionSettings.from_config(config)
     versions = build_version_policies(config, [item.strip() for item in args.versions.split(",") if item.strip()],
                                       args.v1_dqn_model, args.v2_dqn_model, args.v3_dqn_model,
-                                      args.global_dqn_model, base_dir / "configs" / "generic.yaml")
+                                      args.global_dqn_model, base_dir / "configs" / "generic.yaml", scenario)
     modes = [] if args.skip_no_preemption else [("sem_preempcao", None, "v2i")]
     modes += [(f"com_preempcao_{item}", preemption, item) for item in detections]
     report: dict[str, Any] = {"perception": args.perception, "detections": detections, "scenario": scenario, "seeds": seeds,

@@ -31,9 +31,19 @@ dqn:
   max_speed_mps: 13.89
   waiting_reference_seconds: 60
 
+# Fase exclusiva de pedestres (estado phase_select_3): nos cruzamentos com
+# pedestrian_variants, cada demanda ganha a variante "<demanda>+ped", com todos
+# os veículos no vermelho depois do último verde do programa, como no SP
+# (7 s de verde + 11 s de liberação). As redes sintéticas não têm pedestres:
+# a variante reproduz só o custo da fase para os veículos.
+pedestrian_phase:
+  green_seconds: 7
+  clearance_seconds: 11
+
 intersections:
   cruz-2x2:
     split: train
+    pedestrian_variants: true
     net: ../sumo/generic/cruz-2x2/cruz-2x2.net.xml
     scenarios:
       baixa: ../sumo/generic/cruz-2x2/cruz-2x2.baixa.sumocfg
@@ -41,6 +51,7 @@ intersections:
       desbalanceada: ../sumo/generic/cruz-2x2/cruz-2x2.desbalanceada.sumocfg
   cruz-opostas:
     split: train
+    pedestrian_variants: true
     net: ../sumo/generic/cruz-opostas/cruz-opostas.net.xml
     scenarios:
       baixa: ../sumo/generic/cruz-opostas/cruz-opostas.baixa.sumocfg
@@ -48,6 +59,7 @@ intersections:
       desbalanceada: ../sumo/generic/cruz-opostas/cruz-opostas.desbalanceada.sumocfg
   t-3:
     split: train
+    pedestrian_variants: true
     net: ../sumo/generic/t-3/t-3.net.xml
     scenarios:
       baixa: ../sumo/generic/t-3/t-3.baixa.sumocfg
@@ -55,6 +67,7 @@ intersections:
       desbalanceada: ../sumo/generic/t-3/t-3.desbalanceada.sumocfg
   t-avenida:
     split: train
+    pedestrian_variants: true
     net: ../sumo/generic/t-avenida/t-avenida.net.xml
     scenarios:
       baixa: ../sumo/generic/t-avenida/t-avenida.baixa.sumocfg
@@ -62,6 +75,7 @@ intersections:
       desbalanceada: ../sumo/generic/t-avenida/t-avenida.desbalanceada.sumocfg
   cruz-assimetrico:
     split: test
+    pedestrian_variants: true
     net: ../sumo/generic/cruz-assimetrico/cruz-assimetrico.net.xml
     scenarios:
       baixa: ../sumo/generic/cruz-assimetrico/cruz-assimetrico.baixa.sumocfg

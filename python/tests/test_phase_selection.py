@@ -86,6 +86,20 @@ class PhaseSelectionControllerTests(unittest.TestCase):
         controller.update(10, 1)
         self.assertEqual(controller.red_time(0, 30), 20.0)
 
+    def test_pedestrian_phase_follows_the_configured_green(self) -> None:
+        controller = PhaseSelectionController("tls", GREENS, pedestrian_after=2, pedestrian_s=18)
+        self.assertEqual((controller.switch_seconds(2, 0), controller.switch_seconds(0, 2), controller.leave_seconds(2)), (22, 4, 22))
+        controller.update(10, 2)  # 0 → 2: sem pedestres
+        controller.update(13, None)
+        self.assertEqual(controller.update(14, None)["phase_name"], "green_2")
+        controller.update(24, 0)  # sai do verde 2: amarelo, all-red e pedestres
+        controller.update(27, None)
+        decision = controller.update(28, None)
+        self.assertEqual((decision["phase_name"], decision["state"]), ("pedestrian", "rrrrrr"))
+        self.assertEqual(controller.update(45, None)["reason"], "pedestrian_in_progress")
+        self.assertEqual(controller.update(46, None)["phase_name"], "green_0")
+        self.assertEqual(controller.red_time(2, 46), 22.0)
+
     def test_first_apply_imposes_the_state(self) -> None:
         controller = PhaseSelectionController("tls", GREENS)
         client = RecordingClient()
@@ -119,7 +133,7 @@ class PhaseStateEncoderTests(unittest.TestCase):
         groups = ((("a", "lane_0"),), (("b", "lane_0"), ("b", "lane_1")), (("c", "lane_0"),))
         lanes = {("a", "lane_0"): features(4), ("b", "lane_0"): features(8), ("c", "lane_0"): features(0)}
         capacities = {key: 8.0 for group in groups for key in group}
-        observation = encoder.encode(lanes, groups, capacities, 0, 20, [0, 50, 200], (True, True, False))
+        observation = encoder.encode(lanes, groups, capacities, 0, 20, [0, 50, 200], (True, True, False), [0, 4, 4], [4, 4, 22])
         self.assertEqual(observation.state.shape, (4 * (len(ROW_FEATURE_NAMES) + 1),))
         rows, mask = split_state(observation.state, 4, len(ROW_FEATURE_NAMES))
         index = {name: position for position, name in enumerate(ROW_FEATURE_NAMES)}
@@ -136,11 +150,34 @@ class PhaseStateEncoderTests(unittest.TestCase):
         groups = ((("a", "lane_0"),), (("b", "lane_0"), ("b", "lane_1"), ("b", "lane_2")))
         lanes = {("a", "lane_0"): features(2), ("b", "lane_0"): features(2), ("b", "lane_1"): features(2), ("b", "lane_2"): features(2)}
         capacities = {key: 8.0 for group in groups for key in group}
-        rows, _ = split_state(encoder.encode(lanes, groups, capacities, 0, 20, [0, 30], (True, True)).state, 2, len(ROW_FEATURE_NAMES))
+        rows, _ = split_state(encoder.encode(lanes, groups, capacities, 0, 20, [0, 30], (True, True), [0, 4], [4, 4]).state,
+                              2, len(ROW_FEATURE_NAMES))
         index = {name: position for position, name in enumerate(ROW_FEATURE_NAMES)}
         self.assertAlmostEqual(rows[0, 0, index["stopped"]], rows[0, 1, index["stopped"]])  # mesma densidade
         np.testing.assert_allclose(rows[0, :, index["stopped_vehicles"]], [2 / 16, 6 / 16])
         np.testing.assert_allclose(rows[0, :, index["lane_count"]], [1 / 4, 3 / 4])
+
+    def test_switch_costs_enter_the_rows_and_are_required(self) -> None:
+        encoder = PhaseStateEncoder(max_phases=2)
+        groups = ((("a", "lane_0"),), (("b", "lane_0"),))
+        lanes = {key: features(1) for group in groups for key in group}
+        capacities = {key: 8.0 for group in groups for key in group}
+        rows, _ = split_state(encoder.encode(lanes, groups, capacities, 1, 20, [24, 0], (True, True), [22, 0], [4, 22]).state,
+                              2, len(ROW_FEATURE_NAMES))
+        index = {name: position for position, name in enumerate(ROW_FEATURE_NAMES)}
+        np.testing.assert_allclose(rows[0, :, index["switch_in"]], [22 / 30, 0.0])
+        np.testing.assert_allclose(rows[0, :, index["switch_out"]], [4 / 30, 22 / 30])
+        with self.assertRaises(ValueError):
+            encoder.encode(lanes, groups, capacities, 1, 20, [24, 0], (True, True))
+
+    def test_version_2_rows_keep_their_size(self) -> None:
+        from controller.phase_selection_state import ROW_FEATURE_NAMES_V2
+
+        encoder = PhaseStateEncoder(max_phases=2, state_version="phase_select_2")
+        groups = ((("a", "lane_0"),), (("b", "lane_0"),))
+        lanes = {key: features(1) for group in groups for key in group}
+        observation = encoder.encode(lanes, groups, {key: 8.0 for key in lanes}, 0, 20, [0, 24], (True, True))
+        self.assertEqual(observation.state.shape, (2 * (len(ROW_FEATURE_NAMES_V2) + 1),))
 
     def test_rejects_more_phases_than_supported(self) -> None:
         encoder = PhaseStateEncoder(max_phases=2)
@@ -211,6 +248,15 @@ class PhaseSelectionAgentTests(unittest.TestCase):
             agent.train_step()
         self.assertEqual(agent.select_action(state, epsilon=0.0), 2)
 
+    def test_version_2_checkpoints_still_load(self) -> None:
+        from controller.phase_selection_state import ROW_FEATURE_NAMES_V2
+
+        old = PhaseSelectionAgent(PhaseAgentConfig(max_phases=3, row_size=len(ROW_FEATURE_NAMES_V2), state_version="phase_select_2"))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "v2.pt"
+            old.save(path)
+            self.assertEqual(PhaseSelectionAgent.load(path).config.state_version, "phase_select_2")
+
     def test_train_step_save_and_load(self) -> None:
         agent = PhaseSelectionAgent(self.CONFIG, seed=1)
         for action in (0, 1, 2, 0):
@@ -241,6 +287,20 @@ class EvaluationStatisticsTests(unittest.TestCase):
         self.assertAlmostEqual(reduction["mean"], 0.55)
 
 
+class ScenarioTests(unittest.TestCase):
+    def test_pedestrian_variants_double_the_scenarios(self) -> None:
+        import yaml
+
+        from experiments.phase_selection_environment import load_scenarios
+
+        base = Path(__file__).resolve().parents[1]
+        scenarios = load_scenarios(yaml.safe_load((base / "configs" / "generic.yaml").read_text(encoding="utf-8")), base)
+        names = {scenario.name: scenario for scenario in scenarios}
+        self.assertEqual(names["t-3/media+ped"].pedestrian_s, 18.0)
+        self.assertEqual(names["t-3/media"].pedestrian_s, 0.0)
+        self.assertNotIn("sp/calibrated+ped", names)  # SP com pedestres só pelo laço oficial (compare_versions)
+
+
 class VisualKeyTests(unittest.TestCase):
     def test_camera_keys_become_sumo_lane_keys(self) -> None:
         import yaml
@@ -269,7 +329,10 @@ class GlobalPhasePolicyTests(unittest.TestCase):
         from experiments.version_policies import GlobalPhasePolicy
 
         config = Path(__file__).resolve().parents[1] / "configs" / "generic.yaml"
-        policy = GlobalPhasePolicy(PhaseSelectionAgent(PhaseAgentConfig(max_phases=8), seed=1), config)
+        import yaml
+
+        sp = yaml.safe_load((config.parent / "sp.yaml").read_text(encoding="utf-8"))
+        policy = GlobalPhasePolicy(PhaseSelectionAgent(PhaseAgentConfig(max_phases=8), seed=1), config, sp)
         lanes = {key: features(2) for key in policy.key_map}  # chaves (câmera, faixa) da visão
         state_v2 = np.asarray([0.5], dtype=np.float32)  # último elemento: 20 s de 40
         south = policy.observation(state_v2, lanes, SimpleNamespace(phase_index=3))
@@ -279,6 +342,23 @@ class GlobalPhasePolicyTests(unittest.TestCase):
         self.assertAlmostEqual(rows[0, 0, red], (20 + 4) / 44)  # verde atual + amarelo + all-red
         self.assertEqual(sum(south.lane_counts), 7)  # as 7 faixas monitoradas do SP
         self.assertIn(policy(state_v2, lanes, SimpleNamespace(phase_index=0)), (0, 1))
+
+    def test_sp_pedestrian_phase_comes_after_the_south_green(self) -> None:
+        from types import SimpleNamespace
+        import yaml
+
+        from experiments.version_policies import GlobalPhasePolicy
+
+        config = Path(__file__).resolve().parents[1] / "configs" / "generic.yaml"
+        sp = yaml.safe_load((config.parent / "sp.yaml").read_text(encoding="utf-8"))
+        policy = GlobalPhasePolicy(PhaseSelectionAgent(PhaseAgentConfig(max_phases=8), seed=1), config, sp, pedestrian_phase=True)
+        lanes = {key: features(2) for key in policy.key_map}
+        east_west = policy.observation(np.asarray([0.5], dtype=np.float32), lanes, SimpleNamespace(phase_index=0))
+        rows, _ = split_state(east_west.state, 8, len(ROW_FEATURE_NAMES))
+        index = {name: position for position, name in enumerate(ROW_FEATURE_NAMES)}
+        # Sul ficou no vermelho: verde L/O (20 s) + amarelo/all-red (4 s) + pedestres (18 s).
+        self.assertAlmostEqual(rows[0, 1, index["red_time"]], 42 / policy.encoder.max_red_s, places=5)
+        np.testing.assert_allclose(rows[0, :2, index["switch_out"]], [4 / 30, 22 / 30])
 
 
 class RecordingClient:

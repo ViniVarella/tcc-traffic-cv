@@ -29,7 +29,7 @@ from torch import nn
 from torch.nn import functional as functional
 
 from .dqn_agent import Transition
-from .phase_selection_state import LANE_COUNT_INDEX, ROW_FEATURE_NAMES, STATE_VERSION
+from .phase_selection_state import LANE_COUNT_INDEX, ROW_FEATURE_NAMES, ROW_FEATURES_BY_VERSION, STATE_VERSION
 
 
 MASKED_Q = -1e9
@@ -189,8 +189,9 @@ class PhaseSelectionAgent:
     def load(cls, path: str | Path, device: str | None = None) -> "PhaseSelectionAgent":
         checkpoint = torch.load(Path(path), map_location=device or "cpu", weights_only=True)
         config = PhaseAgentConfig(**checkpoint["config"])
-        if config.state_version != STATE_VERSION:
-            raise ValueError(f"Checkpoint de outra versão de estado: {config.state_version!r}.")
+        expected = ROW_FEATURES_BY_VERSION.get(config.state_version)
+        if expected is None or len(expected) != config.row_size:
+            raise ValueError(f"Checkpoint de versão de estado desconhecida: {config.state_version!r}.")
         agent = cls(config, device=device)
         agent.online.load_state_dict(checkpoint["model_state"])
         agent.target.load_state_dict(checkpoint.get("target_model_state", checkpoint["model_state"]))

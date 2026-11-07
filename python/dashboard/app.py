@@ -78,7 +78,7 @@ def load_fixed_time_reference(results_dir: Path, metric: str = "mean_waiting_tim
 MIN_SAMPLE_S = 300.0
 # Com o detector genérico (COCO) a câmera não reconhece viaturas.
 VISUAL_PREEMPTION = ("vision", "both")
-VERSION_LABELS = {"global": "TraffIQ (IA, v6.0)", "v2": "TraffIQ (IA, v5.0)",
+VERSION_LABELS = {"global": "TraffIQ (IA Global, v6.0)", "v2": "TraffIQ (IA, v5.0)",
                   "baseline": "Tempo fixo (convencional)", "v1": "Regra de fila (v2.0)",
                   "max_pressure": "Max-pressure (referência acadêmica)"}
 
@@ -279,7 +279,8 @@ class EpisodeRunner:
     def _run_episode(self, request: StartRequest, bridge: UnityBridge) -> None:
         version = build_version_policies(self.config, [request.version], self.v1_1_checkpoint, self.checkpoints["v2"],
                                          global_checkpoint=self.checkpoints["global"],
-                                         generic_config=self.settings.base_dir / "configs" / "generic.yaml")[0]
+                                         generic_config=self.settings.base_dir / "configs" / "generic.yaml",
+                                         scenario=request.scenario)[0]
         environment = Environment(self.config, self.settings.base_dir, request.scenario,
                                   EpisodeSettings(self.settings.warmup_s, self.settings.control_s, version.decision_interval_s),
                                   state_version=version.state_version)

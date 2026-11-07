@@ -20,7 +20,7 @@ from typing import Any, Protocol
 import yaml
 
 from controller.phase_selection_controller import PhaseSelectionController
-from controller.phase_selection_state import PhaseObservation, PhaseStateEncoder
+from controller.phase_selection_state import STATE_VERSION, PhaseObservation, PhaseStateEncoder
 from controller.decision_scheduler import SmdpAccumulator
 from controller.rewards import RewardWeights
 from experiments.episode_runner import EpisodeOutcome, EpisodeSettings, RewardModel, incoming_lane_capacity
@@ -44,18 +44,30 @@ class GenericScenario:
     split: str
     net: Path
     sumocfg: Path
+    # Fase exclusiva de pedestres depois do último verde do programa (0 = sem).
+    pedestrian_s: float = 0.0
 
     @property
     def name(self) -> str:
         return f"{self.intersection}/{self.demand}"
 
 
+def pedestrian_seconds(config: Mapping[str, Any]) -> float:
+    """Duração da fase exclusiva de pedestres (verde + liberação) do bloco ``pedestrian_phase``."""
+    raw = config.get("pedestrian_phase") or {}
+    return float(raw.get("green_seconds", 0.0)) + float(raw.get("clearance_seconds", 0.0))
+
+
 def load_scenarios(config: Mapping[str, Any], base_dir: Path) -> list[GenericScenario]:
+    """Cruzamento × demanda; com ``pedestrian_variants``, cada demanda ganha a variante ``<demanda>+ped``."""
     scenarios = []
+    pedestrians = pedestrian_seconds(config)
     for name, raw in config["intersections"].items():
+        variants = [0.0, pedestrians] if raw.get("pedestrian_variants") and pedestrians > 0 else [0.0]
         for demand, sumocfg in raw["scenarios"].items():
-            scenarios.append(GenericScenario(name, str(demand), str(raw["split"]), (base_dir / raw["net"]).resolve(),
-                                             (base_dir / sumocfg).resolve()))
+            for seconds in variants:
+                scenarios.append(GenericScenario(name, f"{demand}+ped" if seconds else str(demand), str(raw["split"]),
+                                                 (base_dir / raw["net"]).resolve(), (base_dir / sumocfg).resolve(), seconds))
     return scenarios
 
 
@@ -129,12 +141,15 @@ class PhaseSelectionEnvironment:
             self._layouts[scenario.net] = layout
         return self._layouts[scenario.net]
 
-    def encoder(self, layout: IntersectionLayout) -> PhaseStateEncoder:
+    def encoder(self, layout: IntersectionLayout, pedestrian_s: float = 0.0,
+                state_version: str = STATE_VERSION) -> PhaseStateEncoder:
+        """Encoder do cruzamento; a justiça (``max_red_s``) inclui a fase de pedestres de um ciclo."""
         dqn = self.config.get("dqn", {})
         return PhaseStateEncoder(
             self.max_phases, self.max_green_s,
-            max_red_seconds(len(layout.greens), self.max_green_s, self.yellow_s, self.all_red_s),
+            max_red_seconds(len(layout.greens), self.max_green_s, self.yellow_s, self.all_red_s) + pedestrian_s,
             float(dqn.get("max_speed_mps", 13.89)), float(dqn.get("waiting_reference_seconds", 60.0)),
+            state_version,
         )
 
     def camera_key_map(self, scenario: GenericScenario) -> dict[tuple[str, str], tuple[str, str]]:
@@ -145,7 +160,8 @@ class PhaseSelectionEnvironment:
         return camera_key_map(yaml.safe_load((self.base_dir / raw["roi_profile"]).read_text(encoding="utf-8")))
 
     def run(self, scenario: GenericScenario, seed: int, make_policy: PolicyFactory, learner: Any | None = None,
-            on_step: Callable[[dict[str, Any]], None] | None = None, observer: Any | None = None) -> EpisodeOutcome:
+            on_step: Callable[[dict[str, Any]], None] | None = None, observer: Any | None = None,
+            state_version: str = STATE_VERSION) -> EpisodeOutcome:
         """Um episódio; sem ``observer`` a percepção é *ground truth* (TraCI).
 
         Com ``observer`` (ex.: ``UnityVisualObserver``), as features vêm da visão,
@@ -160,8 +176,12 @@ class PhaseSelectionEnvironment:
         try:
             lanes = layout.incoming_lanes
             reward = RewardModel(lanes, incoming_lane_capacity([client.get_lane_length(lane) for lane in lanes]), self.reward_weights)
-            controller = PhaseSelectionController(layout.tls_id, [green.state for green in layout.greens], self.min_green_s,
-                                                  self.max_green_s, self.yellow_s, self.all_red_s)
+            controller = PhaseSelectionController(
+                layout.tls_id, [green.state for green in layout.greens], self.min_green_s, self.max_green_s,
+                self.yellow_s, self.all_red_s,
+                pedestrian_after=len(layout.greens) - 1 if scenario.pedestrian_s > 0 else None,
+                pedestrian_s=scenario.pedestrian_s,
+            )
             if observer is None:
                 source = TraciLaneFeatureSource(layout.geometries, self.parameters, seed=seed)
                 observe: Callable[[float], Mapping[Any, Any] | None] = lambda sim_time: source.observe(client, sim_time)
@@ -169,7 +189,7 @@ class PhaseSelectionEnvironment:
                 visual = observer.begin_episode(client, seed)
                 observe = lambda sim_time: remap_features(visual(sim_time), key_map)
             return run_phase_episode(client=client, layout=layout, controller=controller,
-                                     observe=observe, encoder=self.encoder(layout),
+                                     observe=observe, encoder=self.encoder(layout, scenario.pedestrian_s, state_version),
                                      policy=make_policy(layout), reward=reward, settings=self.settings, learner=learner,
                                      on_step=on_step)
         finally:
@@ -223,6 +243,8 @@ def run_phase_episode(
                     lane_features, groups, capacities, controller.current, elapsed,
                     [controller.red_time(phase, sim_time) for phase in range(controller.phase_count)],
                     decision_mask(controller, sim_time, lane_features, groups, encoder.max_red_s),
+                    [controller.switch_seconds(controller.current, phase) for phase in range(controller.phase_count)],
+                    [controller.leave_seconds(phase) for phase in range(controller.phase_count)],
                 )
                 last_state = observation.state
                 _learn(learner, accumulator.close(last_state), outcome)

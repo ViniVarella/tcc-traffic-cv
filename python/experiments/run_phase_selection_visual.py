@@ -94,7 +94,8 @@ def main() -> None:
             runs[name] = []
             before = observer.missing_frames
             for seed in seeds:
-                outcome = generic.run(scenario, seed, factories[name], observer=observer)
+                outcome = generic.run(scenario, seed, factories[name], observer=observer,
+                                      state_version=agent.config.state_version)
                 runs[name].append({"seed": seed, "switches": outcome.switches, "decisions": outcome.decisions,
                                    "missing_observations": outcome.missing_observations,
                                    "phase_seconds": dict(outcome.phase_seconds),

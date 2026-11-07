@@ -95,13 +95,15 @@ class GlobalPhasePolicy:
     ``generic.yaml`` (mesmas ROIs das câmeras) e as ``LaneFeatures`` da
     percepção, reindexadas de ``(câmera, faixa)`` para ``(edge, lane_k)``. O
     laço só consulta a política entre o verde mínimo e o máximo, então as duas
-    fases são válidas; com duas fases, a outra fase está no vermelho desde o
-    fim do seu verde: tempo do verde atual + amarelo + all-red (com pedestres,
-    a fase de pedestres não entra na conta). O tempo do verde vem do último
-    elemento do estado v2 (``min(1, tempo / verde máximo)``), como no v1.1.
+    fases são válidas. Com duas fases, a outra está no vermelho desde o fim do
+    seu verde: tempo do verde atual + o tempo perdido ao sair dela (amarelo +
+    all-red e, nos cenários com pedestres, a fase exclusiva que vem depois do
+    verde Sul). O tempo do verde vem do último elemento do estado v2
+    (``min(1, tempo / verde máximo)``), como no v1.1.
     """
 
-    def __init__(self, agent: PhaseSelectionAgent, generic_config: Path, net_scenario: str = "sp/calibrated") -> None:
+    def __init__(self, agent: PhaseSelectionAgent, generic_config: Path, sp_config: Mapping[str, Any],
+                 pedestrian_phase: bool = False, net_scenario: str = "sp/calibrated") -> None:
         from experiments.phase_selection_environment import PhaseSelectionEnvironment
         from sumo.intersection import program_green_indices
 
@@ -109,24 +111,38 @@ class GlobalPhasePolicy:
         scenario = environment.scenario(net_scenario)
         self.agent = agent
         self.layout = environment.layout(scenario)
-        self.encoder = environment.encoder(self.layout)
+        self.green_index = program_green_indices(scenario.net, self.layout.tls_id)
+        pedestrians = sp_config.get("pedestrians", {})
+        self.pedestrian_s = (float(pedestrians.get("green_seconds", 0)) + float(pedestrians.get("clearance_seconds", 0))
+                             if pedestrian_phase else 0.0)
+        if self.pedestrian_s and int(pedestrians.get("every_cycles", 1)) != 1:
+            raise ValueError("O modelo global só representa a fase de pedestres a cada ciclo (every_cycles = 1).")
+        # A fase de pedestres vem depois do verde Sul (secondary_green do programa).
+        south_program = int(sp_config["traffic_light"]["phases"]["secondary_green"])
+        self.pedestrian_after = self.green_index[south_program] if self.pedestrian_s else None
+        self.encoder = environment.encoder(self.layout, self.pedestrian_s, agent.config.state_version)
         if self.encoder.max_phases != agent.config.max_phases:
             raise ValueError("max_phases do generic.yaml difere do checkpoint.")
         self.key_map = environment.camera_key_map(scenario)
         self.groups = [self.layout.lane_keys(phase) for phase in range(len(self.layout.greens))]
         self.capacities = {key: geometry.capacity for key, geometry in self.layout.geometries.items()}
-        self.green_index = program_green_indices(scenario.net, self.layout.tls_id)
         self.max_green_s = environment.max_green_s
         self.transition_s = environment.yellow_s + environment.all_red_s
+
+    def leave_seconds(self, phase: int) -> float:
+        return self.transition_s + (self.pedestrian_s if phase == self.pedestrian_after else 0.0)
 
     def observation(self, state: np.ndarray, lane_features: Mapping[tuple[str, str], Any], phase: Any) -> Any:
         from experiments.phase_selection_environment import remap_features
 
         current = self.green_index[int(phase.phase_index)]
         elapsed = float(state[-1]) * self.max_green_s
-        red_times = [0.0 if index == current else elapsed + self.transition_s for index in range(len(self.groups))]
+        phases = range(len(self.groups))
+        red_times = [0.0 if index == current else elapsed + self.leave_seconds(index) for index in phases]
+        switch_in = [0.0 if index == current else self.leave_seconds(current) for index in phases]
         return self.encoder.encode(remap_features(lane_features, self.key_map), self.groups, self.capacities, current,
-                                   elapsed, red_times, tuple(True for _ in self.groups))
+                                   elapsed, red_times, tuple(True for _ in self.groups),
+                                   switch_in, [self.leave_seconds(index) for index in phases])
 
     def __call__(self, state: np.ndarray, lane_features: Mapping[tuple[str, str], Any], phase: Any) -> int:
         observation = self.observation(state, lane_features, phase)
@@ -146,7 +162,8 @@ class VersionPolicy:
 
 def build_version_policies(config: Mapping[str, Any], names: Sequence[str], v1_checkpoint: Path, v2_checkpoint: Path,
                            v3_checkpoint: Path | None = None, global_checkpoint: Path | None = None,
-                           generic_config: Path | None = None) -> list[VersionPolicy]:
+                           generic_config: Path | None = None, scenario: str | None = None) -> list[VersionPolicy]:
+    """Políticas pedidas; ``scenario`` só importa ao modelo global (``*_ped`` liga a fase de pedestres)."""
     unknown = [name for name in names if name not in (*VERSION_ORDER, *EXPERIMENT_VERSIONS)]
     if unknown:
         raise ValueError(f"Versões desconhecidas: {unknown}. Disponíveis: {', '.join(VERSION_ORDER)}.")
@@ -176,7 +193,8 @@ def build_version_policies(config: Mapping[str, Any], names: Sequence[str], v1_c
                 raise ValueError("A versão global exige o checkpoint e o generic.yaml.")
             agent = PhaseSelectionAgent.load(global_checkpoint)
             result.append(VersionPolicy(name, "modelo global: DQN de seleção livre de fase (experimento)",
-                                        GlobalPhasePolicy(agent, generic_config), 5.0))
+                                        GlobalPhasePolicy(agent, generic_config, config,
+                                                          pedestrian_phase=str(scenario or "").endswith("_ped")), 5.0))
         else:
             result.append(VersionPolicy(name, "max-pressure (referência)", MaxPressurePolicy(), 5.0))
     return result

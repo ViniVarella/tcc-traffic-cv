@@ -60,7 +60,7 @@ def main() -> None:
     scenario = args.scenario or config["sumo"].get("default_scenario")
     output = args.output or base_dir.parent / "results" / "evaluation" / f"versoes-{scenario}-{args.perception}.json"
     versions = build_version_policies(config, names, args.v1_dqn_model, args.v2_dqn_model, args.v3_dqn_model,
-                                      args.global_dqn_model, base_dir / "configs" / "generic.yaml")
+                                      args.global_dqn_model, base_dir / "configs" / "generic.yaml", scenario)
     report: dict[str, Any] = {"perception": args.perception, "scenario": scenario, "seeds": seeds,
                               "warmup_s": args.warmup_seconds, "control_s": args.control_seconds, "versions": {}}
     bridge = UnityBridge.from_config(config) if args.perception == "visual" else None
