@@ -59,13 +59,29 @@ def load_scenarios(config: Mapping[str, Any], base_dir: Path) -> list[GenericSce
     return scenarios
 
 
+def lane_key(sumo_lane: str) -> tuple[str, str]:
+    """Chave ``(edge, lane_k)`` de uma faixa do SUMO, a mesma das ROIs geradas."""
+    edge, _, index = sumo_lane.rpartition("_")
+    return edge, f"lane_{index}"
+
+
 def profile_geometries(profile: Mapping[str, Any]) -> dict[tuple[str, str], LaneGeometry]:
     """ROIs de um perfil de câmeras, reindexadas por ``(edge, lane_k)`` como as geradas."""
     geometries = {}
     for geometry in load_lane_geometries(profile).values():
-        edge, _, index = geometry.sumo_lane.rpartition("_")
-        geometries[(edge, f"lane_{index}")] = replace(geometry, camera_id=edge, lane_id=f"lane_{index}")
+        edge, lane = lane_key(geometry.sumo_lane)
+        geometries[(edge, lane)] = replace(geometry, camera_id=edge, lane_id=lane)
     return geometries
+
+
+def camera_key_map(profile: Mapping[str, Any]) -> dict[tuple[str, str], tuple[str, str]]:
+    """``(câmera, faixa)`` da percepção visual → ``(edge, lane_k)`` do ambiente genérico."""
+    return {key: lane_key(geometry.sumo_lane) for key, geometry in load_lane_geometries(profile).items()}
+
+
+def remap_features(features: Mapping[Any, Any] | None, key_map: Mapping[Any, Any]) -> dict[Any, Any] | None:
+    """Reindexa as features de uma fonte visual; ``None`` (sem frames) continua ``None``."""
+    return None if features is None else {key_map.get(key, key): value for key, value in features.items()}
 
 
 def max_red_seconds(phase_count: int, max_green_s: float, yellow_s: float, all_red_s: float) -> float:
@@ -121,9 +137,22 @@ class PhaseSelectionEnvironment:
             float(dqn.get("max_speed_mps", 13.89)), float(dqn.get("waiting_reference_seconds", 60.0)),
         )
 
+    def camera_key_map(self, scenario: GenericScenario) -> dict[tuple[str, str], tuple[str, str]]:
+        """Tradução das chaves da visão; só cruzamentos com ``roi_profile`` (câmeras reais) têm visão."""
+        raw = self.config["intersections"][scenario.intersection]
+        if "roi_profile" not in raw:
+            raise ValueError(f"{scenario.intersection} não tem câmeras (roi_profile): a percepção visual não se aplica.")
+        return camera_key_map(yaml.safe_load((self.base_dir / raw["roi_profile"]).read_text(encoding="utf-8")))
+
     def run(self, scenario: GenericScenario, seed: int, make_policy: PolicyFactory, learner: Any | None = None,
-            on_step: Callable[[dict[str, Any]], None] | None = None) -> EpisodeOutcome:
+            on_step: Callable[[dict[str, Any]], None] | None = None, observer: Any | None = None) -> EpisodeOutcome:
+        """Um episódio; sem ``observer`` a percepção é *ground truth* (TraCI).
+
+        Com ``observer`` (ex.: ``UnityVisualObserver``), as features vêm da visão,
+        reindexadas para ``(edge, lane_k)``; steps sem frames não decidem.
+        """
         layout = self.layout(scenario)
+        key_map = None if observer is None else self.camera_key_map(scenario)
         sumo = self.config.get("sumo", {})
         client = SumoClient("sumo", str(scenario.sumocfg), gui=False, seed=seed, step_length=sumo.get("step_length", 1.0),
                             traci_port=sumo.get("traci_port", 8873))
@@ -133,9 +162,14 @@ class PhaseSelectionEnvironment:
             reward = RewardModel(lanes, incoming_lane_capacity([client.get_lane_length(lane) for lane in lanes]), self.reward_weights)
             controller = PhaseSelectionController(layout.tls_id, [green.state for green in layout.greens], self.min_green_s,
                                                   self.max_green_s, self.yellow_s, self.all_red_s)
-            source = TraciLaneFeatureSource(layout.geometries, self.parameters, seed=seed)
+            if observer is None:
+                source = TraciLaneFeatureSource(layout.geometries, self.parameters, seed=seed)
+                observe: Callable[[float], Mapping[Any, Any] | None] = lambda sim_time: source.observe(client, sim_time)
+            else:
+                visual = observer.begin_episode(client, seed)
+                observe = lambda sim_time: remap_features(visual(sim_time), key_map)
             return run_phase_episode(client=client, layout=layout, controller=controller,
-                                     observe=lambda sim_time: source.observe(client, sim_time), encoder=self.encoder(layout),
+                                     observe=observe, encoder=self.encoder(layout),
                                      policy=make_policy(layout), reward=reward, settings=self.settings, learner=learner,
                                      on_step=on_step)
         finally:
@@ -147,7 +181,7 @@ def run_phase_episode(
     client: Any,
     layout: IntersectionLayout,
     controller: PhaseSelectionController,
-    observe: Callable[[float], Mapping[Any, Any]],
+    observe: Callable[[float], Mapping[Any, Any] | None],
     encoder: PhaseStateEncoder,
     policy: PhasePolicy,
     reward: RewardModel,
@@ -181,7 +215,10 @@ def run_phase_episode(
             outcome.total_reward += step_reward
             outcome.phase_seconds[phase_name] += 1
             accumulator.add(step_reward)
-            if _is_decision_point(controller, sim_time, settings.decision_interval_s, last_decision):
+            if lane_features is None:
+                # Sem frames: nenhuma decisão (mantém o verde até o máximo, como o TraffIQ).
+                outcome.missing_observations += 1
+            elif _is_decision_point(controller, sim_time, settings.decision_interval_s, last_decision):
                 observation = encoder.encode(
                     lane_features, groups, capacities, controller.current, elapsed,
                     [controller.red_time(phase, sim_time) for phase in range(controller.phase_count)],

@@ -52,8 +52,10 @@ def summarize(runs: list[dict[str, Any]], reference: list[dict[str, Any]] | None
             summary[metric] = confidence_interval(values)
     if reference is not None:
         for metric in METRICS[:2]:
-            summary[f"reduction_{metric}"] = paired_reduction([float(run[metric]) for run in runs],
-                                                              [float(run[metric]) for run in reference])
+            pairs = [(run.get(metric), base.get(metric)) for run, base in zip(runs, reference)]
+            if pairs and all(value is not None and base is not None for value, base in pairs):
+                summary[f"reduction_{metric}"] = paired_reduction([float(value) for value, _ in pairs],
+                                                                  [float(base) for _, base in pairs])
     return summary
 
 

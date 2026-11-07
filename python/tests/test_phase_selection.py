@@ -241,6 +241,27 @@ class EvaluationStatisticsTests(unittest.TestCase):
         self.assertAlmostEqual(reduction["mean"], 0.55)
 
 
+class VisualKeyTests(unittest.TestCase):
+    def test_camera_keys_become_sumo_lane_keys(self) -> None:
+        import yaml
+        from experiments.phase_selection_environment import camera_key_map, profile_geometries, remap_features
+
+        profile = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs" / "sp.yaml").read_text(encoding="utf-8"))
+        key_map = camera_key_map(profile)
+        self.assertEqual(key_map[("south", "lane_0")], ("E3", "lane_0"))
+        self.assertEqual(set(key_map.values()), set(profile_geometries(profile)))  # mesmas chaves das ROIs do ambiente
+        self.assertEqual(remap_features({("south", "lane_0"): 1}, key_map), {("E3", "lane_0"): 1})
+        self.assertIsNone(remap_features(None, key_map))  # sem frames continua sem frames
+
+    def test_summary_skips_reductions_without_the_metric(self) -> None:
+        from experiments.evaluate_phase_selection import summarize
+
+        runs = [{"mean_waiting_time_seconds": 4.0, "mean_waiting_time_stopped_seconds": 8.0}]
+        summary = summarize(runs, [{"mean_waiting_time_seconds": 10.0}])
+        self.assertIn("reduction_mean_waiting_time_seconds", summary)
+        self.assertNotIn("reduction_mean_waiting_time_stopped_seconds", summary)
+
+
 class RecordingClient:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str]] = []
