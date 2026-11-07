@@ -40,8 +40,10 @@ from vision.visual_debug import VisualDebugger
 SCENARIOS = ("calibrated", "calibrated_ped", "original")
 # Controladores oferecidos no painel (nomes do código). O produto exibido é o
 # TraffIQ v5, que decide com o DQN estado v2; o DQN estado v3 é experimento e
-# não aparece aqui. O id "v1" do código é a regra de fila (TraffIQ v2).
-VERSIONS = ("v2", "baseline", "v1", "max_pressure")
+# não aparece aqui. O id "v1" do código é a regra de fila (TraffIQ v2). O
+# "global" é o modelo global (experimento: um DQN para qualquer cruzamento,
+# treinado só em cruzamentos sintéticos, com seleção livre de fase).
+VERSIONS = ("v2", "global", "baseline", "v1", "max_pressure")
 PREEMPTION_SOURCES = ("none", *EMERGENCY_DETECTIONS)
 # Espera média por veículo do ciclo fixo em cada cenário, na avaliação oficial: a
 # referência da "redução" do painel, que mede ao vivo a mesma métrica
@@ -76,7 +78,8 @@ def load_fixed_time_reference(results_dir: Path, metric: str = "mean_waiting_tim
 MIN_SAMPLE_S = 300.0
 # Com o detector genérico (COCO) a câmera não reconhece viaturas.
 VISUAL_PREEMPTION = ("vision", "both")
-VERSION_LABELS = {"v2": "TraffIQ (IA, v5)", "baseline": "Tempo fixo (convencional)", "v1": "Regra de fila (v2)",
+VERSION_LABELS = {"v2": "TraffIQ (IA, v5)", "global": "Modelo global (IA para qualquer cruzamento)",
+                  "baseline": "Tempo fixo (convencional)", "v1": "Regra de fila (v2)",
                   "max_pressure": "Max-pressure (referência acadêmica)"}
 
 
@@ -130,7 +133,7 @@ class EpisodeRunner:
         # é a regra de fila (sem checkpoint); o do ``v1.1`` só é lido se ele for pedido,
         # e o painel não o oferece.
         self.v1_1_checkpoint = models / "visual-dqn-sp-best.pt"
-        self.checkpoints = {"v2": models / "dqn-v2-traffiq-best.pt"}
+        self.checkpoints = {"v2": models / "dqn-v2-traffiq-best.pt", "global": models / "dqn-fase-livre-rl-best.pt"}
         self.announce_before_s = EmergencySettings.from_config(self.config).announce_before_s
         evaluation_dir = settings.base_dir.parent / "results" / "evaluation"
         self.fixed_time_reference, self.fixed_time_reference_source = load_fixed_time_reference(evaluation_dir)
@@ -274,7 +277,9 @@ class EpisodeRunner:
             bridge.close()
 
     def _run_episode(self, request: StartRequest, bridge: UnityBridge) -> None:
-        version = build_version_policies(self.config, [request.version], self.v1_1_checkpoint, self.checkpoints["v2"])[0]
+        version = build_version_policies(self.config, [request.version], self.v1_1_checkpoint, self.checkpoints["v2"],
+                                         global_checkpoint=self.checkpoints["global"],
+                                         generic_config=self.settings.base_dir / "configs" / "generic.yaml")[0]
         environment = Environment(self.config, self.settings.base_dir, request.scenario,
                                   EpisodeSettings(self.settings.warmup_s, self.settings.control_s, version.decision_interval_s),
                                   state_version=version.state_version)

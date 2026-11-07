@@ -262,6 +262,25 @@ class VisualKeyTests(unittest.TestCase):
         self.assertNotIn("reduction_mean_waiting_time_stopped_seconds", summary)
 
 
+class GlobalPhasePolicyTests(unittest.TestCase):
+    def test_sp_phases_and_red_time_in_the_keep_switch_loop(self) -> None:
+        from types import SimpleNamespace
+
+        from experiments.version_policies import GlobalPhasePolicy
+
+        config = Path(__file__).resolve().parents[1] / "configs" / "generic.yaml"
+        policy = GlobalPhasePolicy(PhaseSelectionAgent(PhaseAgentConfig(max_phases=8), seed=1), config)
+        lanes = {key: features(2) for key in policy.key_map}  # chaves (câmera, faixa) da visão
+        state_v2 = np.asarray([0.5], dtype=np.float32)  # último elemento: 20 s de 40
+        south = policy.observation(state_v2, lanes, SimpleNamespace(phase_index=3))
+        self.assertEqual(south.current, 1)  # programa: 0 = verde L/O, 3 = verde Sul
+        rows, _ = split_state(south.state, 8, len(ROW_FEATURE_NAMES))
+        red = ROW_FEATURE_NAMES.index("red_time")
+        self.assertAlmostEqual(rows[0, 0, red], (20 + 4) / 44)  # verde atual + amarelo + all-red
+        self.assertEqual(sum(south.lane_counts), 7)  # as 7 faixas monitoradas do SP
+        self.assertIn(policy(state_v2, lanes, SimpleNamespace(phase_index=0)), (0, 1))
+
+
 class RecordingClient:
     def __init__(self) -> None:
         self.calls: list[tuple[str, str]] = []

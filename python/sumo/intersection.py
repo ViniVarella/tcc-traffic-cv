@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from vision.lane_features import LaneGeometry
 
@@ -72,8 +73,8 @@ def roi_geometry(sumo_lane: str, lane_length_m: float, roi_length_m: float) -> L
     return LaneGeometry(edge, f"lane_{index}", sumo_lane, start, lane_length_m, 3.2)
 
 
-def load_intersection(net_path: str | Path, tls_id: str | None = None, roi_length_m: float = 60.0) -> IntersectionLayout:
-    """Lê o semáforo (o único da rede, se ``tls_id`` for omitido) e monta o layout."""
+def _read_traffic_light(net_path: str | Path, tls_id: str | None) -> tuple[Any, list[tuple[str, float]], dict[int, str], dict[str, float]]:
+    """Semáforo, estados do programa estático, ``linkIndex`` → faixa de entrada e comprimentos."""
     import sumolib
 
     net = sumolib.net.readNet(str(net_path), withPrograms=True)
@@ -90,7 +91,19 @@ def load_intersection(net_path: str | Path, tls_id: str | None = None, roi_lengt
         link_lanes[int(link_index)] = in_lane.getID()
         lengths[in_lane.getID()] = float(in_lane.getLength())
     program = next(iter(tls.getPrograms().values()))
-    states = [(phase.state, phase.duration) for phase in program.getPhases()]
+    return tls, [(phase.state, phase.duration) for phase in program.getPhases()], link_lanes, lengths
+
+
+def program_green_indices(net_path: str | Path, tls_id: str | None = None) -> dict[int, int]:
+    """Índice da fase no programa estático → índice da fase verde no layout (só fases verdes)."""
+    _, states, link_lanes, _ = _read_traffic_light(net_path, tls_id)
+    order = [green.state for green in green_phases(states, link_lanes)]
+    return {index: order.index(state) for index, (state, _) in enumerate(states) if state in order}
+
+
+def load_intersection(net_path: str | Path, tls_id: str | None = None, roi_length_m: float = 60.0) -> IntersectionLayout:
+    """Lê o semáforo (o único da rede, se ``tls_id`` for omitido) e monta o layout."""
+    tls, states, link_lanes, lengths = _read_traffic_light(net_path, tls_id)
     greens = green_phases(states, link_lanes)
     geometries = {}
     for lane, length in sorted(lengths.items()):

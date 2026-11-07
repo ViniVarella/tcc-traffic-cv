@@ -162,7 +162,31 @@ cenários de teste e empata com o max-pressure ou fica à frente dele.
   nem pedestres.
 - A percepção é *ground truth*: nos cruzamentos novos, a visão exigiria
   calibrar as câmeras.
-- O painel e a Unity não usam este modelo.
+
+**Modelo global no painel e no `compare_versions` (2026-11-07).** O modelo
+passou a se chamar **modelo global**, com id `global` no código; o checkpoint
+continua sendo `dqn-fase-livre-rl-best.pt`.
+
+- No SP, com 2 fases verdes, escolher a fase é o mesmo que manter ou trocar.
+  Por isso, `GlobalPhasePolicy` (`experiments/version_policies.py`) o põe no
+  mesmo laço das outras versões, com a mesma camada de segurança, visão,
+  preempção, pedestres e telemetria.
+- O adaptador faz três coisas:
+  - traduz as features `(câmera, faixa)` para `(edge, lane_k)`;
+  - monta o estado `phase_select_2`, com o vermelho da outra fase igual ao
+    verde atual + amarelo + all-red;
+  - devolve "trocar" quando o modelo escolhe a outra fase.
+- Conferência: `compare_versions --versions global --perception oracle`
+  reproduz seed a seed o ambiente genérico (calibrated 4,032 / 3,597 /
+  4,013 s; original 4,510 / 4,671 / 4,383 s).
+- No painel do Eureka, ele aparece como "Modelo global (IA para qualquer
+  cruzamento)".
+- Não é versão do produto. Ainda não foi avaliado com visão nem no
+  `calibrated_ped`, onde nunca viu pedestres; nesse cenário, a fase de
+  pedestres fica fora da conta do vermelho.
+- `experiments.run_phase_selection_visual` avalia o modelo com visão pelo
+  ambiente genérico, comparando com `versoes-<cenário>-visual.json`. Para isso,
+  a Unity precisa estar em Play Mode.
 
 **Comandos** (a partir de `python/`; só SUMO):
 
