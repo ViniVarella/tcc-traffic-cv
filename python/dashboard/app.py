@@ -78,7 +78,7 @@ def load_fixed_time_reference(results_dir: Path, metric: str = "mean_waiting_tim
 MIN_SAMPLE_S = 300.0
 # Com o detector genérico (COCO) a câmera não reconhece viaturas.
 VISUAL_PREEMPTION = ("vision", "both")
-VERSION_LABELS = {"global": "TraffIQ (Global, v6.0)", "v2": "TraffIQ (IA, v5.0)",
+VERSION_LABELS = {"global": "TraffIQ (IA, v6.0)", "v2": "TraffIQ (IA, v5.0)",
                   "baseline": "Tempo fixo (convencional)", "v1": "Regra de fila (v2.0)",
                   "max_pressure": "Max-pressure (referência acadêmica)"}
 

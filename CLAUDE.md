@@ -18,7 +18,7 @@ Tecnologia). Nos textos (README, `docs/`, painel, tese), "versão" é do
 (DQN Keras sobre os detectores E2 do SUMO, `optimization/SP`) → v2.0 regra de
 fila → v2.1 DQN estado v1 → v3.0 DQN estado v2 → v4.0 prioridade para
 viaturas → v5.0 fase de pedestres → **v6.0 (atual) modelo global**, "TraffIQ
-(Global, v6.0)": um DQN de seleção livre de fase para qualquer cruzamento,
+(IA, v6.0)" no painel: um DQN de seleção livre de fase para qualquer cruzamento,
 treinado só em cruzamentos sintéticos (id `global` no código, checkpoint
 `dqn-fase-livre-rl-best.pt`, branch `feat/selecao-livre-de-fase`). Da v3.0 à
 v5.0 quem decide é o DQN estado v2 (`dqn-v2-traffiq-best.pt`; o nome do
