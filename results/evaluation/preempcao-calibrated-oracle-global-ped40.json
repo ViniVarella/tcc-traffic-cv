@@ -1,0 +1,682 @@
+{
+  "perception": "oracle",
+  "detections": [
+    "v2i"
+  ],
+  "scenario": "calibrated",
+  "seeds": [
+    201,
+    202,
+    203
+  ],
+  "warmup_s": 300.0,
+  "control_s": 1800.0,
+  "results": {
+    "global/sem_preempcao": {
+      "summary": {
+        "emergency_mean_time_loss_s": 9.796786739268443,
+        "emergency_max_time_loss_s": 20.83767668462003,
+        "emergency_mean_insertion_delay_s": 1.0,
+        "emergency_mean_total_loss_s": 10.796786739268441,
+        "emergency_max_total_loss_s": 21.83767668462003,
+        "emergency_share_without_stops": 0.38888888888888884,
+        "emergency_crossed": 18,
+        "emergency_scheduled": 18,
+        "v2i_mean_lead_s": 31.72163188328838,
+        "visual_detected": 0,
+        "visual_mean_lead_s": null,
+        "visual_events": 0,
+        "visual_false_events": 0,
+        "mean_waiting_time_seconds": 4.539884462367527,
+        "mean_travel_time_seconds": 23.788984162641015,
+        "arrived_vehicles": 924.6666666666666,
+        "final_pending_vehicles": 0.0,
+        "pedestrian_mean_waiting_s": null,
+        "pedestrian_median_waiting_s": null,
+        "pedestrian_p90_waiting_s": null,
+        "pedestrian_max_waiting_s": null
+      },
+      "runs": [
+        {
+          "seed": 201,
+          "preemption_steps": 0,
+          "missing_observations": 0,
+          "mean_waiting_time_seconds": 4.357456140350878,
+          "mean_travel_time_seconds": 23.466008771929825,
+          "arrived_vehicles": 925,
+          "final_pending_vehicles": 0,
+          "pedestrian_mean_waiting_s": null,
+          "pedestrian_median_waiting_s": null,
+          "pedestrian_p90_waiting_s": null,
+          "pedestrian_max_waiting_s": null,
+          "emergency": {
+            "scheduled": 6,
+            "crossed_stop_line": 6,
+            "mean_time_loss_at_crossing_s": 10.382213800554947,
+            "max_time_loss_at_crossing_s": 17.082052787738597,
+            "mean_insertion_delay_s": 1.0,
+            "mean_total_loss_at_crossing_s": 11.382213800554945,
+            "max_total_loss_at_crossing_s": 18.082052787738597,
+            "mean_stops": 0.6666666666666666,
+            "share_without_stops": 0.3333333333333333,
+            "mean_waiting_s": 5.833333333333333,
+            "mean_v2i_lead_s": 32.247973370248076,
+            "visual_detection": {
+              "detected": 0,
+              "share_detected": 0.0,
+              "mean_lead_s": null,
+              "events": 0,
+              "false_events": 0
+            },
+            "vehicles": [
+              {
+                "id": "emergency_0",
+                "approach": "south",
+                "depart_s": 340.1669397112547,
+                "crossed_s": 362.0,
+                "time_loss_at_crossing_s": 14.051936919465147,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 1,
+                "waiting_s": 10.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_1",
+                "approach": "west",
+                "depart_s": 618.7579063700929,
+                "crossed_s": 638.0,
+                "time_loss_at_crossing_s": 13.167513865546843,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 1,
+                "waiting_s": 10.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_2",
+                "approach": "east",
+                "depart_s": 942.9474951982053,
+                "crossed_s": 961.0,
+                "time_loss_at_crossing_s": 11.96658059865964,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 1,
+                "waiting_s": 5.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_3",
+                "approach": "south",
+                "depart_s": 1244.0419086457068,
+                "crossed_s": 1254.0,
+                "time_loss_at_crossing_s": 2.5776786724128398,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_4",
+                "approach": "east",
+                "depart_s": 1503.3951891640397,
+                "crossed_s": 1527.0,
+                "time_loss_at_crossing_s": 17.082052787738597,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 1,
+                "waiting_s": 10.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_5",
+                "approach": "west",
+                "depart_s": 1823.2027206892121,
+                "crossed_s": 1834.0,
+                "time_loss_at_crossing_s": 3.4475199595066126,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              }
+            ],
+            "detection": "v2i"
+          }
+        },
+        {
+          "seed": 202,
+          "preemption_steps": 0,
+          "missing_observations": 0,
+          "mean_waiting_time_seconds": 4.478918918918919,
+          "mean_travel_time_seconds": 23.815135135135137,
+          "arrived_vehicles": 935,
+          "final_pending_vehicles": 0,
+          "pedestrian_mean_waiting_s": null,
+          "pedestrian_median_waiting_s": null,
+          "pedestrian_p90_waiting_s": null,
+          "pedestrian_max_waiting_s": null,
+          "emergency": {
+            "scheduled": 6,
+            "crossed_stop_line": 6,
+            "mean_time_loss_at_crossing_s": 10.402292668787336,
+            "max_time_loss_at_crossing_s": 20.83767668462003,
+            "mean_insertion_delay_s": 1.0,
+            "mean_total_loss_at_crossing_s": 11.402292668787334,
+            "max_total_loss_at_crossing_s": 21.83767668462003,
+            "mean_stops": 0.6666666666666666,
+            "share_without_stops": 0.3333333333333333,
+            "mean_waiting_s": 7.333333333333333,
+            "mean_v2i_lead_s": 32.481159868856054,
+            "visual_detection": {
+              "detected": 0,
+              "share_detected": 0.0,
+              "mean_lead_s": null,
+              "events": 0,
+              "false_events": 0
+            },
+            "vehicles": [
+              {
+                "id": "emergency_0",
+                "approach": "west",
+                "depart_s": 345.46529656343176,
+                "crossed_s": 354.0,
+                "time_loss_at_crossing_s": 0.4699653848414159,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_1",
+                "approach": "east",
+                "depart_s": 612.1175814137174,
+                "crossed_s": 619.0,
+                "time_loss_at_crossing_s": 0.17419629682938043,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_2",
+                "approach": "south",
+                "depart_s": 902.0965304448223,
+                "crossed_s": 919.0,
+                "time_loss_at_crossing_s": 9.993828737146794,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 1,
+                "waiting_s": 6.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_3",
+                "approach": "west",
+                "depart_s": 1259.7495664414064,
+                "crossed_s": 1284.0,
+                "time_loss_at_crossing_s": 18.051768054641624,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 1,
+                "waiting_s": 13.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_4",
+                "approach": "east",
+                "depart_s": 1501.040240683568,
+                "crossed_s": 1521.0,
+                "time_loss_at_crossing_s": 12.88632085464477,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 1,
+                "waiting_s": 8.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_5",
+                "approach": "south",
+                "depart_s": 1826.6438252399178,
+                "crossed_s": 1855.0,
+                "time_loss_at_crossing_s": 20.83767668462003,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 1,
+                "waiting_s": 17.0,
+                "first_visual_s": null
+              }
+            ],
+            "detection": "v2i"
+          }
+        },
+        {
+          "seed": 203,
+          "preemption_steps": 0,
+          "missing_observations": 0,
+          "mean_waiting_time_seconds": 4.783278327832783,
+          "mean_travel_time_seconds": 24.085808580858085,
+          "arrived_vehicles": 914,
+          "final_pending_vehicles": 0,
+          "pedestrian_mean_waiting_s": null,
+          "pedestrian_median_waiting_s": null,
+          "pedestrian_p90_waiting_s": null,
+          "pedestrian_max_waiting_s": null,
+          "emergency": {
+            "scheduled": 6,
+            "crossed_stop_line": 6,
+            "mean_time_loss_at_crossing_s": 8.605853748463046,
+            "max_time_loss_at_crossing_s": 18.711578816312898,
+            "mean_insertion_delay_s": 1.0,
+            "mean_total_loss_at_crossing_s": 9.605853748463046,
+            "max_total_loss_at_crossing_s": 19.711578816312898,
+            "mean_stops": 0.6666666666666666,
+            "share_without_stops": 0.5,
+            "mean_waiting_s": 4.5,
+            "mean_v2i_lead_s": 30.435762410761015,
+            "visual_detection": {
+              "detected": 0,
+              "share_detected": 0.0,
+              "mean_lead_s": null,
+              "events": 0,
+              "false_events": 0
+            },
+            "vehicles": [
+              {
+                "id": "emergency_0",
+                "approach": "east",
+                "depart_s": 328.6974058521022,
+                "crossed_s": 353.0,
+                "time_loss_at_crossing_s": 18.711578816312898,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 1,
+                "waiting_s": 14.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_1",
+                "approach": "west",
+                "depart_s": 602.6879857568066,
+                "crossed_s": 610.0,
+                "time_loss_at_crossing_s": 0.2326792455641977,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_2",
+                "approach": "south",
+                "depart_s": 921.1058555676778,
+                "crossed_s": 932.0,
+                "time_loss_at_crossing_s": 3.5984855585510944,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_3",
+                "approach": "east",
+                "depart_s": 1254.5511392889653,
+                "crossed_s": 1267.0,
+                "time_loss_at_crossing_s": 5.994733010561228,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_4",
+                "approach": "south",
+                "depart_s": 1519.221081937694,
+                "crossed_s": 1538.0,
+                "time_loss_at_crossing_s": 10.95401007996868,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 2,
+                "waiting_s": 5.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_5",
+                "approach": "west",
+                "depart_s": 1853.121957132188,
+                "crossed_s": 1872.0,
+                "time_loss_at_crossing_s": 12.143635779820173,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 1,
+                "waiting_s": 8.0,
+                "first_visual_s": null
+              }
+            ],
+            "detection": "v2i"
+          }
+        }
+      ]
+    },
+    "global/com_preempcao_v2i": {
+      "summary": {
+        "emergency_mean_time_loss_s": 0.38174538192635876,
+        "emergency_max_time_loss_s": 1.0089138728459897,
+        "emergency_mean_insertion_delay_s": 1.0,
+        "emergency_mean_total_loss_s": 1.3817453819263588,
+        "emergency_max_total_loss_s": 2.00891387284599,
+        "emergency_share_without_stops": 1.0,
+        "emergency_crossed": 18,
+        "emergency_scheduled": 18,
+        "v2i_mean_lead_s": 22.61052077217727,
+        "visual_detected": 0,
+        "visual_mean_lead_s": null,
+        "visual_events": 0,
+        "visual_false_events": 0,
+        "mean_waiting_time_seconds": 4.68711986768495,
+        "mean_travel_time_seconds": 23.816225175268926,
+        "arrived_vehicles": 922.3333333333334,
+        "final_pending_vehicles": 0.0,
+        "pedestrian_mean_waiting_s": null,
+        "pedestrian_median_waiting_s": null,
+        "pedestrian_p90_waiting_s": null,
+        "pedestrian_max_waiting_s": null
+      },
+      "runs": [
+        {
+          "seed": 201,
+          "preemption_steps": 129,
+          "missing_observations": 0,
+          "mean_waiting_time_seconds": 4.496703296703297,
+          "mean_travel_time_seconds": 23.546153846153846,
+          "arrived_vehicles": 923,
+          "final_pending_vehicles": 0,
+          "pedestrian_mean_waiting_s": null,
+          "pedestrian_median_waiting_s": null,
+          "pedestrian_p90_waiting_s": null,
+          "pedestrian_max_waiting_s": null,
+          "emergency": {
+            "scheduled": 6,
+            "crossed_stop_line": 6,
+            "mean_time_loss_at_crossing_s": 0.3530131402075723,
+            "max_time_loss_at_crossing_s": 0.80988665358567,
+            "mean_insertion_delay_s": 1.0,
+            "mean_total_loss_at_crossing_s": 1.3530131402075725,
+            "max_total_loss_at_crossing_s": 1.8098866535856701,
+            "mean_stops": 0.0,
+            "share_without_stops": 1.0,
+            "mean_waiting_s": 0.0,
+            "mean_v2i_lead_s": 22.414640036914744,
+            "visual_detection": {
+              "detected": 0,
+              "share_detected": 0.0,
+              "mean_lead_s": null,
+              "events": 0,
+              "false_events": 0
+            },
+            "vehicles": [
+              {
+                "id": "emergency_0",
+                "approach": "south",
+                "depart_s": 340.1669397112547,
+                "crossed_s": 349.0,
+                "time_loss_at_crossing_s": 0.47762347013558276,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_1",
+                "approach": "west",
+                "depart_s": 618.7579063700929,
+                "crossed_s": 625.0,
+                "time_loss_at_crossing_s": 0.14659157297505576,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_2",
+                "approach": "east",
+                "depart_s": 942.9474951982053,
+                "crossed_s": 949.0,
+                "time_loss_at_crossing_s": 0.07114673825238925,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_3",
+                "approach": "south",
+                "depart_s": 1244.0419086457068,
+                "crossed_s": 1252.0,
+                "time_loss_at_crossing_s": 0.3286761070770564,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_4",
+                "approach": "east",
+                "depart_s": 1503.3951891640397,
+                "crossed_s": 1511.0,
+                "time_loss_at_crossing_s": 0.80988665358567,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_5",
+                "approach": "west",
+                "depart_s": 1823.2027206892121,
+                "crossed_s": 1831.0,
+                "time_loss_at_crossing_s": 0.2841542992196796,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              }
+            ],
+            "detection": "v2i"
+          }
+        },
+        {
+          "seed": 202,
+          "preemption_steps": 131,
+          "missing_observations": 0,
+          "mean_waiting_time_seconds": 4.868621064060804,
+          "mean_travel_time_seconds": 24.11617806731813,
+          "arrived_vehicles": 931,
+          "final_pending_vehicles": 0,
+          "pedestrian_mean_waiting_s": null,
+          "pedestrian_median_waiting_s": null,
+          "pedestrian_p90_waiting_s": null,
+          "pedestrian_max_waiting_s": null,
+          "emergency": {
+            "scheduled": 6,
+            "crossed_stop_line": 6,
+            "mean_time_loss_at_crossing_s": 0.34470741134832655,
+            "max_time_loss_at_crossing_s": 0.4699653848414159,
+            "mean_insertion_delay_s": 1.0,
+            "mean_total_loss_at_crossing_s": 1.3447074113483264,
+            "max_total_loss_at_crossing_s": 1.4699653848414158,
+            "mean_stops": 0.0,
+            "share_without_stops": 1.0,
+            "mean_waiting_s": 0.0,
+            "mean_v2i_lead_s": 22.814493202189386,
+            "visual_detection": {
+              "detected": 0,
+              "share_detected": 0.0,
+              "mean_lead_s": null,
+              "events": 0,
+              "false_events": 0
+            },
+            "vehicles": [
+              {
+                "id": "emergency_0",
+                "approach": "west",
+                "depart_s": 345.46529656343176,
+                "crossed_s": 354.0,
+                "time_loss_at_crossing_s": 0.4699653848414159,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_1",
+                "approach": "east",
+                "depart_s": 612.1175814137174,
+                "crossed_s": 619.0,
+                "time_loss_at_crossing_s": 0.23497672784062232,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_2",
+                "approach": "south",
+                "depart_s": 902.0965304448223,
+                "crossed_s": 910.0,
+                "time_loss_at_crossing_s": 0.20228547807268327,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_3",
+                "approach": "west",
+                "depart_s": 1259.7495664414064,
+                "crossed_s": 1267.0,
+                "time_loss_at_crossing_s": 0.39241696438496476,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_4",
+                "approach": "east",
+                "depart_s": 1501.040240683568,
+                "crossed_s": 1509.0,
+                "time_loss_at_crossing_s": 0.3016375067204645,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_5",
+                "approach": "south",
+                "depart_s": 1826.6438252399178,
+                "crossed_s": 1835.0,
+                "time_loss_at_crossing_s": 0.4669624062298082,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              }
+            ],
+            "detection": "v2i"
+          }
+        },
+        {
+          "seed": 203,
+          "preemption_steps": 130,
+          "missing_observations": 0,
+          "mean_waiting_time_seconds": 4.6960352422907485,
+          "mean_travel_time_seconds": 23.7863436123348,
+          "arrived_vehicles": 913,
+          "final_pending_vehicles": 0,
+          "pedestrian_mean_waiting_s": null,
+          "pedestrian_median_waiting_s": null,
+          "pedestrian_p90_waiting_s": null,
+          "pedestrian_max_waiting_s": null,
+          "emergency": {
+            "scheduled": 6,
+            "crossed_stop_line": 6,
+            "mean_time_loss_at_crossing_s": 0.44751559422317744,
+            "max_time_loss_at_crossing_s": 1.0089138728459897,
+            "mean_insertion_delay_s": 1.0,
+            "mean_total_loss_at_crossing_s": 1.4475155942231774,
+            "max_total_loss_at_crossing_s": 2.00891387284599,
+            "mean_stops": 0.0,
+            "share_without_stops": 1.0,
+            "mean_waiting_s": 0.0,
+            "mean_v2i_lead_s": 22.602429077427683,
+            "visual_detection": {
+              "detected": 0,
+              "share_detected": 0.0,
+              "mean_lead_s": null,
+              "events": 0,
+              "false_events": 0
+            },
+            "vehicles": [
+              {
+                "id": "emergency_0",
+                "approach": "east",
+                "depart_s": 328.6974058521022,
+                "crossed_s": 336.0,
+                "time_loss_at_crossing_s": 1.0089138728459897,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_1",
+                "approach": "west",
+                "depart_s": 602.6879857568066,
+                "crossed_s": 610.0,
+                "time_loss_at_crossing_s": 0.40751055324427377,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_2",
+                "approach": "south",
+                "depart_s": 921.1058555676778,
+                "crossed_s": 929.0,
+                "time_loss_at_crossing_s": 0.26633892915825175,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_3",
+                "approach": "east",
+                "depart_s": 1254.5511392889653,
+                "crossed_s": 1261.0,
+                "time_loss_at_crossing_s": 0.2687235544310733,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_4",
+                "approach": "south",
+                "depart_s": 1519.221081937694,
+                "crossed_s": 1528.0,
+                "time_loss_at_crossing_s": 0.4573425594737368,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              },
+              {
+                "id": "emergency_5",
+                "approach": "west",
+                "depart_s": 1853.121957132188,
+                "crossed_s": 1861.0,
+                "time_loss_at_crossing_s": 0.2762640961857394,
+                "insertion_delay_s": 1.0,
+                "stops_before_crossing": 0,
+                "waiting_s": 0.0,
+                "first_visual_s": null
+              }
+            ],
+            "detection": "v2i"
+          }
+        }
+      ]
+    }
+  }
+}

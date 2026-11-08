@@ -26,10 +26,9 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch  # noqa: E402
 from scipy import stats  # noqa: E402
 
 # Cores por controlador (paleta categórica validada; o tempo fixo é a referência neutra).
-COLORS = {"baseline": "#a3a29c", "max_pressure": "#eb6834", "v2": "#1baf7a", "global": "#2a78d6",
-          "global_rl": "#6250d6", "v1": "#eda100"}
+COLORS = {"baseline": "#a3a29c", "max_pressure": "#eb6834", "v2": "#1baf7a", "global": "#2a78d6", "v1": "#eda100"}
 LABELS = {"baseline": "Tempo fixo", "max_pressure": "Max-pressure", "v1": "Regra de fila (v2.0)",
-          "v2": "Especialista", "global": "Modelo global", "global_rl": "Modelo global (anterior)"}
+          "v2": "Especialista", "global": "Modelo global"}
 TEXT = "#0b0b0b"
 MUTED = "#52514e"
 GRID = "#e4e3df"
@@ -70,28 +69,23 @@ def paired(candidate: list[float], reference: list[float]) -> dict[str, float]:
             "wins": int(np.sum(diff < 0)), "n": int(len(diff))}
 
 
-def sp_runs(evaluation: Path, scenario: str) -> dict[str, dict[int, dict[str, Any]]]:
+def sp_runs(evaluation: Path, scenario: str, model: str) -> dict[str, dict[int, dict[str, Any]]]:
+    """Controladores do SP; o modelo global vem da avaliação do checkpoint ``model`` (mesmas seeds)."""
     data = json.loads((evaluation / f"versoes-{scenario}-oracle-10seeds.json").read_text(encoding="utf-8"))
     runs = {version: {int(r["seed"]): r for r in item["runs"]} for version, item in data["versions"].items()}
-    old = evaluation / f"versoes-{scenario}-oracle-10seeds-global-rl.json"
-    if old.exists():
-        runs["global_rl"] = {int(r["seed"]): r for r in json.loads(old.read_text(encoding="utf-8"))["versions"]["global"]["runs"]}
+    current = json.loads((evaluation / f"versoes-{scenario}-oracle-10seeds-global-{model}.json").read_text(encoding="utf-8"))
+    runs["global"] = {int(r["seed"]): r for r in current["versions"]["global"]["runs"]}
     return runs
 
 
-def generic_runs(evaluation: Path) -> dict[str, dict[str, dict[int, dict[str, Any]]]]:
-    data = json.loads((evaluation / "fase-livre-v3-test-10seeds.json").read_text(encoding="utf-8"))
-    old_path = evaluation / "fase-livre-rl-test-10seeds.json"
-    old = json.loads(old_path.read_text(encoding="utf-8")) if old_path.exists() else {"scenarios": {}}
+def generic_runs(evaluation: Path, model: str) -> dict[str, dict[str, dict[int, dict[str, Any]]]]:
+    data = json.loads((evaluation / f"fase-livre-{model}-test-10seeds.json").read_text(encoding="utf-8"))
     result: dict[str, dict[str, dict[int, dict[str, Any]]]] = {}
     for name, scenario in data["scenarios"].items():
         if not name.startswith("cruz-assimetrico"):
             continue
         result[name] = {GENERIC_MAP[p]: {int(r["seed"]): r for r in s["runs"]}
                         for p, s in scenario["policies"].items() if p in GENERIC_MAP}
-        previous = old["scenarios"].get(name, {}).get("policies", {}).get("dqn_fase_livre")
-        if previous:
-            result[name]["global_rl"] = {int(r["seed"]): r for r in previous["runs"]}
     return result
 
 
@@ -154,7 +148,7 @@ def figure_generic(generic: dict[str, Any], output: Path) -> None:
     fig, ax = plt.subplots(figsize=(WIDTH_IN, 2.6))
     bars(ax, order, ["baseline", "max_pressure", "global"], generic, WAIT, labels)
     ax.set_ylabel("Espera média por veículo (s)")
-    ax.set_ylim(0, ax.get_ylim()[1] * 1.08)
+    ax.set_ylim(0, ax.get_ylim()[1] * 1.22)  # espaço para a legenda acima das barras mais altas
     ax.legend(loc="upper left", ncol=3)
     fig.tight_layout()
     fig.savefig(output)
@@ -310,15 +304,16 @@ def main() -> None:
     root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(description="Gráficos e estatísticas do artigo final.")
     parser.add_argument("--evaluation-dir", type=Path, default=root / "results" / "evaluation")
-    parser.add_argument("--training-log", type=Path, default=root / "results" / "logs" / "dqn-fase-livre-v3-pretrain.jsonl")
+    parser.add_argument("--model", default="ped40", help="Sufixo das avaliações do modelo global (checkpoint dqn-fase-livre-<model>-best.pt).")
+    parser.add_argument("--training-log", type=Path, default=root / "results" / "logs" / "dqn-fase-livre-ped40-pretrain.jsonl")
     parser.add_argument("--output-dir", type=Path, default=root / "docs" / "artigo")
     args = parser.parse_args()
     style()
     figures = args.output_dir / "figuras"
     figures.mkdir(parents=True, exist_ok=True)
-    sp = {scenario: compare(sp_runs(args.evaluation_dir, scenario), ["baseline", "max_pressure", "v2", "v1", "global_rl"])
+    sp = {scenario: compare(sp_runs(args.evaluation_dir, scenario, args.model), ["baseline", "max_pressure", "v2", "v1"])
           for scenario in SP_SCENARIOS}
-    generic = {name: compare(group, ["baseline", "max_pressure", "global_rl"]) for name, group in generic_runs(args.evaluation_dir).items()}
+    generic = {name: compare(group, ["baseline", "max_pressure"]) for name, group in generic_runs(args.evaluation_dir, args.model).items()}
     figure_architecture(figures / "fig-arquitetura.png")
     figure_model(figures / "fig-modelo-global.png")
     figure_sp(sp, figures / "fig-resultados-sp.png")

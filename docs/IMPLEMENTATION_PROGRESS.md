@@ -236,6 +236,62 @@ Percepção *ground truth*, seeds 201–203, espera média / espera parado (s):
     baixa (+1,3 s, p < 0,001); com pedestres, o `v3` é melhor na baixa
     (−1,3 s, p = 0,002).
 
+**Fase de pedestres obrigatória por tempo, N = 40 s (2026-11-08).** Os
+resultados do `v3` com pedestres no `cruz-assimetrico` **não valem**: a regra
+"pedestres depois do último verde" (copiada do SP) era evitável com a escolha
+livre de fase, e o `v3` quase nunca a acionava (~8 s de fase de pedestres
+por seed, contra 450–500 s do tempo fixo e do max-pressure). No SP a regra
+continua a de antes (depois de todo verde Sul), porque lá a ordem é fixa.
+
+- Regra nova (`PhaseSelectionController(pedestrian_interval_s=...)`,
+  `pedestrian_phase.interval_seconds` em `generic.yaml`): N s depois do fim da
+  última fase de pedestres ela fica pendente e entra na próxima troca de
+  verde, vinda de qualquer fase; o verde máximo força essa troca. Os custos
+  `switch_in`/`switch_out` incluem os 18 s quando ela está pendente, e a
+  liberação passa por `"r"*n` (todo verde passa pelo amarelo).
+- Escolha de N pelo nível de serviço do pedestre do HCM 2000 (espera média
+  ≈ Σ(C − g)² / (2ΣC), g = 7 s), com tempo fixo e max-pressure nas seeds de
+  validação 1001–1005 (`experiments.sweep_pedestrian_interval`,
+  `results/evaluation/intervalo-pedestres.json`). Max-pressure, carros /
+  pedestres (s):
+
+  | N | Baixa | Média | Desbalanceada |
+  |---|---|---|---|
+  | 30 | 23,8 / 24,5 | 41,2 / 25,8 | 40,9 / 25,4 |
+  | 40 | 19,8 / 29,5 | 39,1 / 30,5 | 35,6 / 28,8 |
+  | 60 | 17,6 / 38,7 | 35,2 / 38,8 | 29,0 / 38,9 |
+
+  Escolhido N = 40 (decisão do usuário): níveis C a D para os pedestres.
+- Retreino com a mesma receita (`dqn-fase-livre-ped40-best.pt`, melhor no
+  episódio 239; log `dqn-fase-livre-ped40-pretrain.jsonl`), agora padrão do
+  `global` (painel, `compare_versions`, `evaluate_preemption`,
+  `evaluate_phase_selection`, `run_phase_selection_visual`). O modelo faz a
+  fase de pedestres tanto quanto o max-pressure (~25 vezes em 30 min).
+- 10 seeds (201–210), espera média (s), teste t pareado contra o max-pressure:
+
+  | Cenário | Tempo fixo | Max-pressure | Especialista | Global `ped40` |
+  |---|---|---|---|---|
+  | SP `calibrated` | 12,9 | 5,0 | 4,2 | 4,4 (−0,6 vs MP; +0,2 vs especialista, p = 0,023) |
+  | SP `calibrated_ped` | 20,7 | 26,5 | 14,1 | 14,7 (−11,8 vs MP; +0,7 vs especialista); pedestres 22,9 s (especialista 22,4) |
+  | SP `original` | 14,9 | 4,6 | 4,5 | 4,7 (empate com o MP) |
+  | `cruz-assimetrico` baixa | 21,7 | 9,9 | — | 7,9 (−2,0, p < 0,001) |
+  | `cruz-assimetrico` media | 31,8 | 20,3 | — | 19,1 (empate, p = 0,18) |
+  | `cruz-assimetrico` desbalanceada | 33,7 | 19,9 | — | 19,7 (empate) |
+  | `cruz-assimetrico` baixa+ped | 38,8 | 20,9 | — | 17,6 (−3,3, p = 0,001) |
+  | `cruz-assimetrico` media+ped | 60,0 | 39,1 | — | **45,4 (+6,2, perde 10/10)** |
+  | `cruz-assimetrico` desbalanceada+ped | 58,7 | 36,8 | — | 32,2 (−4,6, p = 0,003) |
+
+- Contra o checkpoint `rl`, sem pedestres, a piora continua: +1,5 s na baixa
+  e +3,5 s na média (p ≤ 0,002). Hipótese não provada: o mesmo modelo agora
+  divide a capacidade entre cenários com e sem pedestres.
+- Preempção (V2I, `preempcao-*-oracle-global-ped40.json`): 18/18 viaturas sem
+  parar; perda média 0,4 s (`calibrated`) e 0,9 s (`calibrated_ped`).
+- Tentativa descartada: ajuste fino do `ped40` (480 episódios, lr 3·10⁻⁴,
+  validação em 3 seeds; `dqn-fase-livre-ped40b-*`). Venceu na validação, mas
+  no teste não melhorou a baixa (+0,6 s, p = 0,09) e piorou o SP com
+  pedestres (veículos +1,1 s, pedestres +2,2 s, p ≤ 0,002). O SP não está na
+  validação. `--learning-rate` passou a valer também com `--init-checkpoint`.
+
 **Comandos** (a partir de `python/`; só SUMO):
 
 ```bash
@@ -249,7 +305,7 @@ Percepção *ground truth*, seeds 201–203, espera média / espera parado (s):
   --checkpoint-output ../results/models/dqn-fase-livre-rl-last.pt \
   --best-checkpoint-output ../results/models/dqn-fase-livre-rl-best.pt \
   --log-output ../results/logs/dqn-fase-livre-rl-pretrain.jsonl
-# avaliação nos cruzamentos de teste (padrão: dqn-fase-livre-v3-best.pt)
+# avaliação nos cruzamentos de teste (padrão: dqn-fase-livre-ped40-best.pt)
 ../.venv/bin/python -m experiments.evaluate_phase_selection --output ../results/evaluation/fase-livre-rl-test.json
 ```
 

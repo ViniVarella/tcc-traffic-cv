@@ -39,7 +39,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--scenario", default="calibrated", help="Cenário do SP em generic.yaml (calibrated ou original).")
     parser.add_argument("--policies", default="dqn_fase_livre",
                         help="Lista separada por vírgula: dqn_fase_livre, max_pressure, fixed_time.")
-    parser.add_argument("--dqn-model", type=Path, default=base_dir.parent / "results" / "models" / "dqn-fase-livre-v3-best.pt")
+    parser.add_argument("--dqn-model", type=Path, default=base_dir.parent / "results" / "models" / "dqn-fase-livre-ped40-best.pt")
     parser.add_argument("--seeds", default="201,202,203")
     parser.add_argument("--warmup-seconds", type=float, default=300.0)
     parser.add_argument("--control-seconds", type=float, default=1800.0)

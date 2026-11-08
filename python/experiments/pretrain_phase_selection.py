@@ -70,7 +70,8 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--epsilon-end", type=float, default=0.05)
     parser.add_argument("--epsilon-decay-fraction", type=float, default=0.5)
     parser.add_argument("--hidden-size", type=int, default=64)
-    parser.add_argument("--learning-rate", type=float, default=0.001)
+    parser.add_argument("--learning-rate", type=float, default=None,
+                        help="Padrão 0,001; com --init-checkpoint, sem o valor segue o do checkpoint.")
     parser.add_argument("--min-gradient-steps", type=int, default=5_000)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--checkpoint-output", type=Path, default=base_dir.parent / "results" / "models" / "dqn-fase-livre-last.pt")
@@ -94,13 +95,17 @@ def main() -> None:
         raise ValueError("Requer cenários de treino, episódios positivos e seeds de treino, demonstração e validação disjuntas.")
     if args.init_checkpoint is None:
         agent = PhaseSelectionAgent(PhaseAgentConfig(max_phases=environment.max_phases, hidden_size=args.hidden_size,
-                                                     gamma=args.gamma, learning_rate=args.learning_rate,
+                                                     gamma=args.gamma, learning_rate=args.learning_rate or 0.001,
                                                      demo_batch_fraction=args.demo_batch_fraction,
                                                      demo_loss_weight=args.demo_loss_weight),
                                     device=args.device, seed=args.seed_start)
     else:
         agent = PhaseSelectionAgent.load(args.init_checkpoint, device=args.device)
         agent.config = replace(agent.config, demo_batch_fraction=args.demo_batch_fraction, demo_loss_weight=args.demo_loss_weight)
+        if args.learning_rate is not None:
+            agent.config = replace(agent.config, learning_rate=args.learning_rate)
+            for group in agent.optimizer.param_groups:
+                group["lr"] = args.learning_rate
         agent.online.train()
     # ~1 decisão a cada 10 s de controle; a estimativa só dimensiona o decaimento de ε.
     estimated_decisions = int(args.episodes * args.control_seconds / 10.0)

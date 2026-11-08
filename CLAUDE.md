@@ -20,7 +20,7 @@ fila → v2.1 DQN estado v1 → v3.0 DQN estado v2 → v4.0 prioridade para
 viaturas → v5.0 fase de pedestres → **v6.0 (atual) modelo global**, "TraffIQ
 (IA, v6.0)" no painel: um DQN de seleção livre de fase para qualquer cruzamento,
 treinado só em cruzamentos sintéticos (id `global` no código, checkpoint
-`dqn-fase-livre-v3-best.pt`, branch `feat/selecao-livre-de-fase`). Da v3.0 à
+`dqn-fase-livre-ped40-best.pt`, branch `feat/selecao-livre-de-fase`). Da v3.0 à
 v5.0 quem decide é o DQN estado v2 (`dqn-v2-traffiq-best.pt`; o nome do
 arquivo segue o estado do DQN, não o produto). Até 2026-10-20 a numeração não tinha a
 prova de conceito (regra de fila era a v1 e a atual, a v4). O **DQN estado v3**

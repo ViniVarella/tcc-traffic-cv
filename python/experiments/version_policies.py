@@ -17,7 +17,7 @@ mesmo executor de episódios; muda só a lógica de decisão:
 - ``v2``: DQN do estado v2 (41 entradas);
 - ``max_pressure``: referência adaptativa sobre veículos parados;
 - ``global``: o modelo global, experimento DQN de seleção livre de fase para
-  qualquer cruzamento (``dqn-fase-livre-v3-best.pt``, treinado só em
+  qualquer cruzamento (``dqn-fase-livre-ped40-best.pt``, treinado só em
   cruzamentos sintéticos). No SP, com duas fases verdes, escolher a outra fase
   é "trocar".
 
