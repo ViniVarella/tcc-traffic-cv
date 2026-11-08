@@ -117,6 +117,8 @@ class EpisodeOutcome:
     losses: list[float] = field(default_factory=list)
     phase_seconds: Counter = field(default_factory=Counter)
     metrics: dict[str, Any] = field(default_factory=dict)
+    # Inícios da fase de pedestres no controle (ambiente genérico; espera estimada pelo HCM).
+    pedestrian_starts: list[float] = field(default_factory=list)
 
     @property
     def mean_reward(self) -> float:

@@ -58,6 +58,22 @@ def pedestrian_seconds(config: Mapping[str, Any]) -> float:
     return float(raw.get("green_seconds", 0.0)) + float(raw.get("clearance_seconds", 0.0))
 
 
+def pedestrian_hcm_delay(starts: Sequence[float], green_s: float) -> dict[str, float] | None:
+    """Espera dos pedestres estimada pelo HCM a partir dos inícios reais da fase de pedestres.
+
+    Com chegadas uniformes, num intervalo C entre dois inícios de verde a espera
+    média é (C − g)² / (2C); a média do episódio pondera cada intervalo pela sua
+    duração: Σ(C − g)² / (2 ΣC). A espera máxima é a de quem chega logo depois
+    do fim do verde: max(C) − g. Sem dois inícios, não há intervalo para medir.
+    """
+    cycles = [later - earlier for earlier, later in zip(starts, starts[1:])]
+    if not cycles:
+        return None
+    lost = [max(0.0, cycle - green_s) for cycle in cycles]
+    return {"mean_wait_s": sum(value * value for value in lost) / (2 * sum(cycles)),
+            "max_wait_s": max(lost), "mean_interval_s": sum(cycles) / len(cycles), "phases": len(starts)}
+
+
 def load_scenarios(config: Mapping[str, Any], base_dir: Path) -> list[GenericScenario]:
     """Cruzamento × demanda; com ``pedestrian_variants``, cada demanda ganha a variante ``<demanda>+ped``."""
     scenarios = []
@@ -115,6 +131,9 @@ class PhaseSelectionEnvironment:
         self.parameters = KinematicsParameters.from_config(config)
         self.reward_weights = RewardWeights.from_config(config)
         self.scenarios = load_scenarios(config, base_dir)
+        # Fase de pedestres obrigatória por tempo (N s); sem o campo, a regra antiga (depois do último verde).
+        interval = (config.get("pedestrian_phase") or {}).get("interval_seconds")
+        self.pedestrian_interval_s = None if interval is None else float(interval)
         self._layouts: dict[Path, IntersectionLayout] = {}
 
     @classmethod
@@ -179,8 +198,10 @@ class PhaseSelectionEnvironment:
             controller = PhaseSelectionController(
                 layout.tls_id, [green.state for green in layout.greens], self.min_green_s, self.max_green_s,
                 self.yellow_s, self.all_red_s,
-                pedestrian_after=len(layout.greens) - 1 if scenario.pedestrian_s > 0 else None,
+                pedestrian_after=(len(layout.greens) - 1 if scenario.pedestrian_s > 0 and self.pedestrian_interval_s is None
+                                  else None),
                 pedestrian_s=scenario.pedestrian_s,
+                pedestrian_interval_s=self.pedestrian_interval_s if scenario.pedestrian_s > 0 else None,
             )
             if observer is None:
                 source = TraciLaneFeatureSource(layout.geometries, self.parameters, seed=seed)
@@ -188,10 +209,12 @@ class PhaseSelectionEnvironment:
             else:
                 visual = observer.begin_episode(client, seed)
                 observe = lambda sim_time: remap_features(visual(sim_time), key_map)
-            return run_phase_episode(client=client, layout=layout, controller=controller,
-                                     observe=observe, encoder=self.encoder(layout, scenario.pedestrian_s, state_version),
-                                     policy=make_policy(layout), reward=reward, settings=self.settings, learner=learner,
-                                     on_step=on_step)
+            outcome = run_phase_episode(client=client, layout=layout, controller=controller,
+                                        observe=observe, encoder=self.encoder(layout, scenario.pedestrian_s, state_version),
+                                        policy=make_policy(layout), reward=reward, settings=self.settings, learner=learner,
+                                        on_step=on_step)
+            outcome.pedestrian_starts = [start for start in controller.pedestrian_starts if start > self.settings.warmup_s]
+            return outcome
         finally:
             client.close()
 
@@ -243,8 +266,8 @@ def run_phase_episode(
                     lane_features, groups, capacities, controller.current, elapsed,
                     [controller.red_time(phase, sim_time) for phase in range(controller.phase_count)],
                     decision_mask(controller, sim_time, lane_features, groups, encoder.max_red_s),
-                    [controller.switch_seconds(controller.current, phase) for phase in range(controller.phase_count)],
-                    [controller.leave_seconds(phase) for phase in range(controller.phase_count)],
+                        [controller.switch_seconds(controller.current, phase, sim_time) for phase in range(controller.phase_count)],
+                    [controller.leave_seconds(phase, sim_time) for phase in range(controller.phase_count)],
                 )
                 last_state = observation.state
                 _learn(learner, accumulator.close(last_state), outcome)

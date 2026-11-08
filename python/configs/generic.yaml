@@ -33,12 +33,17 @@ dqn:
 
 # Fase exclusiva de pedestres (estado phase_select_3): nos cruzamentos com
 # pedestrian_variants, cada demanda ganha a variante "<demanda>+ped", com todos
-# os veículos no vermelho depois do último verde do programa, como no SP
-# (7 s de verde + 11 s de liberação). As redes sintéticas não têm pedestres:
-# a variante reproduz só o custo da fase para os veículos.
+# os veículos no vermelho por 7 s de verde + 11 s de liberação, como no SP.
+# A fase é obrigatória por tempo: interval_seconds depois do fim da última, ela
+# entra na próxima troca de verde, venha de qual fase vier (com seleção livre,
+# "depois do último verde" deixava a política evitá-la). N = 40 s, escolhido
+# pelo usuário com experiments.sweep_pedestrian_interval (espera HCM dos
+# pedestres de ~29–31 s com o max-pressure, nível C a D). As redes sintéticas
+# não têm pedestres: a variante reproduz o custo da fase para os veículos.
 pedestrian_phase:
   green_seconds: 7
   clearance_seconds: 11
+  interval_seconds: 40
 
 intersections:
   cruz-2x2:

@@ -7,10 +7,19 @@ links: fica amarelo o que está verde agora e não está na fase escolhida; link
 verdes nas duas fases seguem verdes durante a transição. Os estados vão ao SUMO
 por ``setRedYellowGreenState`` (o programa estático não avança sozinho).
 
-Fase exclusiva de pedestres (opcional): ao sair do verde ``pedestrian_after``,
-depois do amarelo e do all-red, todos os veículos ficam no vermelho por
-``pedestrian_s`` (como no SP, depois de todo verde Sul). Nas redes sintéticas
-não há pedestres: a fase reproduz só o custo dela para os veículos.
+Fase exclusiva de pedestres (opcional), com todos os veículos no vermelho por
+``pedestrian_s`` depois do amarelo e do all-red. Duas regras:
+
+- ``pedestrian_after``: ao sair desse verde (como no SP, depois de todo verde
+  Sul). Só é inevitável quando a fase é inevitável;
+- ``pedestrian_interval_s``: obrigatória por tempo. Passados N segundos do fim
+  da última fase de pedestres, ela fica pendente e entra na próxima troca de
+  verde, venha de qual fase vier; o verde máximo garante essa troca. Com
+  seleção livre de fase, é a regra que a política não consegue evitar.
+
+Nas redes sintéticas não há pedestres: a fase reproduz o custo dela para os
+veículos, e ``pedestrian_starts`` registra os inícios para estimar a espera
+dos pedestres (HCM).
 """
 
 from __future__ import annotations
@@ -56,6 +65,7 @@ class PhaseSelectionController:
         initial_time: float = 0.0,
         pedestrian_after: int | None = None,
         pedestrian_s: float = 0.0,
+        pedestrian_interval_s: float | None = None,
     ) -> None:
         if len(green_states) < 2:
             raise ValueError("São necessárias pelo menos duas fases verdes.")
@@ -63,10 +73,17 @@ class PhaseSelectionController:
             raise ValueError("Tempos de segurança inválidos.")
         if pedestrian_after is not None and not 0 <= pedestrian_after < len(green_states) or pedestrian_s < 0:
             raise ValueError("Fase de pedestres inválida.")
+        if pedestrian_interval_s is not None and (pedestrian_interval_s < 0 or pedestrian_after is not None):
+            raise ValueError("Use pedestrian_after ou pedestrian_interval_s, não os dois.")
         self.tls_id = tls_id
         self.green_states = tuple(green_states)
         self.pedestrian_after = pedestrian_after if pedestrian_s > 0 else None
-        self.pedestrian_s = float(pedestrian_s) if self.pedestrian_after is not None else 0.0
+        self.pedestrian_interval_s = float(pedestrian_interval_s) if pedestrian_interval_s is not None and pedestrian_s > 0 else None
+        enabled = self.pedestrian_after is not None or self.pedestrian_interval_s is not None
+        self.pedestrian_s = float(pedestrian_s) if enabled else 0.0
+        self.pedestrian_done_at = float(initial_time)
+        self.pedestrian_starts: list[float] = []
+        self._pedestrians_next = False
         self.min_green_s = float(min_green_s)
         self.max_green_s = float(max_green_s)
         self.yellow_s = float(yellow_s)
@@ -101,18 +118,28 @@ class PhaseSelectionController:
             return 0.0
         return max(0.0, float(sim_time) - self.red_since[phase])
 
-    def switch_seconds(self, source: int, target: int) -> float:
+    def pedestrian_due(self, sim_time: float | None) -> bool:
+        """Regra por tempo: a fase de pedestres está pendente (entra na próxima troca)."""
+        return (self.pedestrian_interval_s is not None and sim_time is not None
+                and float(sim_time) - self.pedestrian_done_at >= self.pedestrian_interval_s)
+
+    def _pedestrians_on_leave(self, phase: int, sim_time: float | None) -> bool:
+        if self.pedestrian_interval_s is not None:
+            return self.pedestrian_due(sim_time)
+        return phase == self.pedestrian_after
+
+    def switch_seconds(self, source: int, target: int, sim_time: float | None = None) -> float:
         """Tempo sem verde para ninguém ao trocar de ``source`` para ``target`` (0 se não troca)."""
         if source == target:
             return 0.0
-        if "y" not in yellow_state(self.green_states[source], self.green_states[target]):
+        pedestrians = self._pedestrians_on_leave(source, sim_time)
+        if not pedestrians and "y" not in yellow_state(self.green_states[source], self.green_states[target]):
             return 0.0
-        pedestrians = self.pedestrian_s if source == self.pedestrian_after else 0.0
-        return self.yellow_s + self.all_red_s + pedestrians
+        return self.yellow_s + self.all_red_s + (self.pedestrian_s if pedestrians else 0.0)
 
-    def leave_seconds(self, phase: int) -> float:
+    def leave_seconds(self, phase: int, sim_time: float | None = None) -> float:
         """Tempo perdido ao sair de ``phase`` (amarelo + all-red + pedestres, se for o caso)."""
-        return self.yellow_s + self.all_red_s + (self.pedestrian_s if phase == self.pedestrian_after else 0.0)
+        return self.yellow_s + self.all_red_s + (self.pedestrian_s if self._pedestrians_on_leave(phase, sim_time) else 0.0)
 
     def next_cyclic(self, phase: int | None = None) -> int:
         return ((self.current if phase is None else phase) + 1) % self.phase_count
@@ -126,7 +153,7 @@ class PhaseSelectionController:
             if elapsed < self.yellow_s:
                 return self._decision("hold", sim_time, choice, "yellow_in_progress")
             if self.all_red_s > 0:
-                return self._set(ALL_RED, all_red_state(self.green_states[self.current], self.green_states[self.target]),
+                return self._set(ALL_RED, all_red_state(self.green_states[self.current], self._clearance_target()),
                                  sim_time, choice, "yellow_complete")
             return self._after_clearance(sim_time, choice, "yellow_complete")
         if self.mode == ALL_RED:
@@ -136,6 +163,8 @@ class PhaseSelectionController:
         if self.mode == PEDESTRIAN:
             if elapsed < self.pedestrian_s:
                 return self._decision("hold", sim_time, choice, "pedestrian_in_progress")
+            self.pedestrian_done_at = float(sim_time)
+            self._pedestrians_next = False
             return self._enter_green(sim_time, choice, "pedestrian_complete")
         if elapsed >= self.max_green_s:
             target = self.next_cyclic() if choice is None or choice == self.current else choice
@@ -156,7 +185,8 @@ class PhaseSelectionController:
     def _leave_green(self, target: int, sim_time: float, choice: int | None, reason: str) -> dict[str, Any]:
         self.target = target
         self.red_since[self.current] = float(sim_time)
-        yellow = yellow_state(self.green_states[self.current], self.green_states[target])
+        self._pedestrians_next = self._pedestrians_on_leave(self.current, sim_time)
+        yellow = yellow_state(self.green_states[self.current], self._clearance_target())
         if "y" not in yellow:
             # A fase escolhida só acrescenta verdes: não há o que encerrar.
             return self._enter_green(sim_time, choice, reason)
@@ -164,9 +194,14 @@ class PhaseSelectionController:
 
     def _after_clearance(self, sim_time: float, choice: int | None, reason: str) -> dict[str, Any]:
         """Depois do amarelo/all-red: fase de pedestres se o verde que saiu a dispara, senão o verde escolhido."""
-        if self.current == self.pedestrian_after:
+        if self._pedestrians_next:
+            self.pedestrian_starts.append(float(sim_time))
             return self._set(PEDESTRIAN, "r" * len(self.state), sim_time, choice, reason)
         return self._enter_green(sim_time, choice, reason)
+
+    def _clearance_target(self) -> str:
+        """Estado depois da liberação: vermelho total antes dos pedestres, senão o verde escolhido."""
+        return "r" * len(self.state) if self._pedestrians_next else self.green_states[self.target]
 
     def _enter_green(self, sim_time: float, choice: int | None, reason: str) -> dict[str, Any]:
         self.current, self.target = self.target, None

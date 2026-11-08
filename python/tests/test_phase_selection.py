@@ -12,7 +12,7 @@ from controller.phase_selection_agent import PhaseAgentConfig, PhaseSelectionAge
 from controller.phase_selection_controller import PhaseSelectionController, all_red_state, yellow_state
 from controller.phase_selection_policies import FixedTimePhasePolicy, MaxPressurePhasePolicy
 from controller.phase_selection_state import ROW_FEATURE_NAMES, PhaseObservation, PhaseStateEncoder, split_state
-from experiments.phase_selection_environment import decision_mask, max_red_seconds
+from experiments.phase_selection_environment import decision_mask, max_red_seconds, pedestrian_hcm_delay
 from sumo.intersection import green_phases, roi_geometry
 from vision.lane_features import LaneFeatures
 
@@ -99,6 +99,42 @@ class PhaseSelectionControllerTests(unittest.TestCase):
         self.assertEqual(controller.update(45, None)["reason"], "pedestrian_in_progress")
         self.assertEqual(controller.update(46, None)["phase_name"], "green_0")
         self.assertEqual(controller.red_time(2, 46), 22.0)
+
+    def test_pedestrian_phase_by_time_comes_from_any_green(self) -> None:
+        controller = PhaseSelectionController("tls", GREENS, pedestrian_s=18, pedestrian_interval_s=30)
+        self.assertFalse(controller.pedestrian_due(29))
+        self.assertEqual(controller.leave_seconds(1, 29), 4)
+        controller.update(10, 1)  # antes do prazo: troca normal, sem pedestres
+        controller.update(13, None)
+        self.assertEqual(controller.update(14, None)["phase_name"], "green_1")
+        self.assertTrue(controller.pedestrian_due(30))
+        self.assertEqual((controller.leave_seconds(1, 30), controller.switch_seconds(1, 2, 30)), (22, 22))
+        decision = controller.update(30, 2)  # pendente: sai do verde 1 rumo aos pedestres
+        self.assertEqual(decision["state"], "rryyrr")  # amarelo em todos os links verdes, não só nos que acabam
+        self.assertEqual(controller.update(33, None)["state"], "rrrrrr")
+        self.assertEqual(controller.update(34, None)["phase_name"], "pedestrian")
+        self.assertEqual(controller.update(52, None)["phase_name"], "green_2")  # depois, o verde que a política pediu
+        self.assertEqual(controller.pedestrian_starts, [34.0])
+        self.assertFalse(controller.pedestrian_due(81))
+        self.assertTrue(controller.pedestrian_due(82))
+
+    def test_pedestrian_phase_by_time_cannot_be_avoided_by_holding_the_green(self) -> None:
+        controller = PhaseSelectionController("tls", GREENS, pedestrian_s=18, pedestrian_interval_s=30)
+        for second in range(1, 40):
+            controller.update(second, 0)  # a política só pede para manter
+        controller.update(40, 0)  # verde máximo: troca forçada, com os pedestres pendentes
+        controller.update(43, None)
+        self.assertEqual(controller.update(44, None)["phase_name"], "pedestrian")
+
+    def test_pedestrian_rules_are_exclusive(self) -> None:
+        with self.assertRaises(ValueError):
+            PhaseSelectionController("tls", GREENS, pedestrian_after=1, pedestrian_s=18, pedestrian_interval_s=30)
+
+    def test_hcm_pedestrian_delay_from_phase_starts(self) -> None:
+        delay = pedestrian_hcm_delay([100.0, 160.0, 240.0], green_s=7)
+        self.assertAlmostEqual(delay["mean_wait_s"], (53 ** 2 + 73 ** 2) / (2 * 140))
+        self.assertEqual((delay["max_wait_s"], delay["mean_interval_s"], delay["phases"]), (73, 70, 3))
+        self.assertIsNone(pedestrian_hcm_delay([100.0], green_s=7))
 
     def test_first_apply_imposes_the_state(self) -> None:
         controller = PhaseSelectionController("tls", GREENS)
