@@ -221,7 +221,20 @@ Percepção *ground truth*, seeds 201–203, espera média / espera parado (s):
 - Sem pedestres, o `cruz-assimetrico` piorou 1–3 s em relação ao checkpoint
   `rl`. Na demanda desbalanceada, o max-pressure tem a menor espera, mas
   deixa cerca do dobro de veículos na fila de inserção.
-- A avaliação com 10 seeds (201–210) e teste pareado está em andamento.
+- **10 seeds (201–210), teste t pareado** (`docs/artigo/estatisticas.md`,
+  gerado por `experiments.plot_article_figures` a partir de
+  `versoes-*-oracle-10seeds*.json` e `fase-livre-*-test-10seeds.json`):
+  - SP `calibrated`: 4,0 s contra max-pressure 5,0 s (p < 0,001) e
+    especialista 4,2 s (p = 0,056);
+  - SP `calibrated_ped`: 13,1 s contra especialista 14,1 s (p < 0,001, 10/10
+    seeds) e max-pressure 26,5 s;
+  - SP `original`: empate de todos os adaptativos (~4,5 s);
+  - `cruz-assimetrico`: vence o max-pressure em baixa e média, com e sem
+    pedestres (p ≤ 0,010), e empata na desbalanceada (p ≥ 0,5) com menos
+    da metade da fila de inserção;
+  - contra o checkpoint `rl`, a piora sem pedestres só se confirma na demanda
+    baixa (+1,3 s, p < 0,001); com pedestres, o `v3` é melhor na baixa
+    (−1,3 s, p = 0,002).
 
 **Comandos** (a partir de `python/`; só SUMO):
 

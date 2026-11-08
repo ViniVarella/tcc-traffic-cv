@@ -143,3 +143,9 @@ optimization/*/*_last.keras
 !results/evaluation/versoes-calibrated_ped-oracle.json
 !results/evaluation/versoes-original-oracle.json
 !results/evaluation/versoes-original_ped-oracle.json
+
+# Artigos e template do TCC (locais, não versionar)
+/Artigo*.pdf
+/Artigo*.docx
+/Template TCC.pdf
+/~$*
