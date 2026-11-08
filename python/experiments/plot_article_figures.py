@@ -2,12 +2,12 @@
 
 Lê os JSONs de ``results/evaluation`` (percepção *ground truth*, seeds 201–210,
 300 s de aquecimento e 1800 s de controle), faz o teste t pareado seed a seed
-do modelo global (TraffIQ v6.0) contra cada controlador e grava:
+do modelo global contra cada controlador e grava:
 
 - ``docs/artigo/figuras/*.png`` (300 dpi, largura de coluna do artigo);
 - ``docs/artigo/estatisticas.json`` e ``docs/artigo/estatisticas.md``.
 
-Rótulos seguem o produto (TraffIQ v5.0 = DQN estado v2; v6.0 = modelo global).
+Rótulos descritivos: "Especialista" = DQN estado v2 (TraffIQ v5.0); "Modelo global" = TraffIQ v6.0.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from scipy import stats  # noqa: E402
 COLORS = {"baseline": "#a3a29c", "max_pressure": "#eb6834", "v2": "#1baf7a", "global": "#2a78d6",
           "global_rl": "#6250d6", "v1": "#eda100"}
 LABELS = {"baseline": "Tempo fixo", "max_pressure": "Max-pressure", "v1": "Regra de fila (v2.0)",
-          "v2": "TraffIQ v5.0", "global": "TraffIQ v6.0", "global_rl": "v6.0 sem pedestres no treino"}
+          "v2": "Especialista", "global": "Modelo global", "global_rl": "Modelo global (anterior)"}
 TEXT = "#0b0b0b"
 MUTED = "#52514e"
 GRID = "#e4e3df"
@@ -176,7 +176,7 @@ def figure_training(log: Path, output: Path) -> None:
         ax.axhline(reference[policy], color=COLORS[name], linewidth=1.4, linestyle="--", zorder=1)
         ax.text(episodes[-1] + 8, reference[policy], LABELS[name], va="center", fontsize=7.5, color=TEXT)
     ax.plot(episodes, waits, color=COLORS["global"], linewidth=2, marker="o", markersize=4, zorder=3, label=LABELS["global"])
-    ax.text(episodes[-1] + 8, waits[-1], "TraffIQ v6.0", va="center", fontsize=7.5, color=TEXT)
+    ax.text(episodes[-1] + 8, waits[-1], "Modelo global", va="center", fontsize=7.5, color=TEXT)
     ax.scatter([episodes[best]], [waits[best]], s=70, facecolor="none", edgecolor=TEXT, linewidth=1, zorder=4)
     ax.annotate("modelo escolhido", (episodes[best], waits[best]), xytext=(0, -18), textcoords="offset points",
                 ha="center", fontsize=7, color=MUTED)
@@ -241,10 +241,10 @@ def figure_architecture(output: Path) -> None:
     box(ax, (middle, 2.6), (w, h), "Unity\ngêmeo digital 3D\n(3 câmeras)", aqua, True)
     box(ax, (right, 2.6), (w, h), "YOLOv8 + ByteTrack\ndetecção e rastreamento\nde veículos", orange, True)
     box(ax, (right, 0.3), (w, h), "Atributos por faixa\n(ROIs de 60 m e\nhomografia)", orange)
-    box(ax, (middle, 0.3), (w, h), "TraffIQ (DQN)\nescolhe a próxima fase", blue, True)
+    box(ax, (middle, 0.3), (w, h), "Agente DQN\nescolhe a próxima fase", blue, True)
     box(ax, (left, 0.3), (w, h), "Camada de segurança\nverde mín./máx., amarelo,\npedestres e viaturas", gray)
-    arrow(ax, (left + w, 3.15), (middle, 3.15), "estado (UDP)")
-    arrow(ax, (middle + w, 3.15), (right, 3.15), "imagens (TCP)")
+    arrow(ax, (left + w, 3.15), (middle, 3.15), "estado")
+    arrow(ax, (middle + w, 3.15), (right, 3.15), "imagens")
     arrow(ax, (right + w / 2, 2.6), (right + w / 2, 1.4))
     arrow(ax, (right, 0.85), (middle + w, 0.85), "filas e esperas")
     arrow(ax, (middle, 0.85), (left + w, 0.85), "fase escolhida")
@@ -288,15 +288,15 @@ def p_text(p: float) -> str:
 
 def markdown(sp: dict[str, Any], generic: dict[str, Any]) -> str:
     lines = ["# Estatísticas do artigo (10 seeds, 201–210, percepção ground truth)", "",
-             "Média [IC 95%] por controlador; teste t pareado do TraffIQ v6.0 contra cada um "
-             "(diferença negativa = v6.0 espera menos).", ""]
+             "Média [IC 95%] por controlador; teste t pareado do modelo global contra cada um "
+             "(diferença negativa = modelo global espera menos).", ""]
     for title, block in [*((f"SP `{k}`", sp[k]) for k in sp), *((f"`{k}`", generic[k]) for k in generic)]:
         lines += [f"## {title}", "", "| Controlador | Espera média (s) | Espera parado (s) | Fila de inserção |", "|---|---|---|---|"]
         for name, summary in block["summary"].items():
             cells = [f"{fmt(summary[m]['mean'])} ± {fmt(summary[m]['ci95'])}" if m in summary else "—"
                      for m in (WAIT, STOPPED, "mean_pending_vehicles")]
             lines.append(f"| {LABELS[name]} | {' | '.join(cells)} |")
-        lines += ["", "| v6.0 contra | Δ espera média [IC 95%] | p | Δ espera parado [IC 95%] | p | seeds em que a v6.0 vence |",
+        lines += ["", "| Modelo global contra | Δ espera média [IC 95%] | p | Δ espera parado [IC 95%] | p | seeds em que o modelo global vence |",
                   "|---|---|---|---|---|---|"]
         for reference, result in block["paired"].items():
             w, s = result[WAIT], result[STOPPED]
