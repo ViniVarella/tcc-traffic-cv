@@ -188,6 +188,41 @@ continua sendo `dqn-fase-livre-rl-best.pt`.
   ambiente genérico, comparando com `versoes-<cenário>-visual.json`. Para isso,
   a Unity precisa estar em Play Mode.
 
+**Estado `phase_select_3` e treino com pedestres (2026-11-07).** O estado
+ganhou duas features por fase, `switch_in` e `switch_out`: o tempo perdido
+para entrar e para sair da fase (amarelo + all-red + fase de pedestres,
+÷ 30 s). O controlador genérico ganhou a fase exclusiva de pedestres
+(7 + 11 s com todos os veículos no vermelho depois do último verde), e os
+cruzamentos de treino e o `cruz-assimetrico` ganharam variantes `+ped`. O
+novo checkpoint, `dqn-fase-livre-v3-best.pt` (480 episódios em 24 cenários,
+demonstrações do max-pressure seguidas de RL sem imitação, melhor no
+episódio 383), passou a ser o padrão do `global` (painel, `compare_versions`,
+`evaluate_preemption`, `evaluate_phase_selection`).
+
+Percepção *ground truth*, seeds 201–203, espera média / espera parado (s):
+
+| Cenário | Tempo fixo | Max-pressure | DQN estado v2 (v5.0) | Global `rl` | Global `v3` |
+|---|---|---|---|---|---|
+| SP `calibrated_ped` | 20,8 / 34,3 | 26,5 / 29,4 | 14,2 / 18,2 | 19,6 / 24,2 | **13,4 / 18,4** |
+| SP `calibrated` | 13,0 / 23,1 | 4,7 / 8,0 | 4,1 / 7,9 | 3,9 / 8,0 | 3,9 / 7,9 |
+| SP `original` | 14,9 / 22,7 | 4,6 / 7,3 | 4,5 / 7,2 | 4,5 / 7,3 | 4,5 / 7,3 |
+| `cruz-assimetrico` baixa | 22,6 / 31,7 | 9,7 / 14,7 | — | **6,5 / 10,8** | 7,5 / 12,4 |
+| `cruz-assimetrico` media | 32,2 / 38,6 | 19,5 / 24,2 | — | **16,4 / 20,3** | 19,2 / 23,4 |
+| `cruz-assimetrico` desbalanceada | 34,9 / 41,6 | 19,9 / 24,1 | — | 20,8 / 26,0 | 21,7 / 25,8 |
+| `cruz-assimetrico` baixa+ped | 31,1 / 40,2 | 13,4 / 18,8 | — | — | **7,1 / 11,7** |
+| `cruz-assimetrico` media+ped | 51,7 / 56,3 | 25,9 / 31,2 | — | — | **20,2 / 24,9** |
+| `cruz-assimetrico` desbalanceada+ped | 57,8 / 63,2 | 21,2 / 25,5 | — | — | 22,5 / 27,0 |
+
+- Com pedestres, o modelo global passa a v5.0 no SP sem nunca ter visto o
+  cruzamento; o max-pressure, que não pondera o custo da fase de pedestres,
+  fica pior que o tempo fixo.
+- Os pedestres do SP esperam um pouco mais que com a v5.0 (27,9 s contra
+  23,4 s em média; tempo fixo 56,6 s).
+- Sem pedestres, o `cruz-assimetrico` piorou 1–3 s em relação ao checkpoint
+  `rl`. Na demanda desbalanceada, o max-pressure tem a menor espera, mas
+  deixa cerca do dobro de veículos na fila de inserção.
+- A avaliação com 10 seeds (201–210) e teste pareado está em andamento.
+
 **Comandos** (a partir de `python/`; só SUMO):
 
 ```bash
@@ -201,7 +236,7 @@ continua sendo `dqn-fase-livre-rl-best.pt`.
   --checkpoint-output ../results/models/dqn-fase-livre-rl-last.pt \
   --best-checkpoint-output ../results/models/dqn-fase-livre-rl-best.pt \
   --log-output ../results/logs/dqn-fase-livre-rl-pretrain.jsonl
-# avaliação nos cruzamentos de teste (padrão: dqn-fase-livre-rl-best.pt)
+# avaliação nos cruzamentos de teste (padrão: dqn-fase-livre-v3-best.pt)
 ../.venv/bin/python -m experiments.evaluate_phase_selection --output ../results/evaluation/fase-livre-rl-test.json
 ```
 

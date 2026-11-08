@@ -42,7 +42,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--v2-dqn-model", type=Path, default=models / "dqn-v2-traffiq-best.pt")
     parser.add_argument("--v3-dqn-model", type=Path, default=models / "dqn-v3-fase-curta-best.pt",
                         help="Checkpoint do estado v3 (só cenários *_ped; inclua v3 em --versions).")
-    parser.add_argument("--global-dqn-model", type=Path, default=models / "dqn-fase-livre-rl-best.pt",
+    parser.add_argument("--global-dqn-model", type=Path, default=models / "dqn-fase-livre-v3-best.pt",
                         help="Modelo global, experimento de seleção livre de fase (inclua global em --versions).")
     add_vision_arguments(parser)
     parser.add_argument("--step-log-dir", type=Path, default=base_dir.parent / "results" / "logs",

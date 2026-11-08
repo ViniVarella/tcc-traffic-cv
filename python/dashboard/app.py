@@ -133,7 +133,7 @@ class EpisodeRunner:
         # é a regra de fila (sem checkpoint); o do ``v1.1`` só é lido se ele for pedido,
         # e o painel não o oferece.
         self.v1_1_checkpoint = models / "visual-dqn-sp-best.pt"
-        self.checkpoints = {"v2": models / "dqn-v2-traffiq-best.pt", "global": models / "dqn-fase-livre-rl-best.pt"}
+        self.checkpoints = {"v2": models / "dqn-v2-traffiq-best.pt", "global": models / "dqn-fase-livre-v3-best.pt"}
         self.announce_before_s = EmergencySettings.from_config(self.config).announce_before_s
         evaluation_dir = settings.base_dir.parent / "results" / "evaluation"
         self.fixed_time_reference, self.fixed_time_reference_source = load_fixed_time_reference(evaluation_dir)

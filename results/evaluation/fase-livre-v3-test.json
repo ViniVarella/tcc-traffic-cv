@@ -1,0 +1,2421 @@
+{
+  "seeds": [
+    201,
+    202,
+    203
+  ],
+  "warmup_s": 300.0,
+  "control_s": 1800.0,
+  "perception": "ground_truth",
+  "dqn_model": "../results/models/dqn-fase-livre-v3-best.pt",
+  "dqn_metadata": {
+    "state_version": "phase_select_3",
+    "row_features": [
+      "count",
+      "stopped",
+      "occupancy",
+      "speed",
+      "waiting",
+      "stopped_vehicles",
+      "vehicles",
+      "lane_count",
+      "current_count",
+      "current_stopped",
+      "current_occupancy",
+      "current_speed",
+      "current_waiting",
+      "current_stopped_vehicles",
+      "current_vehicles",
+      "current_lane_count",
+      "is_current",
+      "green_elapsed",
+      "red_time",
+      "switch_in",
+      "switch_out"
+    ],
+    "feature_source": "traci_oracle",
+    "decision_interval_s": 5.0,
+    "gamma_per_second": 0.99,
+    "warmup_s": 300.0,
+    "control_s": 1800.0,
+    "validation_seeds": [
+      1001
+    ],
+    "training_scenarios": [
+      "cruz-2x2/baixa",
+      "cruz-2x2/baixa+ped",
+      "cruz-2x2/media",
+      "cruz-2x2/media+ped",
+      "cruz-2x2/desbalanceada",
+      "cruz-2x2/desbalanceada+ped",
+      "cruz-opostas/baixa",
+      "cruz-opostas/baixa+ped",
+      "cruz-opostas/media",
+      "cruz-opostas/media+ped",
+      "cruz-opostas/desbalanceada",
+      "cruz-opostas/desbalanceada+ped",
+      "t-3/baixa",
+      "t-3/baixa+ped",
+      "t-3/media",
+      "t-3/media+ped",
+      "t-3/desbalanceada",
+      "t-3/desbalanceada+ped",
+      "t-avenida/baixa",
+      "t-avenida/baixa+ped",
+      "t-avenida/media",
+      "t-avenida/media+ped",
+      "t-avenida/desbalanceada",
+      "t-avenida/desbalanceada+ped"
+    ],
+    "demonstrations": {
+      "policy": "max_pressure",
+      "episodes": 48,
+      "seeds": [
+        41,
+        42
+      ],
+      "pretrain_steps": 5000,
+      "batch_fraction": 0.25,
+      "loss_weight": 1.0,
+      "rl_without": true
+    },
+    "init_checkpoint": null,
+    "kind": "best_validation",
+    "training_episode": 383,
+    "validation_score": -0.026287276521328326,
+    "validation_switch_rate": 0.550625857911967
+  },
+  "scenarios": {
+    "cruz-assimetrico/baixa": {
+      "intersection": "cruz-assimetrico",
+      "demand": "baixa",
+      "split": "test",
+      "green_phases": 4,
+      "incoming_lanes": 8,
+      "policies": {
+        "fixed_time": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 76,
+              "decisions": 225,
+              "phase_seconds": {
+                "green_0": 546,
+                "yellow": 228,
+                "all_red": 76,
+                "green_1": 190,
+                "green_2": 570,
+                "green_3": 190
+              },
+              "mean_waiting_time_seconds": 23.955017301038062,
+              "mean_waiting_time_stopped_seconds": 32.96666666666667,
+              "mean_pending_vehicles": 0.0038888888888888888,
+              "unfinished_vehicles": 26,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 76,
+              "decisions": 225,
+              "phase_seconds": {
+                "green_0": 546,
+                "yellow": 228,
+                "all_red": 76,
+                "green_1": 190,
+                "green_2": 570,
+                "green_3": 190
+              },
+              "mean_waiting_time_seconds": 20.26644182124789,
+              "mean_waiting_time_stopped_seconds": 30.1203007518797,
+              "mean_pending_vehicles": 0.0038888888888888888,
+              "unfinished_vehicles": 31,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 76,
+              "decisions": 225,
+              "phase_seconds": {
+                "green_0": 546,
+                "yellow": 228,
+                "all_red": 76,
+                "green_1": 190,
+                "green_2": 570,
+                "green_3": 190
+              },
+              "mean_waiting_time_seconds": 23.596283783783782,
+              "mean_waiting_time_stopped_seconds": 31.965675057208237,
+              "mean_pending_vehicles": 0.0077777777777777776,
+              "unfinished_vehicles": 19,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 22.605914302023248,
+            "ci95_low": 17.552852801082235,
+            "ci95_high": 27.65897580296426
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 31.68421415858487,
+            "ci95_low": 28.09706299398873,
+            "ci95_high": 35.27136532318101
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.005185185185185185,
+            "ci95_low": -0.00039277777777777835,
+            "ci95_high": 0.010763148148148148
+          },
+          "unfinished_vehicles": {
+            "mean": 25.333333333333332,
+            "ci95_low": 10.358453697385965,
+            "ci95_high": 40.3082129692807
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          }
+        },
+        "max_pressure": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 114,
+              "decisions": 163,
+              "phase_seconds": {
+                "green_0": 590,
+                "yellow": 315,
+                "all_red": 105,
+                "green_2": 505,
+                "green_1": 105,
+                "green_3": 180
+              },
+              "mean_waiting_time_seconds": 8.254237288135593,
+              "mean_waiting_time_stopped_seconds": 12.74869109947644,
+              "mean_pending_vehicles": 0.0038888888888888888,
+              "unfinished_vehicles": 14,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 116,
+              "decisions": 157,
+              "phase_seconds": {
+                "green_0": 551,
+                "yellow": 333,
+                "all_red": 111,
+                "green_2": 490,
+                "green_1": 145,
+                "green_3": 170
+              },
+              "mean_waiting_time_seconds": 10.761421319796954,
+              "mean_waiting_time_stopped_seconds": 15.703703703703704,
+              "mean_pending_vehicles": 0.0038888888888888888,
+              "unfinished_vehicles": 33,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 111,
+              "decisions": 170,
+              "phase_seconds": {
+                "green_0": 611,
+                "yellow": 303,
+                "all_red": 101,
+                "green_2": 495,
+                "green_1": 120,
+                "green_3": 170
+              },
+              "mean_waiting_time_seconds": 9.976705490848586,
+              "mean_waiting_time_stopped_seconds": 15.73753280839895,
+              "mean_pending_vehicles": 0.008888888888888889,
+              "unfinished_vehicles": 10,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 9.664121366260376,
+            "ci95_low": 6.477988299575717,
+            "ci95_high": 12.850254432945036
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 14.729975870526365,
+            "ci95_low": 10.467034569609453,
+            "ci95_high": 18.992917171443278
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.005555555555555556,
+            "ci95_low": -0.0016161111111111116,
+            "ci95_high": 0.012727222222222223
+          },
+          "unfinished_vehicles": {
+            "mean": 19.0,
+            "ci95_low": -11.528059000423422,
+            "ci95_high": 49.528059000423426
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.5672074035154355,
+            "ci95_low": 0.33464221652680703,
+            "ci95_high": 0.799772590504064
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.5331977705161756,
+            "ci95_low": 0.3571538071761029,
+            "ci95_high": 0.7092417338562482
+          }
+        },
+        "dqn_fase_livre": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 121,
+              "decisions": 167,
+              "phase_seconds": {
+                "green_0": 526,
+                "yellow": 276,
+                "all_red": 92,
+                "green_1": 205,
+                "green_2": 521,
+                "green_3": 180
+              },
+              "mean_waiting_time_seconds": 7.719387755102041,
+              "mean_waiting_time_stopped_seconds": 13.310850439882698,
+              "mean_pending_vehicles": 0.0038888888888888888,
+              "unfinished_vehicles": 16,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 125,
+              "decisions": 155,
+              "phase_seconds": {
+                "green_0": 541,
+                "yellow": 300,
+                "all_red": 100,
+                "green_2": 474,
+                "green_1": 230,
+                "green_3": 155
+              },
+              "mean_waiting_time_seconds": 7.722591362126246,
+              "mean_waiting_time_stopped_seconds": 11.92051282051282,
+              "mean_pending_vehicles": 0.0038888888888888888,
+              "unfinished_vehicles": 22,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 122,
+              "decisions": 162,
+              "phase_seconds": {
+                "green_0": 571,
+                "yellow": 292,
+                "all_red": 97,
+                "green_2": 510,
+                "green_1": 160,
+                "green_3": 170
+              },
+              "mean_waiting_time_seconds": 7.1547420965058235,
+              "mean_waiting_time_stopped_seconds": 11.878453038674033,
+              "mean_pending_vehicles": 0.0077777777777777776,
+              "unfinished_vehicles": 10,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 7.532240404578037,
+            "ci95_low": 6.720043045965209,
+            "ci95_high": 8.344437763190864
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 12.369938766356517,
+            "ci95_low": 10.344893233904822,
+            "ci95_high": 14.394984298808213
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.005185185185185185,
+            "ci95_low": -0.00039277777777777835,
+            "ci95_high": 0.010763148148148148
+          },
+          "unfinished_vehicles": {
+            "mean": 16.0,
+            "ci95_low": 1.0939707500622422,
+            "ci95_high": 30.90602924993776
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.6644956461782235,
+            "ci95_low": 0.5636866710803581,
+            "ci95_high": 0.765304621276089
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.6096231293510618,
+            "ci95_low": 0.5680199121063801,
+            "ci95_high": 0.6512263465957434
+          }
+        }
+      }
+    },
+    "cruz-assimetrico/baixa+ped": {
+      "intersection": "cruz-assimetrico",
+      "demand": "baixa+ped",
+      "split": "test",
+      "green_phases": 4,
+      "incoming_lanes": 8,
+      "policies": {
+        "fixed_time": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 63,
+              "decisions": 191,
+              "phase_seconds": {
+                "pedestrian": 278,
+                "green_0": 480,
+                "yellow": 189,
+                "all_red": 63,
+                "green_1": 160,
+                "green_2": 480,
+                "green_3": 150
+              },
+              "mean_waiting_time_seconds": 32.828371278458846,
+              "mean_waiting_time_stopped_seconds": 40.48596112311015,
+              "mean_pending_vehicles": 0.0038888888888888888,
+              "unfinished_vehicles": 33,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 63,
+              "decisions": 191,
+              "phase_seconds": {
+                "pedestrian": 278,
+                "green_0": 480,
+                "yellow": 189,
+                "all_red": 63,
+                "green_1": 160,
+                "green_2": 480,
+                "green_3": 150
+              },
+              "mean_waiting_time_seconds": 29.67003367003367,
+              "mean_waiting_time_stopped_seconds": 39.51569506726457,
+              "mean_pending_vehicles": 0.0038888888888888888,
+              "unfinished_vehicles": 30,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 63,
+              "decisions": 191,
+              "phase_seconds": {
+                "pedestrian": 278,
+                "green_0": 480,
+                "yellow": 189,
+                "all_red": 63,
+                "green_1": 160,
+                "green_2": 480,
+                "green_3": 150
+              },
+              "mean_waiting_time_seconds": 30.74621848739496,
+              "mean_waiting_time_stopped_seconds": 40.74387527839644,
+              "mean_pending_vehicles": 0.008888888888888889,
+              "unfinished_vehicles": 16,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 31.081541145295827,
+            "ci95_low": 27.092568797818238,
+            "ci95_high": 35.070513492773415
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 40.24851048959039,
+            "ci95_low": 38.639637720536435,
+            "ci95_high": 41.85738325864434
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.005555555555555556,
+            "ci95_low": -0.0016161111111111116,
+            "ci95_high": 0.012727222222222223
+          },
+          "unfinished_vehicles": {
+            "mean": 26.333333333333332,
+            "ci95_low": 3.79101554113538,
+            "ci95_high": 48.875651125531284
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          }
+        },
+        "max_pressure": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 103,
+              "decisions": 157,
+              "phase_seconds": {
+                "pedestrian": 116,
+                "green_0": 555,
+                "yellow": 288,
+                "all_red": 96,
+                "green_2": 470,
+                "green_1": 90,
+                "green_3": 185
+              },
+              "mean_waiting_time_seconds": 13.125862068965517,
+              "mean_waiting_time_stopped_seconds": 19.17632241813602,
+              "mean_pending_vehicles": 0.0038888888888888888,
+              "unfinished_vehicles": 24,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 106,
+              "decisions": 144,
+              "phase_seconds": {
+                "pedestrian": 146,
+                "green_0": 545,
+                "yellow": 303,
+                "all_red": 101,
+                "green_2": 440,
+                "green_1": 105,
+                "green_3": 160
+              },
+              "mean_waiting_time_seconds": 14.160535117056856,
+              "mean_waiting_time_stopped_seconds": 19.60185185185185,
+              "mean_pending_vehicles": 0.0038888888888888888,
+              "unfinished_vehicles": 26,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 100,
+              "decisions": 159,
+              "phase_seconds": {
+                "pedestrian": 121,
+                "green_0": 550,
+                "yellow": 288,
+                "all_red": 96,
+                "green_2": 480,
+                "green_1": 90,
+                "green_3": 175
+              },
+              "mean_waiting_time_seconds": 12.777591973244148,
+              "mean_waiting_time_stopped_seconds": 17.769767441860466,
+              "mean_pending_vehicles": 0.0077777777777777776,
+              "unfinished_vehicles": 13,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 13.35466305308884,
+            "ci95_low": 11.567673636546973,
+            "ci95_high": 15.141652469630708
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 18.849313903949447,
+            "ci95_low": 16.46728274436799,
+            "ci95_high": 21.231345063530906
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.005185185185185185,
+            "ci95_low": -0.00039277777777777835,
+            "ci95_high": 0.010763148148148148
+          },
+          "unfinished_vehicles": {
+            "mean": 21.0,
+            "ci95_low": 3.6096325417392805,
+            "ci95_high": 38.39036745826072
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.5691057769395074,
+            "ci95_low": 0.4674342334798083,
+            "ci95_high": 0.6707773203992065
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.5313868654860627,
+            "ci95_low": 0.4561716232624473,
+            "ci95_high": 0.6066021077096782
+          }
+        },
+        "dqn_fase_livre": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 120,
+              "decisions": 158,
+              "phase_seconds": {
+                "pedestrian": 8,
+                "green_0": 540,
+                "yellow": 297,
+                "all_red": 99,
+                "green_1": 225,
+                "green_2": 535,
+                "green_3": 96
+              },
+              "mean_waiting_time_seconds": 7.513651877133106,
+              "mean_waiting_time_stopped_seconds": 11.964673913043478,
+              "mean_pending_vehicles": 0.0038888888888888888,
+              "unfinished_vehicles": 18,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 120,
+              "decisions": 163,
+              "phase_seconds": {
+                "pedestrian": 8,
+                "green_0": 560,
+                "yellow": 283,
+                "all_red": 94,
+                "green_1": 225,
+                "green_2": 540,
+                "green_3": 90
+              },
+              "mean_waiting_time_seconds": 7.0813953488372094,
+              "mean_waiting_time_stopped_seconds": 12.145299145299145,
+              "mean_pending_vehicles": 0.0038888888888888888,
+              "unfinished_vehicles": 22,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 126,
+              "decisions": 150,
+              "phase_seconds": {
+                "pedestrian": 8,
+                "green_0": 580,
+                "yellow": 309,
+                "all_red": 103,
+                "green_1": 175,
+                "green_2": 525,
+                "green_3": 100
+              },
+              "mean_waiting_time_seconds": 6.828046744574291,
+              "mean_waiting_time_stopped_seconds": 10.906666666666666,
+              "mean_pending_vehicles": 0.008333333333333333,
+              "unfinished_vehicles": 12,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 7.141031323514869,
+            "ci95_low": 6.279782759571138,
+            "ci95_high": 8.0022798874586
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 11.672213241669764,
+            "ci95_low": 10.0099282006015,
+            "ci95_high": 13.334498282738029
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.00537037037037037,
+            "ci95_low": -0.0010044444444444458,
+            "ci95_high": 0.011745185185185185
+          },
+          "unfinished_vehicles": {
+            "mean": 17.333333333333332,
+            "ci95_low": 4.8291052306296525,
+            "ci95_high": 29.837561436037014
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.7701246594876059,
+            "ci95_low": 0.7494004200679089,
+            "ci95_high": 0.7908488989073029
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.709810404586257,
+            "ci95_low": 0.6592191293368931,
+            "ci95_high": 0.7604016798356209
+          }
+        }
+      }
+    },
+    "cruz-assimetrico/media": {
+      "intersection": "cruz-assimetrico",
+      "demand": "media",
+      "split": "test",
+      "green_phases": 4,
+      "incoming_lanes": 8,
+      "policies": {
+        "fixed_time": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 76,
+              "decisions": 225,
+              "phase_seconds": {
+                "green_0": 546,
+                "yellow": 228,
+                "all_red": 76,
+                "green_1": 190,
+                "green_2": 570,
+                "green_3": 190
+              },
+              "mean_waiting_time_seconds": 32.388992537313435,
+              "mean_waiting_time_stopped_seconds": 38.493348115299334,
+              "mean_pending_vehicles": 0.017777777777777778,
+              "unfinished_vehicles": 52,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 76,
+              "decisions": 225,
+              "phase_seconds": {
+                "green_0": 546,
+                "yellow": 228,
+                "all_red": 76,
+                "green_1": 190,
+                "green_2": 570,
+                "green_3": 190
+              },
+              "mean_waiting_time_seconds": 30.608133086876155,
+              "mean_waiting_time_stopped_seconds": 37.08622620380739,
+              "mean_pending_vehicles": 0.01888888888888889,
+              "unfinished_vehicles": 36,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 76,
+              "decisions": 225,
+              "phase_seconds": {
+                "green_0": 546,
+                "yellow": 228,
+                "all_red": 76,
+                "green_1": 190,
+                "green_2": 570,
+                "green_3": 190
+              },
+              "mean_waiting_time_seconds": 33.62205466540999,
+              "mean_waiting_time_stopped_seconds": 40.35407239819005,
+              "mean_pending_vehicles": 0.02,
+              "unfinished_vehicles": 49,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 32.20639342986653,
+            "ci95_low": 28.4420367815253,
+            "ci95_high": 35.97075007820776
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 38.64454890576559,
+            "ci95_low": 34.57231696481608,
+            "ci95_high": 42.716780846715096
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.01888888888888889,
+            "ci95_low": 0.016128513101863376,
+            "ci95_high": 0.021649264675914402
+          },
+          "unfinished_vehicles": {
+            "mean": 45.666666666666664,
+            "ci95_low": 24.537617276996738,
+            "ci95_high": 66.79571605633659
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          }
+        },
+        "max_pressure": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 105,
+              "decisions": 179,
+              "phase_seconds": {
+                "green_0": 687,
+                "yellow": 288,
+                "all_red": 96,
+                "green_2": 499,
+                "green_1": 120,
+                "green_3": 110
+              },
+              "mean_waiting_time_seconds": 19.33395696913003,
+              "mean_waiting_time_stopped_seconds": 24.871239470517448,
+              "mean_pending_vehicles": 0.02388888888888889,
+              "unfinished_vehicles": 55,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 111,
+              "decisions": 170,
+              "phase_seconds": {
+                "green_0": 616,
+                "yellow": 303,
+                "all_red": 101,
+                "green_2": 550,
+                "green_1": 120,
+                "green_3": 110
+              },
+              "mean_waiting_time_seconds": 19.793040293040292,
+              "mean_waiting_time_stopped_seconds": 24.0958751393534,
+              "mean_pending_vehicles": 0.01888888888888889,
+              "unfinished_vehicles": 26,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 114,
+              "decisions": 165,
+              "phase_seconds": {
+                "green_0": 636,
+                "yellow": 311,
+                "all_red": 103,
+                "green_2": 520,
+                "green_1": 120,
+                "green_3": 110
+              },
+              "mean_waiting_time_seconds": 19.455307262569832,
+              "mean_waiting_time_stopped_seconds": 23.6368778280543,
+              "mean_pending_vehicles": 0.01888888888888889,
+              "unfinished_vehicles": 36,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 19.52743484158005,
+            "ci95_low": 18.93643816701728,
+            "ci95_high": 20.11843151614282
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 24.201330812641714,
+            "ci95_low": 22.651348958451806,
+            "ci95_high": 25.751312666831623
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.020555555555555556,
+            "ci95_low": 0.013383888888888888,
+            "ci95_high": 0.027727222222222223
+          },
+          "unfinished_vehicles": {
+            "mean": 39.0,
+            "ci95_low": 2.403412941459507,
+            "ci95_high": 75.59658705854049
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.3925878138497252,
+            "ci95_low": 0.305146578664135,
+            "ci95_high": 0.48002904903531535
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.37280643697526145,
+            "ci95_low": 0.28350036384775223,
+            "ci95_high": 0.46211251010277066
+          }
+        },
+        "dqn_fase_livre": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 118,
+              "decisions": 167,
+              "phase_seconds": {
+                "green_0": 561,
+                "yellow": 288,
+                "all_red": 96,
+                "green_1": 185,
+                "green_3": 110,
+                "green_2": 560
+              },
+              "mean_waiting_time_seconds": 17.1994459833795,
+              "mean_waiting_time_stopped_seconds": 21.45967741935484,
+              "mean_pending_vehicles": 0.01888888888888889,
+              "unfinished_vehicles": 41,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 124,
+              "decisions": 154,
+              "phase_seconds": {
+                "green_0": 481,
+                "yellow": 312,
+                "all_red": 104,
+                "green_2": 553,
+                "green_1": 200,
+                "green_3": 150
+              },
+              "mean_waiting_time_seconds": 24.525252525252526,
+              "mean_waiting_time_stopped_seconds": 28.967462039045554,
+              "mean_pending_vehicles": 0.165,
+              "unfinished_vehicles": 29,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 120,
+              "decisions": 161,
+              "phase_seconds": {
+                "green_0": 551,
+                "yellow": 303,
+                "all_red": 101,
+                "green_2": 550,
+                "green_1": 165,
+                "green_3": 130
+              },
+              "mean_waiting_time_seconds": 15.852474323062559,
+              "mean_waiting_time_stopped_seconds": 19.764842840512223,
+              "mean_pending_vehicles": 0.01888888888888889,
+              "unfinished_vehicles": 39,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 19.192390943898193,
+            "ci95_low": 7.597384710076053,
+            "ci95_high": 30.787397177720333
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 23.397327432970872,
+            "ci95_low": 11.229669953818883,
+            "ci95_high": 35.56498491212286
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.06759259259259259,
+            "ci95_low": -0.14197944444444444,
+            "ci95_high": 0.2771646296296296
+          },
+          "unfinished_vehicles": {
+            "mean": 36.333333333333336,
+            "ci95_low": 20.361273297828276,
+            "ci95_high": 52.305393368838395
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.39873875592199726,
+            "ci95_low": -0.037880114458267,
+            "ci95_high": 0.8353576263022615
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.39054658889903165,
+            "ci95_low": 0.0118270672891157,
+            "ci95_high": 0.7692661105089476
+          }
+        }
+      }
+    },
+    "cruz-assimetrico/media+ped": {
+      "intersection": "cruz-assimetrico",
+      "demand": "media+ped",
+      "split": "test",
+      "green_phases": 4,
+      "incoming_lanes": 8,
+      "policies": {
+        "fixed_time": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 63,
+              "decisions": 191,
+              "phase_seconds": {
+                "pedestrian": 278,
+                "green_0": 480,
+                "yellow": 189,
+                "all_red": 63,
+                "green_1": 160,
+                "green_2": 480,
+                "green_3": 150
+              },
+              "mean_waiting_time_seconds": 52.61895551257253,
+              "mean_waiting_time_stopped_seconds": 57.21135646687697,
+              "mean_pending_vehicles": 0.5611111111111111,
+              "unfinished_vehicles": 85,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 63,
+              "decisions": 191,
+              "phase_seconds": {
+                "pedestrian": 278,
+                "green_0": 480,
+                "yellow": 189,
+                "all_red": 63,
+                "green_1": 160,
+                "green_2": 480,
+                "green_3": 150
+              },
+              "mean_waiting_time_seconds": 51.90873786407767,
+              "mean_waiting_time_stopped_seconds": 56.93929712460064,
+              "mean_pending_vehicles": 5.7283333333333335,
+              "unfinished_vehicles": 71,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 63,
+              "decisions": 191,
+              "phase_seconds": {
+                "pedestrian": 278,
+                "green_0": 480,
+                "yellow": 189,
+                "all_red": 63,
+                "green_1": 160,
+                "green_2": 480,
+                "green_3": 150
+              },
+              "mean_waiting_time_seconds": 50.69676153091266,
+              "mean_waiting_time_stopped_seconds": 54.78260869565217,
+              "mean_pending_vehicles": 13.918333333333333,
+              "unfinished_vehicles": 72,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 51.74148496918762,
+            "ci95_low": 49.3268314617211,
+            "ci95_high": 54.156138476654135
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 56.31108742904326,
+            "ci95_low": 53.00524670970203,
+            "ci95_high": 59.616928148384496
+          },
+          "mean_pending_vehicles": {
+            "mean": 6.735925925925926,
+            "ci95_low": -9.997023922598572,
+            "ci95_high": 23.468875774450424
+          },
+          "unfinished_vehicles": {
+            "mean": 76.0,
+            "ci95_low": 56.596698313603085,
+            "ci95_high": 95.40330168639692
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          }
+        },
+        "max_pressure": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 100,
+              "decisions": 173,
+              "phase_seconds": {
+                "pedestrian": 62,
+                "green_0": 665,
+                "yellow": 273,
+                "all_red": 91,
+                "green_2": 509,
+                "green_1": 100,
+                "green_3": 100
+              },
+              "mean_waiting_time_seconds": 23.91588785046729,
+              "mean_waiting_time_stopped_seconds": 30.035211267605632,
+              "mean_pending_vehicles": 1.1755555555555555,
+              "unfinished_vehicles": 53,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 101,
+              "decisions": 167,
+              "phase_seconds": {
+                "pedestrian": 80,
+                "green_0": 654,
+                "yellow": 282,
+                "all_red": 94,
+                "green_2": 490,
+                "green_1": 100,
+                "green_3": 100
+              },
+              "mean_waiting_time_seconds": 26.25563909774436,
+              "mean_waiting_time_stopped_seconds": 31.45945945945946,
+              "mean_pending_vehicles": 6.485,
+              "unfinished_vehicles": 45,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 103,
+              "decisions": 156,
+              "phase_seconds": {
+                "pedestrian": 116,
+                "green_0": 579,
+                "yellow": 285,
+                "all_red": 95,
+                "green_2": 500,
+                "green_1": 110,
+                "green_3": 115
+              },
+              "mean_waiting_time_seconds": 27.641456582633054,
+              "mean_waiting_time_stopped_seconds": 32.00432432432432,
+              "mean_pending_vehicles": 0.4172222222222222,
+              "unfinished_vehicles": 39,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 25.937661176948236,
+            "ci95_low": 21.25958038496096,
+            "ci95_high": 30.615741968935513
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 31.16633168379647,
+            "ci95_low": 28.640363810895003,
+            "ci95_high": 33.69229955669794
+          },
+          "mean_pending_vehicles": {
+            "mean": 2.6925925925925926,
+            "ci95_low": -5.520966480540489,
+            "ci95_high": 10.906151665725675
+          },
+          "unfinished_vehicles": {
+            "mean": 45.666666666666664,
+            "ci95_low": 28.217248554751173,
+            "ci95_high": 63.116084778582156
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.49815135550987405,
+            "ci95_low": 0.3851405292193402,
+            "ci95_high": 0.6111621818004079
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.44609948726885423,
+            "ci95_low": 0.3724784985754072,
+            "ci95_high": 0.5197204759623013
+          }
+        },
+        "dqn_fase_livre": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 114,
+              "decisions": 166,
+              "phase_seconds": {
+                "pedestrian": 8,
+                "green_0": 548,
+                "yellow": 288,
+                "all_red": 96,
+                "green_2": 540,
+                "green_1": 220,
+                "green_3": 100
+              },
+              "mean_waiting_time_seconds": 24.444958371877892,
+              "mean_waiting_time_stopped_seconds": 29.459308807134896,
+              "mean_pending_vehicles": 0.07277777777777777,
+              "unfinished_vehicles": 43,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 116,
+              "decisions": 165,
+              "phase_seconds": {
+                "pedestrian": 8,
+                "green_0": 570,
+                "yellow": 285,
+                "all_red": 95,
+                "green_1": 145,
+                "green_2": 600,
+                "green_3": 97
+              },
+              "mean_waiting_time_seconds": 16.891224862888482,
+              "mean_waiting_time_stopped_seconds": 20.95124716553288,
+              "mean_pending_vehicles": 0.019444444444444445,
+              "unfinished_vehicles": 24,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 116,
+              "decisions": 168,
+              "phase_seconds": {
+                "pedestrian": 8,
+                "green_0": 595,
+                "yellow": 279,
+                "all_red": 93,
+                "green_2": 550,
+                "green_1": 185,
+                "green_3": 90
+              },
+              "mean_waiting_time_seconds": 19.234418604651164,
+              "mean_waiting_time_stopped_seconds": 24.18362573099415,
+              "mean_pending_vehicles": 0.01888888888888889,
+              "unfinished_vehicles": 35,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 20.19020061313918,
+            "ci95_low": 10.584494187062626,
+            "ci95_high": 29.795907039215734
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 24.86472723455398,
+            "ci95_low": 14.195166299174312,
+            "ci95_high": 35.534288169933646
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.037037037037037035,
+            "ci95_low": -0.0398622631788742,
+            "ci95_high": 0.11393633725294827
+          },
+          "unfinished_vehicles": {
+            "mean": 34.0,
+            "ci95_low": 10.300923935027903,
+            "ci95_high": 57.6990760649721
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.6102102327088669,
+            "ci95_low": 0.435906947167668,
+            "ci95_high": 0.7845135182500658
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.5585582045588333,
+            "ci95_low": 0.3760052462546944,
+            "ci95_high": 0.7411111628629723
+          }
+        }
+      }
+    },
+    "cruz-assimetrico/desbalanceada": {
+      "intersection": "cruz-assimetrico",
+      "demand": "desbalanceada",
+      "split": "test",
+      "green_phases": 4,
+      "incoming_lanes": 8,
+      "policies": {
+        "fixed_time": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 76,
+              "decisions": 225,
+              "phase_seconds": {
+                "green_0": 546,
+                "yellow": 228,
+                "all_red": 76,
+                "green_1": 190,
+                "green_2": 570,
+                "green_3": 190
+              },
+              "mean_waiting_time_seconds": 33.517489711934154,
+              "mean_waiting_time_stopped_seconds": 40.52114427860697,
+              "mean_pending_vehicles": 43.53944444444444,
+              "unfinished_vehicles": 48,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 76,
+              "decisions": 225,
+              "phase_seconds": {
+                "green_0": 546,
+                "yellow": 228,
+                "all_red": 76,
+                "green_1": 190,
+                "green_2": 570,
+                "green_3": 190
+              },
+              "mean_waiting_time_seconds": 35.454909819639276,
+              "mean_waiting_time_stopped_seconds": 41.874556213017755,
+              "mean_pending_vehicles": 28.783333333333335,
+              "unfinished_vehicles": 53,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 76,
+              "decisions": 225,
+              "phase_seconds": {
+                "green_0": 546,
+                "yellow": 228,
+                "all_red": 76,
+                "green_1": 190,
+                "green_2": 570,
+                "green_3": 190
+              },
+              "mean_waiting_time_seconds": 35.58617234468938,
+              "mean_waiting_time_stopped_seconds": 42.38066825775656,
+              "mean_pending_vehicles": 25.156666666666666,
+              "unfinished_vehicles": 56,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 34.852857292087606,
+            "ci95_low": 31.975190968734097,
+            "ci95_high": 37.730523615441115
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 41.592122916460426,
+            "ci95_low": 39.20368814456649,
+            "ci95_high": 43.98055768835436
+          },
+          "mean_pending_vehicles": {
+            "mean": 32.493148148148144,
+            "ci95_low": 8.303848009734843,
+            "ci95_high": 56.682448286561446
+          },
+          "unfinished_vehicles": {
+            "mean": 52.333333333333336,
+            "ci95_low": 42.293,
+            "ci95_high": 62.37366666666667
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          }
+        },
+        "max_pressure": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 119,
+              "decisions": 153,
+              "phase_seconds": {
+                "green_0": 556,
+                "yellow": 330,
+                "all_red": 110,
+                "green_2": 604,
+                "green_1": 110,
+                "green_3": 90
+              },
+              "mean_waiting_time_seconds": 19.329268292682926,
+              "mean_waiting_time_stopped_seconds": 23.68617683686177,
+              "mean_pending_vehicles": 45.16222222222222,
+              "unfinished_vehicles": 37,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 121,
+              "decisions": 151,
+              "phase_seconds": {
+                "green_0": 586,
+                "yellow": 330,
+                "all_red": 110,
+                "green_2": 584,
+                "green_1": 100,
+                "green_3": 90
+              },
+              "mean_waiting_time_seconds": 19.617296222664017,
+              "mean_waiting_time_stopped_seconds": 23.691476590636256,
+              "mean_pending_vehicles": 36.95777777777778,
+              "unfinished_vehicles": 41,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 117,
+              "decisions": 160,
+              "phase_seconds": {
+                "green_0": 587,
+                "yellow": 315,
+                "all_red": 105,
+                "green_2": 583,
+                "green_1": 110,
+                "green_3": 100
+              },
+              "mean_waiting_time_seconds": 20.668356997971603,
+              "mean_waiting_time_stopped_seconds": 25.035626535626534,
+              "mean_pending_vehicles": 35.55,
+              "unfinished_vehicles": 52,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 19.871640504439515,
+            "ci95_low": 18.12056462623237,
+            "ci95_high": 21.62271638264666
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 24.137759987708183,
+            "ci95_low": 22.20598889255931,
+            "ci95_high": 26.069531082857054
+          },
+          "mean_pending_vehicles": {
+            "mean": 39.22333333333333,
+            "ci95_low": 26.32670788083673,
+            "ci95_high": 52.11995878582993
+          },
+          "unfinished_vehicles": {
+            "mean": 43.333333333333336,
+            "ci95_low": 24.03635190848061,
+            "ci95_high": 62.63031475818606
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.4297359700931751,
+            "ci95_low": 0.392889001781022,
+            "ci95_high": 0.4665829384053282
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.419652158665607,
+            "ci95_low": 0.3873635813110027,
+            "ci95_high": 0.45194073602021134
+          }
+        },
+        "dqn_fase_livre": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 107,
+              "decisions": 177,
+              "phase_seconds": {
+                "green_0": 531,
+                "yellow": 291,
+                "all_red": 97,
+                "green_2": 671,
+                "green_1": 120,
+                "green_3": 90
+              },
+              "mean_waiting_time_seconds": 22.25711481844946,
+              "mean_waiting_time_stopped_seconds": 26.433566433566433,
+              "mean_pending_vehicles": 25.24888888888889,
+              "unfinished_vehicles": 46,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 105,
+              "decisions": 181,
+              "phase_seconds": {
+                "green_0": 571,
+                "yellow": 282,
+                "all_red": 94,
+                "green_2": 658,
+                "green_1": 110,
+                "green_3": 85
+              },
+              "mean_waiting_time_seconds": 20.880382775119617,
+              "mean_waiting_time_stopped_seconds": 25.342624854819977,
+              "mean_pending_vehicles": 19.252222222222223,
+              "unfinished_vehicles": 41,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 110,
+              "decisions": 173,
+              "phase_seconds": {
+                "green_0": 541,
+                "yellow": 294,
+                "all_red": 98,
+                "green_2": 667,
+                "green_1": 110,
+                "green_3": 90
+              },
+              "mean_waiting_time_seconds": 21.955383123181377,
+              "mean_waiting_time_stopped_seconds": 25.60633484162896,
+              "mean_pending_vehicles": 10.175555555555556,
+              "unfinished_vehicles": 53,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 21.697626905583487,
+            "ci95_low": 19.899823274116812,
+            "ci95_high": 23.49543053705016
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 25.79417537667179,
+            "ci95_low": 24.38006215267057,
+            "ci95_high": 27.208288600673015
+          },
+          "mean_pending_vehicles": {
+            "mean": 18.225555555555555,
+            "ci95_low": -0.6279163518030266,
+            "ci95_high": 37.07902746291414
+          },
+          "unfinished_vehicles": {
+            "mean": 46.666666666666664,
+            "ci95_low": 31.691787030719297,
+            "ci95_high": 61.64154630261403
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.3766878309338428,
+            "ci95_low": 0.2823854889472229,
+            "ci95_high": 0.4709901729204627
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.37941934271009536,
+            "ci95_low": 0.31107754641970525,
+            "ci95_high": 0.4477611390004855
+          }
+        }
+      }
+    },
+    "cruz-assimetrico/desbalanceada+ped": {
+      "intersection": "cruz-assimetrico",
+      "demand": "desbalanceada+ped",
+      "split": "test",
+      "green_phases": 4,
+      "incoming_lanes": 8,
+      "policies": {
+        "fixed_time": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 63,
+              "decisions": 191,
+              "phase_seconds": {
+                "pedestrian": 278,
+                "green_0": 480,
+                "yellow": 189,
+                "all_red": 63,
+                "green_1": 160,
+                "green_2": 480,
+                "green_3": 150
+              },
+              "mean_waiting_time_seconds": 57.22894168466523,
+              "mean_waiting_time_stopped_seconds": 62.27262044653349,
+              "mean_pending_vehicles": 64.38944444444445,
+              "unfinished_vehicles": 49,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 63,
+              "decisions": 191,
+              "phase_seconds": {
+                "pedestrian": 278,
+                "green_0": 480,
+                "yellow": 189,
+                "all_red": 63,
+                "green_1": 160,
+                "green_2": 480,
+                "green_3": 150
+              },
+              "mean_waiting_time_seconds": 58.196467991169975,
+              "mean_waiting_time_stopped_seconds": 63.4488567990373,
+              "mean_pending_vehicles": 66.24777777777778,
+              "unfinished_vehicles": 80,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 63,
+              "decisions": 191,
+              "phase_seconds": {
+                "pedestrian": 278,
+                "green_0": 480,
+                "yellow": 189,
+                "all_red": 63,
+                "green_1": 160,
+                "green_2": 480,
+                "green_3": 150
+              },
+              "mean_waiting_time_seconds": 57.830415754923415,
+              "mean_waiting_time_stopped_seconds": 63.83695652173913,
+              "mean_pending_vehicles": 55.66777777777778,
+              "unfinished_vehicles": 78,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 57.75194181025287,
+            "ci95_low": 56.53830913636568,
+            "ci95_high": 58.96557448414006
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 63.1861445891033,
+            "ci95_low": 61.16243782127068,
+            "ci95_high": 65.20985135693591
+          },
+          "mean_pending_vehicles": {
+            "mean": 62.10166666666667,
+            "ci95_low": 48.06800419204738,
+            "ci95_high": 76.13532914128595
+          },
+          "unfinished_vehicles": {
+            "mean": 69.0,
+            "ci95_low": 25.898342997822773,
+            "ci95_high": 112.10165700217723
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          }
+        },
+        "max_pressure": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 111,
+              "decisions": 144,
+              "phase_seconds": {
+                "pedestrian": 109,
+                "green_0": 575,
+                "yellow": 312,
+                "all_red": 104,
+                "green_2": 510,
+                "green_1": 100,
+                "green_3": 90
+              },
+              "mean_waiting_time_seconds": 22.588924387646433,
+              "mean_waiting_time_stopped_seconds": 27.054846938775512,
+              "mean_pending_vehicles": 69.37166666666667,
+              "unfinished_vehicles": 46,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 115,
+              "decisions": 154,
+              "phase_seconds": {
+                "pedestrian": 43,
+                "green_0": 605,
+                "yellow": 309,
+                "all_red": 103,
+                "green_2": 560,
+                "green_1": 90,
+                "green_3": 90
+              },
+              "mean_waiting_time_seconds": 20.495959595959597,
+              "mean_waiting_time_stopped_seconds": 24.388221153846153,
+              "mean_pending_vehicles": 46.580555555555556,
+              "unfinished_vehicles": 48,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 112,
+              "decisions": 154,
+              "phase_seconds": {
+                "pedestrian": 62,
+                "green_0": 603,
+                "yellow": 300,
+                "all_red": 100,
+                "green_2": 545,
+                "green_1": 100,
+                "green_3": 90
+              },
+              "mean_waiting_time_seconds": 20.658762886597938,
+              "mean_waiting_time_stopped_seconds": 24.955168119551683,
+              "mean_pending_vehicles": 49.60055555555556,
+              "unfinished_vehicles": 50,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 21.247882290067988,
+            "ci95_low": 18.355551710606004,
+            "ci95_high": 24.14021286952997
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 25.466078737391115,
+            "ci95_low": 21.9760517081034,
+            "ci95_high": 28.956105766678828
+          },
+          "mean_pending_vehicles": {
+            "mean": 55.18425925925926,
+            "ci95_low": 24.430400196150853,
+            "ci95_high": 85.93811832236766
+          },
+          "unfinished_vehicles": {
+            "mean": 48.0,
+            "ci95_low": 43.03132358335408,
+            "ci95_high": 52.96867641664592
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.631957586886413,
+            "ci95_low": 0.5742378072756745,
+            "ci95_high": 0.6896773664971515
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.5967484708784956,
+            "ci95_low": 0.5291171103756558,
+            "ci95_high": 0.6643798313813354
+          }
+        },
+        "dqn_fase_livre": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 106,
+              "decisions": 179,
+              "phase_seconds": {
+                "pedestrian": 8,
+                "green_0": 545,
+                "yellow": 270,
+                "all_red": 90,
+                "green_2": 697,
+                "green_1": 100,
+                "green_3": 90
+              },
+              "mean_waiting_time_seconds": 21.660818713450293,
+              "mean_waiting_time_stopped_seconds": 26.26950354609929,
+              "mean_pending_vehicles": 29.66777777777778,
+              "unfinished_vehicles": 41,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 103,
+              "decisions": 175,
+              "phase_seconds": {
+                "pedestrian": 44,
+                "green_0": 586,
+                "yellow": 270,
+                "all_red": 90,
+                "green_1": 105,
+                "green_2": 625,
+                "green_3": 80
+              },
+              "mean_waiting_time_seconds": 22.515594541910332,
+              "mean_waiting_time_stopped_seconds": 26.64475201845444,
+              "mean_pending_vehicles": 32.17333333333333,
+              "unfinished_vehicles": 39,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 101,
+              "decisions": 180,
+              "phase_seconds": {
+                "pedestrian": 26,
+                "green_0": 590,
+                "yellow": 273,
+                "all_red": 91,
+                "green_1": 100,
+                "green_2": 650,
+                "green_3": 70
+              },
+              "mean_waiting_time_seconds": 23.410905550146058,
+              "mean_waiting_time_stopped_seconds": 28.022144522144522,
+              "mean_pending_vehicles": 23.176111111111112,
+              "unfinished_vehicles": 49,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 22.52910626850223,
+            "ci95_low": 20.355008106878667,
+            "ci95_high": 24.70320443012579
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 26.978800028899418,
+            "ci95_low": 24.68616010426136,
+            "ci95_high": 29.271439953537474
+          },
+          "mean_pending_vehicles": {
+            "mean": 28.339074074074073,
+            "ci95_low": 16.803183404000578,
+            "ci95_high": 39.87496474414757
+          },
+          "unfinished_vehicles": {
+            "mean": 43.0,
+            "ci95_low": 29.85411785640335,
+            "ci95_high": 56.14588214359665
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.6099321864216766,
+            "ci95_low": 0.5765237075976132,
+            "ci95_high": 0.64334066524574
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.5730827747622508,
+            "ci95_low": 0.5470555828988911,
+            "ci95_high": 0.5991099666256104
+          }
+        }
+      }
+    },
+    "sp/calibrated": {
+      "intersection": "sp",
+      "demand": "calibrated",
+      "split": "test",
+      "green_phases": 2,
+      "incoming_lanes": 7,
+      "policies": {
+        "fixed_time": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 41,
+              "decisions": 287,
+              "phase_seconds": {
+                "green_0": 812,
+                "yellow": 123,
+                "all_red": 41,
+                "green_1": 824
+              },
+              "mean_waiting_time_seconds": 12.981236203090507,
+              "mean_waiting_time_stopped_seconds": 22.148775894538606,
+              "mean_pending_vehicles": 0.17555555555555555,
+              "unfinished_vehicles": 11,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 41,
+              "decisions": 287,
+              "phase_seconds": {
+                "green_0": 812,
+                "yellow": 123,
+                "all_red": 41,
+                "green_1": 824
+              },
+              "mean_waiting_time_seconds": 13.33042529989095,
+              "mean_waiting_time_stopped_seconds": 24.448,
+              "mean_pending_vehicles": 0.3338888888888889,
+              "unfinished_vehicles": 13,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 41,
+              "decisions": 287,
+              "phase_seconds": {
+                "green_0": 812,
+                "yellow": 123,
+                "all_red": 41,
+                "green_1": 824
+              },
+              "mean_waiting_time_seconds": 12.641196013289036,
+              "mean_waiting_time_stopped_seconds": 22.83,
+              "mean_pending_vehicles": 0.165,
+              "unfinished_vehicles": 11,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 12.984285838756831,
+            "ci95_low": 12.128121371373823,
+            "ci95_high": 13.84045030613984
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 23.14225863151287,
+            "ci95_low": 20.20828049115103,
+            "ci95_high": 26.07623677187471
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.2248148148148148,
+            "ci95_low": -0.010224064933727989,
+            "ci95_high": 0.45985369456335756
+          },
+          "unfinished_vehicles": {
+            "mean": 11.666666666666666,
+            "ci95_low": 8.798,
+            "ci95_high": 14.535333333333332
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          }
+        },
+        "max_pressure": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 123,
+              "decisions": 139,
+              "phase_seconds": {
+                "green_0": 681,
+                "yellow": 369,
+                "all_red": 123,
+                "green_1": 627
+              },
+              "mean_waiting_time_seconds": 4.407530454042082,
+              "mean_waiting_time_stopped_seconds": 7.552182163187855,
+              "mean_pending_vehicles": 0.0044444444444444444,
+              "unfinished_vehicles": 14,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 122,
+              "decisions": 142,
+              "phase_seconds": {
+                "green_0": 692,
+                "yellow": 366,
+                "all_red": 122,
+                "green_1": 620
+              },
+              "mean_waiting_time_seconds": 5.135076252723311,
+              "mean_waiting_time_stopped_seconds": 8.27017543859649,
+              "mean_pending_vehicles": 0.008888888888888889,
+              "unfinished_vehicles": 12,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 120,
+              "decisions": 146,
+              "phase_seconds": {
+                "green_0": 716,
+                "yellow": 360,
+                "all_red": 119,
+                "green_1": 605
+              },
+              "mean_waiting_time_seconds": 4.629711751662971,
+              "mean_waiting_time_stopped_seconds": 8.10873786407767,
+              "mean_pending_vehicles": 0.002777777777777778,
+              "unfinished_vehicles": 12,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 4.724106152809455,
+            "ci95_low": 3.7978328886385864,
+            "ci95_high": 5.650379416980323
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 7.977031821954005,
+            "ci95_low": 7.041229245810659,
+            "ci95_high": 8.912834398097349
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.00537037037037037,
+            "ci95_low": -0.0024777102076164155,
+            "ci95_high": 0.013218450948357156
+          },
+          "unfinished_vehicles": {
+            "mean": 12.666666666666666,
+            "ci95_low": 9.798,
+            "ci95_high": 15.535333333333332
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.6363381274884313,
+            "ci95_low": 0.5793205942395782,
+            "ci95_high": 0.6933556607372845
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.655189879720678,
+            "ci95_low": 0.6326306012660813,
+            "ci95_high": 0.6777491581752747
+          }
+        },
+        "dqn_fase_livre": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 107,
+              "decisions": 169,
+              "phase_seconds": {
+                "green_0": 801,
+                "yellow": 321,
+                "all_red": 107,
+                "green_1": 571
+              },
+              "mean_waiting_time_seconds": 4.240044247787611,
+              "mean_waiting_time_stopped_seconds": 7.935817805383023,
+              "mean_pending_vehicles": 0.0044444444444444444,
+              "unfinished_vehicles": 13,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 106,
+              "decisions": 172,
+              "phase_seconds": {
+                "green_0": 812,
+                "yellow": 318,
+                "all_red": 105,
+                "green_1": 565
+              },
+              "mean_waiting_time_seconds": 3.7707423580786026,
+              "mean_waiting_time_stopped_seconds": 7.692650334075724,
+              "mean_pending_vehicles": 0.0077777777777777776,
+              "unfinished_vehicles": 14,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 108,
+              "decisions": 167,
+              "phase_seconds": {
+                "green_0": 793,
+                "yellow": 324,
+                "all_red": 108,
+                "green_1": 575
+              },
+              "mean_waiting_time_seconds": 3.7876106194690267,
+              "mean_waiting_time_stopped_seconds": 7.962790697674419,
+              "mean_pending_vehicles": 0.0033333333333333335,
+              "unfinished_vehicles": 10,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 3.9327990751117468,
+            "ci95_low": 3.271429087210713,
+            "ci95_high": 4.594169063012781
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 7.863752945711055,
+            "ci95_low": 7.494104106922462,
+            "ci95_high": 8.233401784499648
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.005185185185185185,
+            "ci95_low": -0.000560995236415388,
+            "ci95_high": 0.010931365606785759
+          },
+          "unfinished_vehicles": {
+            "mean": 12.333333333333334,
+            "ci95_low": 7.161770953892819,
+            "ci95_high": 17.50489571277385
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.6969598484894038,
+            "ci95_low": 0.6421063605147411,
+            "ci95_high": 0.7518133364640666
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.6594213864432624,
+            "ci95_low": 0.6024065091234718,
+            "ci95_high": 0.716436263763053
+          }
+        },
+        "especialista_dqn_estado_v2": {
+          "runs": [
+            {
+              "seed": 201,
+              "mean_waiting_time_seconds": 4.254706533776301,
+              "mean_waiting_time_stopped_seconds": 8.316017316017316,
+              "mean_pending_vehicles": 0.005,
+              "unfinished_vehicles": null,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "mean_waiting_time_seconds": 3.9269356597600873,
+              "mean_waiting_time_stopped_seconds": 7.549266247379455,
+              "mean_pending_vehicles": 0.0077777777777777776,
+              "unfinished_vehicles": null,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "mean_waiting_time_seconds": 4.25638179800222,
+              "mean_waiting_time_stopped_seconds": 7.826530612244898,
+              "mean_pending_vehicles": 0.0033333333333333335,
+              "unfinished_vehicles": null,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 4.146007997179536,
+            "ci95_low": 3.6746692694746144,
+            "ci95_high": 4.617346724884459
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 7.8972713918805555,
+            "ci95_low": 6.932752898071925,
+            "ci95_high": 8.861789885689186
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.00537037037037037,
+            "ci95_low": -0.00020759259259259255,
+            "ci95_high": 0.010948333333333332
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.6803167250988312,
+            "ci95_low": 0.6251842592824758,
+            "ci95_high": 0.7354491909151867
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.6576439243587827,
+            "ci95_low": 0.5748188164747458,
+            "ci95_high": 0.7404690322428197
+          }
+        }
+      }
+    },
+    "sp/original": {
+      "intersection": "sp",
+      "demand": "original",
+      "split": "test",
+      "green_phases": 2,
+      "incoming_lanes": 7,
+      "policies": {
+        "fixed_time": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 41,
+              "decisions": 287,
+              "phase_seconds": {
+                "green_0": 812,
+                "yellow": 123,
+                "all_red": 41,
+                "green_1": 824
+              },
+              "mean_waiting_time_seconds": 14.943100995732575,
+              "mean_waiting_time_stopped_seconds": 22.688984881209503,
+              "mean_pending_vehicles": 17.531111111111112,
+              "unfinished_vehicles": 27,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 41,
+              "decisions": 287,
+              "phase_seconds": {
+                "green_0": 812,
+                "yellow": 123,
+                "all_red": 41,
+                "green_1": 824
+              },
+              "mean_waiting_time_seconds": 14.888096935138988,
+              "mean_waiting_time_stopped_seconds": 22.704347826086956,
+              "mean_pending_vehicles": 21.047777777777778,
+              "unfinished_vehicles": 25,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 41,
+              "decisions": 287,
+              "phase_seconds": {
+                "green_0": 812,
+                "yellow": 123,
+                "all_red": 41,
+                "green_1": 824
+              },
+              "mean_waiting_time_seconds": 15.007112375533428,
+              "mean_waiting_time_stopped_seconds": 22.71259418729817,
+              "mean_pending_vehicles": 18.441666666666666,
+              "unfinished_vehicles": 27,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 14.94610343546833,
+            "ci95_low": 14.79812507046322,
+            "ci95_high": 15.094081800473441
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 22.701975631531543,
+            "ci95_low": 22.672208084843177,
+            "ci95_high": 22.731743178219908
+          },
+          "mean_pending_vehicles": {
+            "mean": 19.006851851851852,
+            "ci95_low": 14.472467160505758,
+            "ci95_high": 23.541236543197947
+          },
+          "unfinished_vehicles": {
+            "mean": 26.333333333333332,
+            "ci95_low": 23.464666666666666,
+            "ci95_high": 29.201999999999998
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          }
+        },
+        "max_pressure": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 129,
+              "decisions": 129,
+              "phase_seconds": {
+                "green_0": 641,
+                "yellow": 387,
+                "all_red": 129,
+                "green_1": 643
+              },
+              "mean_waiting_time_seconds": 4.670352453351763,
+              "mean_waiting_time_stopped_seconds": 7.426373626373627,
+              "mean_pending_vehicles": 0.5472222222222223,
+              "unfinished_vehicles": 21,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 129,
+              "decisions": 129,
+              "phase_seconds": {
+                "green_0": 641,
+                "yellow": 387,
+                "all_red": 129,
+                "green_1": 643
+              },
+              "mean_waiting_time_seconds": 4.570441988950276,
+              "mean_waiting_time_stopped_seconds": 7.3533333333333335,
+              "mean_pending_vehicles": 0.535,
+              "unfinished_vehicles": 20,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 129,
+              "decisions": 129,
+              "phase_seconds": {
+                "green_0": 641,
+                "yellow": 387,
+                "all_red": 129,
+                "green_1": 643
+              },
+              "mean_waiting_time_seconds": 4.483425414364641,
+              "mean_waiting_time_stopped_seconds": 7.237458193979933,
+              "mean_pending_vehicles": 0.5483333333333333,
+              "unfinished_vehicles": 20,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 4.5747399522222265,
+            "ci95_low": 4.342360902312009,
+            "ci95_high": 4.807119002132444
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 7.339055051228964,
+            "ci95_low": 7.102387936848355,
+            "ci95_high": 7.575722165609574
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.5435185185185185,
+            "ci95_low": 0.5251390307981969,
+            "ci95_high": 0.5618980062388401
+          },
+          "unfinished_vehicles": {
+            "mean": 20.333333333333332,
+            "ci95_low": 18.898999999999997,
+            "ci95_high": 21.767666666666667
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.6939059762127572,
+            "ci95_low": 0.6766704380556029,
+            "ci95_high": 0.7111415143699115
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.6767202760667432,
+            "ci95_low": 0.6658901443520653,
+            "ci95_high": 0.6875504077814212
+          }
+        },
+        "dqn_fase_livre": {
+          "runs": [
+            {
+              "seed": 201,
+              "switches": 129,
+              "decisions": 130,
+              "phase_seconds": {
+                "green_0": 641,
+                "yellow": 386,
+                "all_red": 128,
+                "green_1": 645
+              },
+              "mean_waiting_time_seconds": 4.510020732550104,
+              "mean_waiting_time_stopped_seconds": 7.267260579064588,
+              "mean_pending_vehicles": 0.54,
+              "unfinished_vehicles": 21,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "switches": 128,
+              "decisions": 130,
+              "phase_seconds": {
+                "green_0": 643,
+                "yellow": 384,
+                "all_red": 128,
+                "green_1": 645
+              },
+              "mean_waiting_time_seconds": 4.600138121546961,
+              "mean_waiting_time_stopped_seconds": 7.376522702104097,
+              "mean_pending_vehicles": 0.54,
+              "unfinished_vehicles": 20,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "switches": 128,
+              "decisions": 130,
+              "phase_seconds": {
+                "green_0": 643,
+                "yellow": 384,
+                "all_red": 128,
+                "green_1": 645
+              },
+              "mean_waiting_time_seconds": 4.382596685082873,
+              "mean_waiting_time_stopped_seconds": 7.219567690557452,
+              "mean_pending_vehicles": 0.5311111111111111,
+              "unfinished_vehicles": 20,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 4.497585179726646,
+            "ci95_low": 4.2260406337328,
+            "ci95_high": 4.769129725720492
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 7.287783657242045,
+            "ci95_low": 7.087881379591855,
+            "ci95_high": 7.487685934892235
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.5370370370370371,
+            "ci95_low": 0.5242874074074074,
+            "ci95_high": 0.5497866666666668
+          },
+          "unfinished_vehicles": {
+            "mean": 20.333333333333332,
+            "ci95_low": 18.898999999999997,
+            "ci95_high": 21.767666666666667
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.699057172296917,
+            "ci95_low": 0.6779239368894151,
+            "ci95_high": 0.7201904077044189
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.6789799816326255,
+            "ci95_low": 0.6701127413655721,
+            "ci95_high": 0.687847221899679
+          }
+        },
+        "especialista_dqn_estado_v2": {
+          "runs": [
+            {
+              "seed": 201,
+              "mean_waiting_time_seconds": 4.596963423050379,
+              "mean_waiting_time_stopped_seconds": 7.401111111111111,
+              "mean_pending_vehicles": 0.5438888888888889,
+              "unfinished_vehicles": null,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 202,
+              "mean_waiting_time_seconds": 4.461325966850829,
+              "mean_waiting_time_stopped_seconds": 7.177777777777778,
+              "mean_pending_vehicles": 0.545,
+              "unfinished_vehicles": null,
+              "teleported_vehicles": 0
+            },
+            {
+              "seed": 203,
+              "mean_waiting_time_seconds": 4.357044198895028,
+              "mean_waiting_time_stopped_seconds": 7.153061224489796,
+              "mean_pending_vehicles": 0.5305555555555556,
+              "unfinished_vehicles": null,
+              "teleported_vehicles": 0
+            }
+          ],
+          "mean_waiting_time_seconds": {
+            "mean": 4.471777862932079,
+            "ci95_low": 4.172910426307731,
+            "ci95_high": 4.770645299556427
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 7.243983371126228,
+            "ci95_low": 6.904531740120119,
+            "ci95_high": 7.583435002132336
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.5398148148148149,
+            "ci95_low": 0.5198457646434564,
+            "ci95_high": 0.5597838649861733
+          },
+          "teleported_vehicles": {
+            "mean": 0.0,
+            "ci95_low": 0.0,
+            "ci95_high": 0.0
+          },
+          "reduction_mean_waiting_time_seconds": {
+            "mean": 0.7007932198133823,
+            "ci95_low": 0.6792828375836923,
+            "ci95_high": 0.7223036020430722
+          },
+          "reduction_mean_waiting_time_stopped_seconds": {
+            "mean": 0.6809074550397402,
+            "ci95_low": 0.665546297759975,
+            "ci95_high": 0.6962686123195053
+          }
+        }
+      }
+    }
+  }
+}

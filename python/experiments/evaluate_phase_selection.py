@@ -74,7 +74,7 @@ def main() -> None:
     base_dir = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description="Avalia a seleção livre de fase nos cruzamentos de teste.")
     parser.add_argument("--config", type=Path, default=base_dir / "configs" / "generic.yaml")
-    parser.add_argument("--dqn-model", type=Path, default=base_dir.parent / "results" / "models" / "dqn-fase-livre-rl-best.pt")
+    parser.add_argument("--dqn-model", type=Path, default=base_dir.parent / "results" / "models" / "dqn-fase-livre-v3-best.pt")
     parser.add_argument("--split", default="test", help="test, train ou all.")
     parser.add_argument("--seeds", default="201,202,203")
     parser.add_argument("--output", type=Path, default=base_dir.parent / "results" / "evaluation" / "fase-livre-test.json")
