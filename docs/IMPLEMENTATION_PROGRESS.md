@@ -298,6 +298,26 @@ continua a de antes (depois de todo verde Sul), porque lá a ordem é fixa.
   Espera dos pedestres no `calibrated_ped`: 24,2 s (*ground truth* 23,2; max-pressure 24,2;
   especialista 25,0). Fila de inserção média ≤ 0,3 veículo. A visão custa
   ao global +0,2 s e +1,0 s (não significativos), na ordem do especialista.
+- Teste de sensibilidade (pedido do usuário): a regra por tempo (N = 40 s)
+  também no SP, só como registro (`compare_versions --pedestrian-interval 40`,
+  `versoes-calibrated_ped-oracle-10seeds-ped-tempo40.json`; o padrão do SP
+  continua "depois de todo verde Sul"). Seeds 201–210, *ground truth*,
+  veículos / pedestres (s), regra atual → por tempo:
+
+  | Controlador | Regra atual | Por tempo (40 s) |
+  |---|---|---|
+  | Tempo fixo | 20,7 / 55,2 | 28,5 / 28,5 |
+  | Max-pressure | 26,5 / 20,9 | 16,2 / 33,6 |
+  | Especialista (v2) | 14,1 / 22,4 | 10,9 / 33,6 |
+  | Global `ped40` | 14,7 / 22,9 | 12,4 / 33,9 |
+
+  Com ciclos curtos (controle adaptativo), "a cada verde Sul" dá a fase de
+  pedestres com mais frequência que "40 s + a próxima troca": os veículos
+  melhoram e os pedestres pioram ~11 s (nível C → D do HCM). No tempo fixo
+  (ciclo de ~109 s) é o contrário. A ordem não muda: o global vence o
+  max-pressure (−3,8 s, p < 0,001) e fica atrás do especialista (+1,5 s);
+  pedestres empatados entre os três adaptativos. A regra só troca espera de
+  pedestre por espera de veículo; mantida a regra atual no SP.
 - Tentativa descartada: ajuste fino do `ped40` (480 episódios, lr 3·10⁻⁴,
   validação em 3 seeds; `dqn-fase-livre-ped40b-*`). Venceu na validação, mas
   no teste não melhorou a baixa (+0,6 s, p = 0,09) e piorou o SP com

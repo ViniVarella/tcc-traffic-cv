@@ -115,6 +115,9 @@ class GlobalPhasePolicy:
         pedestrians = sp_config.get("pedestrians", {})
         self.pedestrian_s = (float(pedestrians.get("green_seconds", 0)) + float(pedestrians.get("clearance_seconds", 0))
                              if pedestrian_phase else 0.0)
+        # Regra por tempo (teste de sensibilidade): a fase vem ao sair de qualquer verde quando pendente.
+        self.pedestrian_by_time = bool(self.pedestrian_s) and pedestrians.get("interval_seconds") is not None
+        self.controller: Any | None = None
         if self.pedestrian_s and int(pedestrians.get("every_cycles", 1)) != 1:
             raise ValueError("O modelo global só representa a fase de pedestres a cada ciclo (every_cycles = 1).")
         # A fase de pedestres vem depois do verde Sul (secondary_green do programa).
@@ -129,7 +132,13 @@ class GlobalPhasePolicy:
         self.max_green_s = environment.max_green_s
         self.transition_s = environment.yellow_s + environment.all_red_s
 
+    def bind_controller(self, controller: Any) -> None:
+        self.controller = controller
+
     def leave_seconds(self, phase: int) -> float:
+        if self.pedestrian_by_time:
+            due = self.controller is not None and self.controller.pedestrian_due()
+            return self.transition_s + (self.pedestrian_s if due else 0.0)
         return self.transition_s + (self.pedestrian_s if phase == self.pedestrian_after else 0.0)
 
     def observation(self, state: np.ndarray, lane_features: Mapping[tuple[str, str], Any], phase: Any) -> Any:
