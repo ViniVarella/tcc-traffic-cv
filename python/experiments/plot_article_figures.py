@@ -231,17 +231,17 @@ def figure_architecture(output: Path) -> None:
     blue, orange, aqua, gray = COLORS["global"], COLORS["max_pressure"], COLORS["v2"], "#8a8984"
     w, h = 2.5, 1.1
     left, middle, right = 0.05, 3.75, 7.45
-    box(ax, (left, 2.6), (w, h), "SUMO\nsimulação do cruzamento\n(demanda medida por drone)", gray, True)
+    box(ax, (left, 2.6), (w, h), "SUMO\nsimulação microscópica\n(demanda do drone)", gray, True)
     box(ax, (middle, 2.6), (w, h), "Unity\ngêmeo digital 3D\n(3 câmeras)", aqua, True)
-    box(ax, (right, 2.6), (w, h), "YOLOv8 + ByteTrack\ndetecção e rastreamento\nde veículos", orange, True)
+    box(ax, (right, 2.6), (w, h), "YOLOv8 + ByteTrack\ndetecção e\nrastreamento", orange, True)
     box(ax, (right, 0.3), (w, h), "Atributos por faixa\n(ROIs de 60 m e\nhomografia)", orange)
-    box(ax, (middle, 0.3), (w, h), "Agente DQN\nescolhe a próxima fase", blue, True)
+    box(ax, (middle, 0.3), (w, h), "Agente DQN\nescolhe o\npróximo estágio", blue, True)
     box(ax, (left, 0.3), (w, h), "Camada de segurança\nverde mín./máx., amarelo,\npedestres e viaturas", gray)
     arrow(ax, (left + w, 3.15), (middle, 3.15), "estado")
     arrow(ax, (middle + w, 3.15), (right, 3.15), "imagens")
     arrow(ax, (right + w / 2, 2.6), (right + w / 2, 1.4))
-    arrow(ax, (right, 0.85), (middle + w, 0.85), "filas e esperas")
-    arrow(ax, (middle, 0.85), (left + w, 0.85), "fase escolhida")
+    arrow(ax, (right, 0.85), (middle + w, 0.85), "filas")
+    arrow(ax, (middle, 0.85), (left + w, 0.85), "estágio")
     arrow(ax, (left + w / 2, 1.4), (left + w / 2, 2.6))
     ax.text(left + w / 2 + 0.1, 2.0, "TraCI", fontsize=6.5, color=MUTED, va="center")
     fig.savefig(output)
@@ -257,17 +257,17 @@ def figure_model(output: Path) -> None:
     names = ["A", "B", "C"]
     for i, name in enumerate(names):
         y = 3.4 - i * 0.95
-        box(ax, (0.05, y), (1.9, 0.65), f"Fase {name}\n21 atributos", gray)
+        box(ax, (0.05, y), (1.9, 0.65), f"Estágio {name}\n21 atributos", gray)
         box(ax, (2.45, y), (1.6, 0.65), "rede φ\n(compartilhada)", blue)
-        box(ax, (6.65, y), (1.5, 0.65), f"nota Q(fase {name})", blue)
+        box(ax, (6.65, y), (1.5, 0.65), f"nota Q\n(estágio {name})", blue)
         arrow(ax, (1.95, y + 0.32), (2.45, y + 0.32))
         arrow(ax, (4.05, y + 0.32), (6.65, y + 0.32))
         arrow(ax, (4.05, y + 0.32), (4.9, 1.0))
         arrow(ax, (8.15, y + 0.32), (8.6, 2.15))
-    ax.text(1.0, 0.75, "… até 8 fases", ha="center", fontsize=7.5, color=MUTED)
-    box(ax, (4.3, 0.1), (2.0, 0.85), "resumo do cruzamento\n(média e máximo)", orange)
+    ax.text(1.0, 0.75, "… até 8 estágios", ha="center", fontsize=7.5, color=MUTED)
+    box(ax, (4.3, 0.1), (2.0, 0.85), "resumo do\ncruzamento\n(média e máximo)", orange)
     arrow(ax, (6.3, 0.55), (7.4, 1.5))
-    box(ax, (8.6, 1.75), (1.35, 0.8), "abre a fase\nde maior nota", blue, True)
+    box(ax, (8.6, 1.75), (1.35, 0.8), "abre o\nestágio de\nmaior nota", blue, True)
     fig.savefig(output)
     plt.close(fig)
 
