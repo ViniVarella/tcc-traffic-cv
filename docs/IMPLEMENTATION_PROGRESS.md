@@ -298,6 +298,13 @@ continua a de antes (depois de todo verde Sul), porque lá a ordem é fixa.
   Espera dos pedestres no `calibrated_ped`: 24,2 s (*ground truth* 23,2; max-pressure 24,2;
   especialista 25,0). Fila de inserção média ≤ 0,3 veículo. A visão custa
   ao global +0,2 s e +1,0 s (não significativos), na ordem do especialista.
+- Preempção com câmeras (`preempcao-calibrated-visual-global.json`,
+  `calibrated`, seeds 201–203, 18 viaturas, `missing_frames` = 0), perda total
+  (entrada + rede) / sem parar, contra o especialista com câmeras
+  (`preempcao-calibrated-visual.json`): V2I 1,3 s / 18 de 18 (especialista
+  1,4 s / 18); só visão 4,2 s / 14 de 18 (especialista 2,7 s / 16); ambos
+  1,4 s / 18 de 18 (1,4 s / 18). Visão: 18/18 detectadas, 0 alarmes falsos.
+  Só a detecção visual fica pior que no especialista (3 seeds; não testado).
 - Teste de sensibilidade (pedido do usuário): a regra por tempo (N = 40 s)
   também no SP, só como registro (`compare_versions --pedestrian-interval 40`,
   `versoes-calibrated_ped-oracle-10seeds-ped-tempo40.json`; o padrão do SP
