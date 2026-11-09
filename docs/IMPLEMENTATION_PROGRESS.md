@@ -286,6 +286,18 @@ continua a de antes (depois de todo verde Sul), porque lá a ordem é fixa.
   divide a capacidade entre cenários com e sem pedestres.
 - Preempção (V2I, `preempcao-*-oracle-global-ped40.json`): 18/18 viaturas sem
   parar; perda média 0,4 s (`calibrated`) e 0,9 s (`calibrated_ped`).
+- Percepção visual (Unity, YOLO de 2 classes + ByteTrack, seeds 201–203,
+  `missing_frames` = 0; `versoes-*-visual-global.json`), espera média (s),
+  teste t pareado; as outras versões vêm de `versoes-*-visual.json`:
+
+  | Cenário | Global visual | Global *ground truth* | Especialista visual | Max-pressure visual | Tempo fixo visual |
+  |---|---|---|---|---|---|
+  | `calibrated` | 4,67 | 4,49 (p = 0,26) | 4,31 (p = 0,015) | 4,77 (p = 0,64) | 12,98 (−64%) |
+  | `calibrated_ped` | 15,6 | 14,7 (p = 0,17) | 14,2 (p = 0,08) | 21,0 (p = 0,011) | 20,8 (−25%) |
+
+  Espera dos pedestres no `calibrated_ped`: 24,2 s (*ground truth* 23,2; max-pressure 24,2;
+  especialista 25,0). Fila de inserção média ≤ 0,3 veículo. A visão custa
+  ao global +0,2 s e +1,0 s (não significativos), na ordem do especialista.
 - Tentativa descartada: ajuste fino do `ped40` (480 episódios, lr 3·10⁻⁴,
   validação em 3 seeds; `dqn-fase-livre-ped40b-*`). Venceu na validação, mas
   no teste não melhorou a baixa (+0,6 s, p = 0,09) e piorou o SP com
