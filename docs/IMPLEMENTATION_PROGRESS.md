@@ -52,14 +52,20 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Prova de conceito com os detectores do SUMO vira a v1 do produto, e as
   demais sobem um número (atual: v5): 2026-10-20 — seção **Numeração do
   produto com a prova de conceito** abaixo.
-- Experimento: um DQN genérico com escolha livre de fase, para qualquer
-  cruzamento, treinado só em cruzamentos sintéticos: 2026-11-05 — seção
-  **Experimento: DQN genérico com seleção livre de fase** abaixo.
+- Modelo global (TraffIQ v6.0, atual): um DQN com escolha livre de fase,
+  para qualquer cruzamento, treinado só em cruzamentos sintéticos. Começou
+  como experimento em 2026-11-05 e passou a versão do produto depois do
+  retreino com a fase de pedestres por tempo (`dqn-fase-livre-ped40-best.pt`,
+  2026-11-08) — seção **Modelo global** abaixo.
 
-## Experimento: DQN genérico com seleção livre de fase (2026-11-05)
+## Modelo global: DQN genérico com seleção livre de fase (2026-11-05; TraffIQ v6.0)
 
-Branch `feat/selecao-livre-de-fase`. É **experimento**, não versão do produto:
-o TraffIQ v5 continua com o DQN estado v2 (`dqn-v2-traffiq-best.pt`).
+Branch `feat/selecao-livre-de-fase`. Começou como **experimento**, ao lado do
+TraffIQ v5.0 (DQN estado v2, `dqn-v2-traffiq-best.pt`), e é a **versão atual
+do produto, v6.0** (id `global` no código, checkpoint
+`dqn-fase-livre-ped40-best.pt`). Os trechos abaixo que o chamam de
+experimento ou dizem que "não é versão do produto" são o registro de cada
+etapa, escritos antes dessa decisão.
 
 **Pergunta.** Um único modelo, sem treino por cruzamento, controla
 cruzamentos com outros números de faixas e de fases? E ele pode escolher a
@@ -221,9 +227,9 @@ Percepção *ground truth*, seeds 201–203, espera média / espera parado (s):
 - Sem pedestres, o `cruz-assimetrico` piorou 1–3 s em relação ao checkpoint
   `rl`. Na demanda desbalanceada, o max-pressure tem a menor espera, mas
   deixa cerca do dobro de veículos na fila de inserção.
-- **10 seeds (201–210), teste t pareado** (`docs/artigo/estatisticas.md`,
-  gerado por `experiments.plot_article_figures` a partir de
-  `versoes-*-oracle-10seeds*.json` e `fase-livre-*-test-10seeds.json`):
+- **10 seeds (201–210), teste t pareado** (a partir de
+  `versoes-*-oracle-10seeds*.json` e `fase-livre-*-test-10seeds.json`; as
+  estatísticas e figuras do artigo ficam na branch `docs/artigo-final`):
   - SP `calibrated`: 4,0 s contra max-pressure 5,0 s (p < 0,001) e
     especialista 4,2 s (p = 0,056);
   - SP `calibrated_ped`: 13,1 s contra especialista 14,1 s (p < 0,001, 10/10
@@ -305,6 +311,10 @@ continua a de antes (depois de todo verde Sul), porque lá a ordem é fixa.
   1,4 s / 18); só visão 4,2 s / 14 de 18 (especialista 2,7 s / 16); ambos
   1,4 s / 18 de 18 (1,4 s / 18). Visão: 18/18 detectadas, 0 alarmes falsos.
   Só a detecção visual fica pior que no especialista (3 seeds; não testado).
+  Sem preempção, também com câmeras (`preempcao-calibrated-visual-global-v2i.json`,
+  2026-11-10, `missing_frames` = 0, mesmo comando com `--detections v2i`):
+  9,8 s / 6 de 18 (*ground truth*: 10,8 s / 7 de 18); o V2I da mesma rodada
+  repetiu 1,3 s / 18 de 18. Espera do tráfego 4,6 s sem e 4,8 s com preempção.
 - Teste de sensibilidade (pedido do usuário): a regra por tempo (N = 40 s)
   também no SP, só como registro (`compare_versions --pedestrian-interval 40`,
   `versoes-calibrated_ped-oracle-10seeds-ped-tempo40.json`; o padrão do SP
