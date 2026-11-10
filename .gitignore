@@ -149,3 +149,6 @@ optimization/*/*_last.keras
 /Artigo*.docx
 /Template TCC.pdf
 /~$*
+
+# Dependências do gerador do artigo
+docs/artigo/gerador/node_modules/
