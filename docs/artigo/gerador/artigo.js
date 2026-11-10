@@ -1,4 +1,4 @@
-// Gera o rascunho do artigo final do TCC 2 (ABNT) em .docx.
+// Gera o artigo final do TCC 2 (ABNT) em .docx, no template de 2026.2 (máximo de 12 páginas com capa e referências).
 const fs = require("fs");
 const path = require("path");
 const {
@@ -139,63 +139,69 @@ const cover = [
 ];
 
 const body = [
-  h1("1. Resumo"),
+  h1("Resumo"),
   p("Este trabalho apresenta o TraffIQ, um sistema de controle semafórico adaptativo baseado em visão computacional e aprendizado por reforço profundo, avaliado em um cruzamento real de São Paulo. A demanda foi medida por filmagem aérea com drone e reproduzida no simulador SUMO; um gêmeo digital no Unity gera as imagens de três câmeras virtuais, das quais o YOLOv8 e o ByteTrack extraem filas e esperas por faixa. Um agente *Deep Q-Network* (DQN) decide os estágios sob uma camada de segurança que inclui um estágio exclusivo de pedestres e prioridade para veículos de emergência. Propõe-se um modelo global, com pesos compartilhados entre os estágios, que controla cruzamentos com qualquer número de faixas e de estágios sem novo treino e foi treinado apenas em cruzamentos sintéticos. Em dez repetições, ele reduziu a espera média no cruzamento estudado em 29% em relação ao tempo fixo no cenário com pedestres (20,7 s para 14,7 s), contra 26,5 s do *max-pressure*, e em 66% sem pedestres (12,9 s para 4,4 s). Em um cruzamento nunca visto no treino, venceu o *max-pressure* em três de seis cenários, empatou em dois e perdeu em um."),
-  p("**Palavras-chave:** controle semafórico adaptativo; aprendizado por reforço; visão computacional; gêmeo digital; generalização.", { noIndent: true }),
+  p("**Palavras-chave:** Controle semafórico adaptativo. Aprendizado por reforço. Visão computacional. Gêmeo digital. Generalização.", { noIndent: true }),
 
-  h1("2. Introdução"),
+  h1("Abstract"),
+  p("This work presents TraffIQ, an adaptive traffic signal control system based on computer vision and deep reinforcement learning, evaluated at a real intersection in São Paulo, Brazil. Traffic demand was measured from aerial drone footage and reproduced in the SUMO simulator; a digital twin in Unity renders the images of three virtual cameras, from which YOLOv8 and ByteTrack extract per-lane queues and waiting times. A Deep Q-Network (DQN) agent selects the signal stages under a safety layer that includes an exclusive pedestrian stage and priority for emergency vehicles. We propose a global model, with weights shared across stages, that controls intersections with any number of lanes and stages without retraining and was trained only on synthetic intersections. Over ten runs, it reduced the mean waiting time at the studied intersection by 29% relative to fixed-time control in the scenario with pedestrians (20.7 s to 14.7 s), against 26.5 s for max-pressure, and by 66% without pedestrians (12.9 s to 4.4 s). At an intersection never seen in training, it outperformed max-pressure in three of six scenarios, tied in two and lost in one."),
+  p("**Keywords:** Adaptive traffic signal control. Reinforcement learning. Computer vision. Digital twin. Generalization.", { noIndent: true }),
+
+  h1("1. Introdução"),
   p("São Paulo enfrenta sérios desafios de mobilidade: os motoristas perdem mais de 130 horas por ano em congestionamentos (TOMTOM, 2025), com custo econômico-social estimado em R$ 77,7 bilhões (KALAF, 2020). Ainda assim, predominam os planos de tempo fixo, que não se ajustam à demanda."),
   p("No Aprendizado por Reforço (*Reinforcement Learning* – RL), um agente aprende uma política pela interação com o ambiente, guiado por recompensas (SUTTON; BARTO, 2018). O *Deep Q-Network* (DQN) combina redes neurais profundas e *Q-Learning* (MNIH et al., 2015), e o *Double DQN* reduz a superestimação dos valores de ação (VAN HASSELT; GUEZ; SILVER, 2016). O DQN já foi aplicado a cruzamentos isolados (GENDERS; RAZAVI, 2016) e à cooperação entre cruzamentos (WEI et al., 2019). Uma referência clássica sem aprendizado é o *max-pressure* (VARAIYA, 2013), que dá o verde ao estágio com maior pressão de filas."),
   p("Duas limitações são recorrentes: o modelo fica preso ao cruzamento de treino, pois o estado tem uma posição fixa para cada faixa, o que representações por estágio buscam evitar (ZHENG et al., 2019; OROOJLOOY et al., 2020); e a percepção usa sensores perfeitos do simulador, indisponíveis em campo. Este trabalho trata as duas."),
-  h2("2.1 Justificativa"),
+  h2("1.1 Justificativa"),
   p("Uma solução que atue por software sobre câmeras e controladores existentes, sem obras, tem baixo custo, e um modelo que dispense novo treino em cada cruzamento facilita a implantação em larga escala. O trabalho alinha-se ao Objetivo de Desenvolvimento Sustentável 11 da ONU, Cidades e Comunidades Sustentáveis (ONU, 2015)."),
 
-  h1("3. Objetivos"),
-  h2("3.1 Objetivo Geral"),
+  h1("2. Objetivos"),
+  h2("2.1 Objetivo Geral"),
   p("Desenvolver e avaliar um sistema de controle semafórico adaptativo baseado em visão computacional e aprendizado por reforço profundo, capaz de reduzir a espera dos veículos em um cruzamento real de São Paulo e de ser aplicado a outros cruzamentos sem novo treinamento."),
-  h2("3.2 Objetivos Específicos"),
+  h2("2.2 Objetivos Específicos"),
   bullet("Medir a demanda de um cruzamento real com drone e reproduzi-la no SUMO;"),
   bullet("Extrair, das câmeras de um gêmeo digital no Unity, as filas e esperas por faixa com YOLOv8 e ByteTrack;"),
   bullet("Treinar agentes DQN sob uma camada de segurança, com estágio de pedestres e prioridade para emergências;"),
   bullet("Propor um modelo global, independente do número de faixas e de estágios, treinado só em cruzamentos sintéticos;"),
   bullet("Comparar os controladores com o tempo fixo e o *max-pressure* em repetições independentes, com testes estatísticos."),
 
-  h1("4. Metodologia"),
+  h1("3. Metodologia"),
   p("A pesquisa é quantitativa e experimental, baseada em simulação: os controladores foram comparados no mesmo ambiente, mudando só a decisão do semáforo. Cada execução tem 300 s de aquecimento e 1800 s de controle. Os resultados finais usam dez sementes (201 a 210), disjuntas das de treino e de validação; a mesma semente gera a mesma demanda para todos os controladores, o que permite o teste *t* pareado (média, IC 95% e valor-*p*). As métricas são a espera média por veículo, a espera dos veículos que pararam e a fila de inserção (veículos que ainda não entraram na rede). As referências são o tempo fixo, que reproduz o programa do cruzamento, e o *max-pressure*. O treino usa a percepção *ground truth* (posições reais dos veículos) e a espera do simulador como recompensa; a avaliação usa também as câmeras."),
-  p("O SUMO (LOPEZ et al., 2018) é um simulador microscópico aberto, controlado passo a passo pela interface TraCI (ECLIPSE SUMO, 2026). O gêmeo digital no Unity foi construído a partir do SUMO2Unity (MOHAMMADI et al., 2024), do qual se aproveitaram o importador da rede do SUMO e os recursos visuais; a comunicação em tempo real entre o simulador, o Unity e o controlador foi desenvolvida neste trabalho. O YOLOv8 (JOCHER; CHAURASIA; QIU, 2023) foi ajustado com imagens do próprio gêmeo, e o rastreamento usa o ByteTrack (ZHANG et al., 2022). Os agentes foram implementados com PyTorch (PASZKE et al., 2019)."),
+  p("O SUMO (LOPEZ et al., 2018), simulador microscópico aberto, foi escolhido por ser controlado passo a passo pela interface TraCI (ECLIPSE SUMO, 2026), o que permite decidir o semáforo a cada segundo e repetir a mesma demanda para todos os controladores. O Unity gera as imagens das câmeras com controle total da cena; o gêmeo digital foi construído a partir do SUMO2Unity (MOHAMMADI et al., 2024), do qual se aproveitaram o importador da rede do SUMO e os recursos visuais, e a comunicação em tempo real entre o simulador, o Unity e o controlador foi desenvolvida neste trabalho. O YOLOv8 (JOCHER; CHAURASIA; QIU, 2023), escolhido por detectar em tempo real, foi ajustado com imagens do próprio gêmeo; o ByteTrack (ZHANG et al., 2022) mantém a identidade dos veículos entre quadros mesmo com detecções de baixa confiança. Os agentes foram implementados com PyTorch (PASZKE et al., 2019), que facilita redes com pesos compartilhados entre estágios."),
 
-  h1("5. Desenvolvimento"),
-  h2("5.1 Dados de campo e simulação"),
+  h1("4. Desenvolvimento e Resultados"),
+  h2("4.1 Dados de campo e simulação"),
   p("O cruzamento fica em Santo Amaro, São Paulo. Uma filmagem aérea de 13 minutos foi processada com o SimJamComputerVision (ROADWAYVR, 2026), que conta e rastreia os veículos por faixa, e a geometria foi importada do OpenStreetMap. As motocicletas foram retiradas da demanda, pois circulam entre as faixas e não formam fila. A demanda resultante é de 976 veículos/h no Leste, 727 no Sul e 139 no Oeste, com chegadas de Poisson. Foram avaliados três cenários: a demanda medida, com e sem pedestres, e uma demanda equilibrada."),
   p("O semáforo tem dois estágios verdes, Leste/Oeste e Sul. Uma camada de segurança executa todas as decisões e impõe verde mínimo de 10 s e máximo de 40 s, amarelo de 3 s e vermelho geral de 1 s. No cenário com pedestres, um estágio exclusivo (7 s de verde e 11 s de liberação, com todos os veículos no vermelho) ocorre após cada verde do Sul. As viaturas de emergência avisam o controlador da aproximação e do tempo de chegada (V2I, *vehicle-to-infrastructure*) e também são detectadas pelas câmeras; enquanto têm prioridade, o verde delas é mantido sem consultar a política."),
-  h2("5.2 Gêmeo digital e percepção visual"),
+  h2("4.2 Gêmeo digital e percepção visual"),
   p("O Python é o único cliente do SUMO. A cada passo, envia o estado da simulação ao Unity, que renderiza a cena e devolve as imagens de três câmeras (Figura 1). Em cada imagem, o detector localiza os veículos, o rastreador os acompanha e uma homografia projeta cada um sobre sua faixa, dentro de uma região de interesse de 60 m antes da linha de retenção (Figura 2). O detector foi ajustado com 18.000 imagens sintéticas rotuladas automaticamente, em duas classes (veículo e veículo de emergência), e atingiu mAP50 de 0,995 na validação."),
   ...figure("fig-arquitetura.png", "Arquitetura do sistema", 12),
   ...figure("fig-carros-camera-yolo.png", "Detecções e regiões de interesse por faixa na câmera Sul do gêmeo digital", 10),
-  h2("5.3 Modelos especialista e global"),
+  h2("4.3 Modelos especialista e global"),
   p("O desenvolvimento foi incremental: uma prova de conceito com os detectores do simulador, uma regra de fila e agentes DQN alimentados pelas câmeras. O resultado é o modelo especialista, que descreve cada uma das 7 faixas por contagem, veículos parados, ocupação, velocidade e espera, escolhe entre manter ou trocar o verde e só funciona no cruzamento de treino."),
   p("O modelo global trata a decisão como uma escolha entre estágios, lidos automaticamente do programa semafórico da rede com as faixas que cada um libera. Cada estágio é descrito por 21 atributos: a demanda das suas faixas e a do estágio atual, o tempo de verde decorrido, o tempo no vermelho e o tempo perdido para entrar e sair do estágio (amarelo, vermelho geral e, quando houver, o estágio de pedestres)."),
   p("Uma mesma rede φ (duas camadas de 64 neurônios) codifica cada estágio (Figura 3); a média e o máximo das codificações resumem o cruzamento, e cada estágio recebe uma nota Q(p) = V(s) + A(p, s) − Ā(s), na forma *dueling* (WANG et al., 2016). Abre-se o estágio válido de maior nota, e escolher o atual equivale a mantê-lo. Como os pesos são compartilhados e o resumo não depende da ordem, à maneira de *Deep Sets* (ZAHEER et al., 2017), os mesmos 26.306 parâmetros controlam cruzamentos de 2 a 8 estágios. Para nenhum estágio ficar esquecido, um estágio com veículo parado que esteja no vermelho há mais tempo do que ficaria no pior caso do tempo fixo, com verde máximo em todos os estágios, é aberto obrigatoriamente."),
   ...figure("fig-modelo-global.png", "Arquitetura do modelo global", 12),
   p("O treino usou só quatro cruzamentos sintéticos, cada um com três níveis de demanda, com e sem pedestres (24 cenários). Seguindo o DQfD (HESTER et al., 2018), o agente partiu de demonstrações do *max-pressure* e treinou depois 480 episódios por reforço, com *Double DQN*. Nos cruzamentos sintéticos, o estágio de pedestres entra na primeira troca de verde 40 s após o anterior, intervalo escolhido pelo nível de serviço do pedestre do *Highway Capacity Manual* (TRB, 2000); atrelado a um verde veicular, ele era evitado pelo modelo. O cruzamento de São Paulo e um cruzamento de teste assimétrico, com 1 a 3 faixas por aproximação e 4 estágios, não foram usados no treino."),
 
-  h1("6. Resultados"),
-  h2("6.1 Cruzamento de São Paulo"),
+  h2("4.4 Resultados no cruzamento de São Paulo"),
   p("A Figura 4 resume os três cenários com percepção *ground truth* (10 sementes, teste *t* pareado). Na demanda medida, o modelo global reduziu a espera média em 66% em relação ao tempo fixo (12,9 s para 4,4 s; p < 0,001), superou o *max-pressure* (5,0 s; p < 0,001) e ficou 0,2 s acima do especialista, treinado nesse cruzamento. Na demanda equilibrada, todos os controladores adaptativos ficaram entre 4,5 e 4,7 s."),
   ...figure("fig-resultados-sp.png", "Espera dos veículos no cruzamento de São Paulo (média e IC 95%, 10 sementes)", 13),
   p("Com pedestres, o cenário mais próximo do cruzamento real, o modelo global reduziu a espera média em 29% (20,7 s para 14,7 s; p < 0,001) e a dos veículos que pararam em 44% (33,9 s para 18,9 s), ficando 0,7 s acima do especialista. O *max-pressure* decide só pelo número de veículos parados e não considera os 18 s com todos os veículos no vermelho a cada estágio de pedestres: escolhe pior o momento de trocar, fica pior que o tempo fixo (26,5 s) e deixa em média 12 veículos sem entrar na rede. Os pedestres esperaram em média 23 s, contra 55 s no tempo fixo."),
-  h2("6.2 Generalização para um cruzamento não visto"),
+  h2("4.5 Generalização para um cruzamento não visto"),
   p("No cruzamento de teste (Figura 5), o modelo global superou o tempo fixo nos seis cenários. Contra o *max-pressure*, venceu na demanda baixa, sem e com pedestres, e na desbalanceada com pedestres (p ≤ 0,003); empatou na média e na desbalanceada sem pedestres; e perdeu na média com pedestres (+6,2 s). Os cenários mais carregados estão perto da saturação, com veículos aguardando para entrar na rede em todos os controladores."),
   ...figure("fig-generalizacao.png", "Espera média no cruzamento de teste, nunca visto no treino (média e IC 95%, 10 sementes)", 13),
-  h2("6.3 Percepção visual e emergências"),
+  h2("4.6 Percepção visual e emergências"),
   p("Decidindo pelas câmeras (3 sementes, sem quadros perdidos), o modelo global, que nunca foi treinado com elas, manteve o desempenho: 4,67 s na demanda medida e 15,6 s com pedestres, contra 4,49 s e 14,7 s com a percepção *ground truth* (p = 0,26 e p = 0,17). Com câmeras nos dois lados da comparação, a redução em relação ao tempo fixo foi de 64% e de 25%, e, com pedestres, a espera dos veículos que pararam caiu 42% (34,3 s para 19,9 s). Na prioridade para emergências, também decidindo pelas câmeras, as 18 viaturas avaliadas cruzaram sem parar com o aviso V2I, com perda média de 1,3 s; sem a prioridade, só 6 cruzaram sem parar, com 9,8 s. Só com a detecção visual, 14 das 18 cruzaram sem parar, com todas detectadas e nenhum alarme falso. Cada decisão leva cerca de 0,1 ms em um notebook."),
+  h2("4.7 Objetivos e comparação com a literatura"),
+  p("Os cinco objetivos específicos foram atingidos: a demanda foi medida com drone e reproduzida no SUMO (seção 4.1); as câmeras do gêmeo digital forneceram filas e esperas por faixa, sem diferença significativa para a percepção *ground truth* (4.2 e 4.6); os agentes operaram sob a camada de segurança, com estágio de pedestres e prioridade para emergências (4.3 e 4.6); o modelo global, treinado só em cruzamentos sintéticos, controlou dois cruzamentos não vistos (4.4 e 4.5); e as comparações usaram dez repetições pareadas com teste *t* (4.4 e 4.5)."),
+  p("Em relação à literatura, Genders e Razavi (2016) e Wei et al. (2019) treinam e avaliam cada modelo no mesmo cenário, com dados exatos do simulador; aqui, o mesmo modelo foi avaliado em cruzamentos não vistos e decidindo pelas câmeras. Como o FRAP (ZHENG et al., 2019) e o AttendLight (OROOJLOOY et al., 2020), o modelo global descreve o cruzamento por estágio para não depender do número de faixas e de estágios; este trabalho acrescenta o estágio obrigatório de pedestres, a prioridade para emergências e a percepção visual, e disponibiliza a integração em tempo real entre SUMO, Unity e controlador."),
 
-  h1("7. Considerações Finais"),
+  h1("5. Considerações Finais"),
   p("O trabalho cumpriu os objetivos e as etapas previstas na primeira fase do projeto. No cruzamento estudado, a espera dos veículos caiu 29% com pedestres e 66% sem eles, em relação ao tempo fixo, com significância estatística em dez repetições."),
   p("A principal contribuição é o modelo global. Treinado só em cruzamentos sintéticos, ele ficou a menos de 1 s do especialista no cruzamento real e generalizou para outra geometria e outro número de estágios, vencendo ou empatando com o *max-pressure* em cinco de seis cenários. O ganho sobre o *max-pressure* cresce quando há um estágio obrigatório caro, como o de pedestres em São Paulo (−11,8 s): o modelo aprendeu a ponderar esse custo."),
   p("As limitações são a avaliação em simulação, com imagens sintéticas; o treino com percepção *ground truth*; um único cruzamento real; e a calibração das câmeras em cada cruzamento novo, embora sem novo treino. Propõem-se a avaliação com câmeras reais, a coordenação entre cruzamentos vizinhos (WEI et al., 2019) e um piloto em campo com o órgão de trânsito."),
 
-  h1("8. Referências"),
+  h1("Referências"),
   ref("ECLIPSE SUMO. **SUMO Documentation**. 2026. Disponível em: https://sumo.dlr.de/docs/. Acesso em: 9 mar. 2026."),
   ref("GENDERS, W.; RAZAVI, S. Using a deep reinforcement learning agent for traffic signal control. **arXiv preprint** arXiv:1611.01142, 2016. Disponível em: https://arxiv.org/abs/1611.01142. Acesso em: 2 maio 2026."),
   ref("HESTER, T. et al. Deep Q-learning from demonstrations. In: AAAI CONFERENCE ON ARTIFICIAL INTELLIGENCE, 32., 2018, New Orleans. **Anais** [...]. Palo Alto: AAAI Press, 2018. p. 3223-3230."),
@@ -234,11 +240,7 @@ const doc = new Document({
   },
   numbering: { config: [{ reference: "bullets", levels: [{ level: 0, format: LevelFormat.BULLET, text: "➔", alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } }] }] },
   sections: [{
-    properties: { titlePage: true, page: { size: { width: 11906, height: 16838 }, margin: { top: 3 * CM, left: 3 * CM, bottom: 2 * CM, right: 2 * CM } } },
-    headers: {
-      default: new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: SMALL })] })] }),
-      first: new Header({ children: [new Paragraph({ children: [] })] }),
-    },
+    properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 3 * CM, left: 3 * CM, bottom: 2 * CM, right: 2 * CM } } },
     children: [...cover, ...body],
   }],
 });
