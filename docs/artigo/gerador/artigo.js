@@ -205,7 +205,7 @@ const body = [
   ref("ECLIPSE SUMO. **SUMO Documentation**. 2026. Disponível em: https://sumo.dlr.de/docs/. Acesso em: 9 mar. 2026."),
   ref("GENDERS, W.; RAZAVI, S. Using a deep reinforcement learning agent for traffic signal control. **arXiv preprint** arXiv:1611.01142, 2016. Disponível em: https://arxiv.org/abs/1611.01142. Acesso em: 2 maio 2026."),
   ref("HESTER, T. et al. Deep Q-learning from demonstrations. In: AAAI CONFERENCE ON ARTIFICIAL INTELLIGENCE, 32., 2018, New Orleans. **Anais** [...]. Palo Alto: AAAI Press, 2018. p. 3223-3230."),
-  ref("JOCHER, G.; CHAURASIA, A.; QIU, J. **Ultralytics YOLOv8**. Versão 8.0.0. 2023. Disponível em: https://github.com/ultralytics/ultralytics. Acesso em: [data]."),
+  ref("JOCHER, G.; CHAURASIA, A.; QIU, J. **Ultralytics YOLOv8**. Versão 8.0.0. 2023. Disponível em: https://github.com/ultralytics/ultralytics. Acesso em: 1 out. 2026."),
   ref("KALAF, C. T. M. **O custo econômico social do congestionamento na cidade de São Paulo**. 2020. Monografia (Bacharelado em Ciências Econômicas) — Insper Instituto de Ensino e Pesquisa, São Paulo, 2020."),
   ref("LOPEZ, P. A. et al. Microscopic traffic simulation using SUMO. In: INTERNATIONAL CONFERENCE ON INTELLIGENT TRANSPORTATION SYSTEMS (ITSC), 21., 2018. **Anais** [...]. IEEE, 2018. p. 2575-2582."),
   ref("MNIH, V. et al. Human-level control through deep reinforcement learning. **Nature**, v. 518, n. 7540, p. 529-533, 2015."),
