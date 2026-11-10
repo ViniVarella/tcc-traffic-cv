@@ -127,7 +127,7 @@ const ref = (text) => new Paragraph({ children: runs(text), alignment: Alignment
 // ---------------------------------------------------------------- conteúdo
 const cover = [
   new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "CENTRO UNIVERSITÁRIO DO INSTITUTO MAUÁ DE TECNOLOGIA", font: FONT, size: BODY, bold: true })] }),
-  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 600 }, children: [new TextRun({ text: "Ciência da Computação", font: FONT, size: BODY })] }),
+  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 600 }, children: [new TextRun({ text: "Ciência da Computação", font: FONT, size: BODY, bold: true })] }),
   coverLine("TÍTULO", "Aplicação de IA na Otimização Adaptativa de Semáforos Inteligentes"),
   coverLine("CATEGORIA", "Concluído"),
   coverLine("ÁREA", "Ciências Exatas e da Terra"),
