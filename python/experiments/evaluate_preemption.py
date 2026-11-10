@@ -39,8 +39,8 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     add_scenario_argument(parser)
     parser.add_argument("--perception", choices=("oracle", "visual"), default="oracle")
     parser.add_argument("--detections", default=None,
-                        help=f"Fontes do pedido de preempção, entre {','.join(EMERGENCY_DETECTIONS)}. "
-                             "Padrão: v2i (oracle) ou v2i,vision,both (visual).")
+                        help=f"Fontes do pedido de preempção, entre {','.join(EMERGENCY_DETECTIONS)}, ou none "
+                             "(só o modo sem preempção). Padrão: v2i (oracle) ou v2i,vision,both (visual).")
     parser.add_argument("--skip-no-preemption", action="store_true",
                         help="Não roda o modo sem preempção (para refazer só os modos com preempção).")
     parser.add_argument("--versions", default="baseline,v2,max_pressure")
@@ -71,9 +71,14 @@ def main() -> None:
     seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
     detections = [item.strip() for item in (args.detections or ("v2i" if args.perception == "oracle" else "v2i,vision,both")).split(",")
                   if item.strip()]
+    if detections == ["none"]:
+        # Só o modo sem preempção (por exemplo, para medi-lo com a câmera sem refazer os outros).
+        if args.skip_no_preemption:
+            raise ValueError("--detections none não combina com --skip-no-preemption.")
+        detections = []
     if any(item not in EMERGENCY_DETECTIONS for item in detections):
         raise ValueError(f"--detections aceita {EMERGENCY_DETECTIONS}.")
-    if args.perception == "oracle" and detections != ["v2i"]:
+    if args.perception == "oracle" and detections not in (["v2i"], []):
         raise ValueError("A detecção visual das viaturas exige --perception visual (Unity em Play Mode).")
     config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
     scenario = args.scenario or config["sumo"].get("default_scenario")
