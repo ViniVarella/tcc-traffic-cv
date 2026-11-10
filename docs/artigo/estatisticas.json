@@ -1,0 +1,1150 @@
+{
+  "sp": {
+    "calibrated": {
+      "seeds": [
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210
+      ],
+      "summary": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "mean": 12.91938578881673,
+            "ci95": 0.28420124345640896
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 22.917534837066487,
+            "ci95": 0.47093212913461846
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.18577777777777776,
+            "ci95": 0.0645403501451161
+          }
+        },
+        "v1": {
+          "mean_waiting_time_seconds": {
+            "mean": 4.255340710716424,
+            "ci95": 0.24291359086547615
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 7.645441134475786,
+            "ci95": 0.171854294386003
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.005555555555555555,
+            "ci95": 0.002279160291549958
+          }
+        },
+        "v2": {
+          "mean_waiting_time_seconds": {
+            "mean": 4.171105348869519,
+            "ci95": 0.11223337866235039
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 7.858955247895679,
+            "ci95": 0.1927378589633588
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.005388888888888888,
+            "ci95": 0.00207818794450064
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "mean": 4.984015390180008,
+            "ci95": 0.2207179151381213
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 8.14186092499098,
+            "ci95": 0.20600847002748138
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.006555555555555556,
+            "ci95": 0.003915482858269646
+          }
+        },
+        "global": {
+          "mean_waiting_time_seconds": {
+            "mean": 4.380043171387127,
+            "ci95": 0.10018992404931193
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 7.673354852147616,
+            "ci95": 0.10283965381095533
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.0057777777777777775,
+            "ci95": 0.002348931126893613
+          }
+        }
+      },
+      "paired": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "diff": -8.5393426174296,
+            "ci_low": -8.80450840230536,
+            "ci_high": -8.27417683255384,
+            "p": 8.749694296234474e-14,
+            "reduction_pct": 66.09712533564422,
+            "wins": 10,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -15.244179984918873,
+            "ci_low": -15.71502953168069,
+            "ci_high": -14.773330438157055,
+            "p": 8.340462997285231e-14,
+            "reduction_pct": 66.51753817894566,
+            "wins": 10,
+            "n": 10
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "diff": -0.6039722187928814,
+            "ci_low": -0.8847932235153175,
+            "ci_high": -0.32315121407044534,
+            "p": 0.0008892752578703026,
+            "reduction_pct": 12.118185268506299,
+            "wins": 9,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -0.46850607284336443,
+            "ci_low": -0.6894695732890852,
+            "ci_high": -0.24754257239764363,
+            "p": 0.000978588083657248,
+            "reduction_pct": 5.754287344866212,
+            "wins": 9,
+            "n": 10
+          }
+        },
+        "v2": {
+          "mean_waiting_time_seconds": {
+            "diff": 0.20893782251760787,
+            "ci_low": 0.035603320175105785,
+            "ci_high": 0.38227232486011,
+            "p": 0.023346128652515445,
+            "reduction_pct": -5.009171551474626,
+            "wins": 2,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -0.18560039574806328,
+            "ci_low": -0.39489071543732013,
+            "ci_high": 0.023689923941193597,
+            "p": 0.07580349241095626,
+            "reduction_pct": 2.361642099918552,
+            "wins": 7,
+            "n": 10
+          }
+        },
+        "v1": {
+          "mean_waiting_time_seconds": {
+            "diff": 0.1247024606707022,
+            "ci_low": -0.14938873785054815,
+            "ci_high": 0.39879365919195253,
+            "p": 0.3302470314457974,
+            "reduction_pct": -2.9304929768998145,
+            "wins": 3,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": 0.02791371767182991,
+            "ci_low": -0.16087224335063843,
+            "ci_high": 0.21669967869429824,
+            "p": 0.7456798977886627,
+            "reduction_pct": -0.3651027740696114,
+            "wins": 6,
+            "n": 10
+          }
+        }
+      }
+    },
+    "calibrated_ped": {
+      "seeds": [
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210
+      ],
+      "summary": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "mean": 20.67627065852613,
+            "ci95": 0.49935742318075055
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 33.92221874673838,
+            "ci95": 0.49932465725437
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.8415000000000001,
+            "ci95": 0.1214859363155625
+          },
+          "pedestrian_mean_waiting_s": {
+            "mean": 55.150886911165436,
+            "ci95": 2.7537670971613712
+          },
+          "pedestrian_p90_waiting_s": {
+            "mean": 138.2,
+            "ci95": 5.700955216930537
+          }
+        },
+        "v1": {
+          "mean_waiting_time_seconds": {
+            "mean": 25.144723530974566,
+            "ci95": 1.4930410620146186
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 29.24942633774638,
+            "ci95": 1.5978558680613135
+          },
+          "mean_pending_vehicles": {
+            "mean": 10.006166666666665,
+            "ci95": 5.326336547194405
+          },
+          "pedestrian_mean_waiting_s": {
+            "mean": 21.645487570857167,
+            "ci95": 1.2574689922849802
+          },
+          "pedestrian_p90_waiting_s": {
+            "mean": 49.4,
+            "ci95": 2.8052370389865304
+          }
+        },
+        "v2": {
+          "mean_waiting_time_seconds": {
+            "mean": 14.085753361881695,
+            "ci95": 0.329941915609526
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 18.20497135670889,
+            "ci95": 0.2883014694015889
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.0755,
+            "ci95": 0.028390434315681373
+          },
+          "pedestrian_mean_waiting_s": {
+            "mean": 22.39742745194824,
+            "ci95": 1.3182100933616807
+          },
+          "pedestrian_p90_waiting_s": {
+            "mean": 55.8,
+            "ci95": 2.2821766429701102
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "mean": 26.501421812836895,
+            "ci95": 1.1715050428314393
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 29.745310302495728,
+            "ci95": 1.1433013603703557
+          },
+          "mean_pending_vehicles": {
+            "mean": 12.415222222222223,
+            "ci95": 4.774869765880316
+          },
+          "pedestrian_mean_waiting_s": {
+            "mean": 20.904128562563905,
+            "ci95": 1.0949300081632247
+          },
+          "pedestrian_p90_waiting_s": {
+            "mean": 47.4,
+            "ci95": 2.885174318390035
+          }
+        },
+        "global": {
+          "mean_waiting_time_seconds": {
+            "mean": 14.747866937081833,
+            "ci95": 0.4363775788737136
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 18.922416812794275,
+            "ci95": 0.39302905382188674
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.06605555555555556,
+            "ci95": 0.019968331570677213
+          },
+          "pedestrian_mean_waiting_s": {
+            "mean": 22.876430442964576,
+            "ci95": 0.9896869352099351
+          },
+          "pedestrian_p90_waiting_s": {
+            "mean": 53.3,
+            "ci95": 2.238151464620479
+          }
+        }
+      },
+      "paired": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "diff": -5.928403721444298,
+            "ci_low": -6.680044137358597,
+            "ci_high": -5.17676330553,
+            "p": 2.4789984412734856e-08,
+            "reduction_pct": 28.672500081631703,
+            "wins": 10,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -14.99980193394411,
+            "ci_low": -15.7312627172364,
+            "ci_high": -14.26834115065182,
+            "p": 5.031534370730804e-12,
+            "reduction_pct": 44.21822182662016,
+            "wins": 10,
+            "n": 10
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "diff": -11.753554875755068,
+            "ci_low": -12.691050404722478,
+            "ci_high": -10.816059346787657,
+            "p": 4.0982185286749874e-10,
+            "reduction_pct": 44.350657707209564,
+            "wins": 10,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -10.822893489701446,
+            "ci_low": -11.743537718018366,
+            "ci_high": -9.902249261384526,
+            "p": 7.268297892967943e-10,
+            "reduction_pct": 36.38520956627364,
+            "wins": 10,
+            "n": 10
+          }
+        },
+        "v2": {
+          "mean_waiting_time_seconds": {
+            "diff": 0.6621135752001349,
+            "ci_low": 0.3376386625983672,
+            "ci_high": 0.9865884878019027,
+            "p": 0.0012613390588165267,
+            "reduction_pct": -4.700590434814252,
+            "wins": 1,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": 0.7174454560853828,
+            "ci_low": 0.3434298777153905,
+            "ci_high": 1.091461034455375,
+            "p": 0.0018793224898676869,
+            "reduction_pct": -3.9409315292385414,
+            "wins": 1,
+            "n": 10
+          }
+        },
+        "v1": {
+          "mean_waiting_time_seconds": {
+            "diff": -10.396856593892736,
+            "ci_low": -11.648426185778082,
+            "ci_high": -9.14528700200739,
+            "p": 1.5718888676038082e-08,
+            "reduction_pct": 41.348064857763696,
+            "wins": 10,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -10.327009524952107,
+            "ci_low": -11.71388666033206,
+            "ci_high": -8.940132389572154,
+            "p": 4.1043584811411427e-08,
+            "reduction_pct": 35.3067079186613,
+            "wins": 10,
+            "n": 10
+          }
+        }
+      }
+    },
+    "original": {
+      "seeds": [
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210
+      ],
+      "summary": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "mean": 14.930801072969519,
+            "ci95": 0.06870386524137671
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 22.743368615883355,
+            "ci95": 0.07778821679143944
+          },
+          "mean_pending_vehicles": {
+            "mean": 19.05738888888889,
+            "ci95": 1.155862749496324
+          }
+        },
+        "v1": {
+          "mean_waiting_time_seconds": {
+            "mean": 4.652743712700465,
+            "ci95": 0.08945641801412231
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 7.366780624818882,
+            "ci95": 0.08849202842915573
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.5385555555555557,
+            "ci95": 0.005856467550581281
+          }
+        },
+        "v2": {
+          "mean_waiting_time_seconds": {
+            "mean": 4.492050709806979,
+            "ci95": 0.06636017930793202
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 7.266827091182873,
+            "ci95": 0.09110423420435133
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.5415000000000001,
+            "ci95": 0.007236618875726086
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "mean": 4.617075490605524,
+            "ci95": 0.05063226491105275
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 7.327229727319063,
+            "ci95": 0.05907577406785813
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.5423888888888889,
+            "ci95": 0.004942699767147775
+          }
+        },
+        "global": {
+          "mean_waiting_time_seconds": {
+            "mean": 4.653502093740131,
+            "ci95": 0.10023706922932595
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 7.358031921781199,
+            "ci95": 0.11300618778527338
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.5403888888888889,
+            "ci95": 0.004168391912127965
+          }
+        }
+      },
+      "paired": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "diff": -10.27729897922939,
+            "ci_low": -10.407821718138964,
+            "ci_high": -10.146776240319815,
+            "p": 2.8179069021604043e-17,
+            "reduction_pct": 68.83287058077042,
+            "wins": 10,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -15.385336694102156,
+            "ci_low": -15.553467866025022,
+            "ci_high": -15.21720552217929,
+            "p": 7.288931527125453e-18,
+            "reduction_pct": 67.6475721514598,
+            "wins": 10,
+            "n": 10
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "diff": 0.03642660313460766,
+            "ci_low": -0.09220464706516807,
+            "ci_high": 0.1650578533343834,
+            "p": 0.5377420344054146,
+            "reduction_pct": -0.788954029638997,
+            "wins": 5,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": 0.030802194462137677,
+            "ci_low": -0.08881862689721474,
+            "ci_high": 0.1504230158214901,
+            "p": 0.5745296349100266,
+            "reduction_pct": -0.42037981076658193,
+            "wins": 3,
+            "n": 10
+          }
+        },
+        "v2": {
+          "mean_waiting_time_seconds": {
+            "diff": 0.16145138393315203,
+            "ci_low": 0.027525657413531107,
+            "ci_high": 0.29537711045277293,
+            "p": 0.023335162726625218,
+            "reduction_pct": -3.594157643427159,
+            "wins": 2,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": 0.09120483059832711,
+            "ci_low": -0.0517763505983105,
+            "ci_high": 0.23418601179496473,
+            "p": 0.18291063807035565,
+            "reduction_pct": -1.2550846394706268,
+            "wins": 4,
+            "n": 10
+          }
+        },
+        "v1": {
+          "mean_waiting_time_seconds": {
+            "diff": 0.0007583810396663892,
+            "ci_low": -0.15394204556015398,
+            "ci_high": 0.15545880763948675,
+            "p": 0.99139383570988,
+            "reduction_pct": -0.016299652129897563,
+            "wins": 5,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -0.008748703037683025,
+            "ci_low": -0.16566822044035742,
+            "ci_high": 0.14817081436499138,
+            "p": 0.9024082356600648,
+            "reduction_pct": 0.11875883758786464,
+            "wins": 5,
+            "n": 10
+          }
+        }
+      }
+    }
+  },
+  "generic": {
+    "cruz-assimetrico/baixa": {
+      "seeds": [
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210
+      ],
+      "summary": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "mean": 21.70957984568182,
+            "ci95": 1.1931645987573032
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 31.387650829130045,
+            "ci95": 1.0824740503827623
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.0061111111111111106,
+            "ci95": 0.002127839503289811
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "mean": 9.937027792781494,
+            "ci95": 0.5366959715321148
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 15.062426621884011,
+            "ci95": 0.6757052077573524
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.006277777777777778,
+            "ci95": 0.0023328128421200777
+          }
+        },
+        "global": {
+          "mean_waiting_time_seconds": {
+            "mean": 7.903397409262221,
+            "ci95": 0.514018263759814
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 12.453896594169143,
+            "ci95": 0.6190502203156114
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.006333333333333334,
+            "ci95": 0.0024224908686708443
+          }
+        }
+      },
+      "paired": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "diff": -13.806182436419599,
+            "ci_low": -15.10832912477765,
+            "ci_high": -12.504035748061547,
+            "p": 1.8191115258909174e-09,
+            "reduction_pct": 63.5948854586688,
+            "wins": 10,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -18.933754234960904,
+            "ci_low": -20.133785282574628,
+            "ci_high": -17.73372318734718,
+            "p": 5.263311949574178e-11,
+            "reduction_pct": 60.32230426556481,
+            "wins": 10,
+            "n": 10
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "diff": -2.0336303835192715,
+            "ci_low": -2.9126444260585886,
+            "ci_high": -1.1546163409799544,
+            "p": 0.0005393493607647132,
+            "reduction_pct": 20.465177575497513,
+            "wins": 9,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -2.6085300277148695,
+            "ci_low": -3.710563890354722,
+            "ci_high": -1.5064961650750173,
+            "p": 0.00045958812068616747,
+            "reduction_pct": 17.318126044345124,
+            "wins": 9,
+            "n": 10
+          }
+        }
+      }
+    },
+    "cruz-assimetrico/baixa+ped": {
+      "seeds": [
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210
+      ],
+      "summary": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "mean": 38.75815914756503,
+            "ci95": 0.8695630440931833
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 47.65702497898708,
+            "ci95": 0.7637571357576218
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.006055555555555555,
+            "ci95": 0.0022281554571642924
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "mean": 20.864067538521798,
+            "ci95": 1.1411996334883194
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 26.062223566733373,
+            "ci95": 1.2722715312990982
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.0061111111111111106,
+            "ci95": 0.002052270654384333
+          }
+        },
+        "global": {
+          "mean_waiting_time_seconds": {
+            "mean": 17.56618217564583,
+            "ci95": 1.4916896886110793
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 22.467561058881124,
+            "ci95": 1.5825620875851185
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.006,
+            "ci95": 0.00211791945157793
+          }
+        }
+      },
+      "paired": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "diff": -21.191976971919196,
+            "ci_low": -22.458398356112962,
+            "ci_high": -19.92555558772543,
+            "p": 3.1095847902282474e-11,
+            "reduction_pct": 54.677460018765046,
+            "wins": 10,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -25.189463920105958,
+            "ci_low": -26.518700869857746,
+            "ci_high": -23.86022697035417,
+            "p": 1.0207917417492477e-11,
+            "reduction_pct": 52.85572049705681,
+            "wins": 10,
+            "n": 10
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "diff": -3.297885362875961,
+            "ci_low": -4.9317558172366525,
+            "ci_high": -1.6640149085152687,
+            "p": 0.0013545114831871846,
+            "reduction_pct": 15.806531285364212,
+            "wins": 9,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -3.594662507852245,
+            "ci_low": -5.352717693088733,
+            "ci_high": -1.8366073226157569,
+            "p": 0.0012447890457018306,
+            "reduction_pct": 13.792616346214553,
+            "wins": 9,
+            "n": 10
+          }
+        }
+      }
+    },
+    "cruz-assimetrico/media": {
+      "seeds": [
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210
+      ],
+      "summary": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "mean": 31.835167831941117,
+            "ci95": 0.7583915188927959
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 38.490234943783335,
+            "ci95": 0.7593834499263912
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.1415,
+            "ci95": 0.19532677998762568
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "mean": 20.272476329874344,
+            "ci95": 1.0242956058618846
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 25.163736249971233,
+            "ci95": 1.063242388105199
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.48950000000000005,
+            "ci95": 0.7878671775482045
+          }
+        },
+        "global": {
+          "mean_waiting_time_seconds": {
+            "mean": 19.06824197629111,
+            "ci95": 2.0700884877627934
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 23.1681266186861,
+            "ci95": 2.232069688918329
+          },
+          "mean_pending_vehicles": {
+            "mean": 0.04533333333333334,
+            "ci95": 0.030325264900684237
+          }
+        }
+      },
+      "paired": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "diff": -12.766925855650014,
+            "ci_low": -14.5999347841298,
+            "ci_high": -10.933916927170227,
+            "p": 7.355017138305285e-08,
+            "reduction_pct": 40.10321517086709,
+            "wins": 10,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -15.322108325097236,
+            "ci_low": -17.272906069326396,
+            "ci_high": -13.371310580868078,
+            "p": 2.5719171402095383e-08,
+            "reduction_pct": 39.80778072016407,
+            "wins": 10,
+            "n": 10
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "diff": -1.20423435358324,
+            "ci_low": -3.0967182763942427,
+            "ci_high": 0.6882495692277628,
+            "p": 0.18387733551539007,
+            "reduction_pct": 5.94024298752603,
+            "wins": 7,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -1.9956096312851337,
+            "ci_low": -4.071937214888148,
+            "ci_high": 0.08071795231788115,
+            "p": 0.05771587982459639,
+            "reduction_pct": 7.930498124210056,
+            "wins": 7,
+            "n": 10
+          }
+        }
+      }
+    },
+    "cruz-assimetrico/media+ped": {
+      "seeds": [
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210
+      ],
+      "summary": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "mean": 59.974151766801086,
+            "ci95": 1.730232661295962
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 63.2852978816707,
+            "ci95": 1.3853213636288522
+          },
+          "mean_pending_vehicles": {
+            "mean": 30.12038888888889,
+            "ci95": 6.14328415348151
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "mean": 39.144541137210624,
+            "ci95": 0.844539562929862
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 42.99791881153154,
+            "ci95": 0.984561489025214
+          },
+          "mean_pending_vehicles": {
+            "mean": 40.73038888888889,
+            "ci95": 6.755993171108389
+          }
+        },
+        "global": {
+          "mean_waiting_time_seconds": {
+            "mean": 45.362431822019055,
+            "ci95": 1.4566388029963588
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 48.39768259390882,
+            "ci95": 1.3571222167537713
+          },
+          "mean_pending_vehicles": {
+            "mean": 35.61288888888889,
+            "ci95": 8.656346623142333
+          }
+        }
+      },
+      "paired": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "diff": -14.61171994478202,
+            "ci_low": -16.833124233918955,
+            "ci_high": -12.390315655645086,
+            "p": 1.2097407107688635e-07,
+            "reduction_pct": 24.363362405852985,
+            "wins": 10,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -14.887615287761886,
+            "ci_low": -17.065586569837556,
+            "ci_high": -12.709644005686213,
+            "p": 8.660562704708656e-08,
+            "reduction_pct": 23.524603321925387,
+            "wins": 10,
+            "n": 10
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "diff": 6.217890684808433,
+            "ci_low": 4.718715431689712,
+            "ci_high": 7.717065937927154,
+            "p": 6.067148353815044e-06,
+            "reduction_pct": -15.884438811054888,
+            "wins": 0,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": 5.399763782377276,
+            "ci_low": 4.177783432563299,
+            "ci_high": 6.621744132191253,
+            "p": 3.589686716434632e-06,
+            "reduction_pct": -12.558198004990707,
+            "wins": 0,
+            "n": 10
+          }
+        }
+      }
+    },
+    "cruz-assimetrico/desbalanceada": {
+      "seeds": [
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210
+      ],
+      "summary": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "mean": 33.742158549547675,
+            "ci95": 1.1602700231329608
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 40.3120048129311,
+            "ci95": 1.0443759189236774
+          },
+          "mean_pending_vehicles": {
+            "mean": 25.192999999999998,
+            "ci95": 7.364887394767703
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "mean": 19.890760710227745,
+            "ci95": 0.39568550313194145
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 24.137884640851784,
+            "ci95": 0.5439128499906968
+          },
+          "mean_pending_vehicles": {
+            "mean": 31.54583333333333,
+            "ci95": 8.604414508220277
+          }
+        },
+        "global": {
+          "mean_waiting_time_seconds": {
+            "mean": 19.7006749038954,
+            "ci95": 0.7131192769978307
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 23.914053593445367,
+            "ci95": 0.6662660095724247
+          },
+          "mean_pending_vehicles": {
+            "mean": 34.071222222222225,
+            "ci95": 9.774135209951996
+          }
+        }
+      },
+      "paired": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "diff": -14.041483645652278,
+            "ci_low": -15.342612146292444,
+            "ci_high": -12.740355145012112,
+            "p": 1.5548864375623693e-09,
+            "reduction_pct": 41.61406456861221,
+            "wins": 10,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -16.39795121948574,
+            "ci_low": -17.499447885612952,
+            "ci_high": -15.29645455335853,
+            "p": 8.848386975542645e-11,
+            "reduction_pct": 40.67758796810243,
+            "wins": 10,
+            "n": 10
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "diff": -0.1900858063323465,
+            "ci_low": -1.0053319518003028,
+            "ci_high": 0.6251603391356098,
+            "p": 0.6106330549153655,
+            "reduction_pct": 0.9556487512043892,
+            "wins": 5,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -0.22383104740642173,
+            "ci_low": -1.1518561026368166,
+            "ci_high": 0.704194007823973,
+            "p": 0.5985935790901904,
+            "reduction_pct": 0.9273018358352653,
+            "wins": 6,
+            "n": 10
+          }
+        }
+      }
+    },
+    "cruz-assimetrico/desbalanceada+ped": {
+      "seeds": [
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210
+      ],
+      "summary": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "mean": 58.73792055428677,
+            "ci95": 1.2403520677242799
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 63.760666300191374,
+            "ci95": 1.3517268221091945
+          },
+          "mean_pending_vehicles": {
+            "mean": 94.62944444444445,
+            "ci95": 12.236984153390585
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "mean": 36.825209707420086,
+            "ci95": 2.9777524375749955
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 40.44152737516382,
+            "ci95": 2.9954567796118976
+          },
+          "mean_pending_vehicles": {
+            "mean": 91.34244444444445,
+            "ci95": 8.852451253676817
+          }
+        },
+        "global": {
+          "mean_waiting_time_seconds": {
+            "mean": 32.21893030023863,
+            "ci95": 1.331192273555583
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "mean": 36.405019463603004,
+            "ci95": 1.2311607801981206
+          },
+          "mean_pending_vehicles": {
+            "mean": 84.30877777777778,
+            "ci95": 10.800618715346927
+          }
+        }
+      },
+      "paired": {
+        "baseline": {
+          "mean_waiting_time_seconds": {
+            "diff": -26.518990254048127,
+            "ci_low": -28.35718024927622,
+            "ci_high": -24.680800258820035,
+            "p": 1.1714284648661663e-10,
+            "reduction_pct": 45.14798958457978,
+            "wins": 10,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -27.35564683658838,
+            "ci_low": -29.09458025904373,
+            "ci_high": -25.61671341413303,
+            "p": 5.4039009667962786e-11,
+            "reduction_pct": 42.903640165545546,
+            "wins": 10,
+            "n": 10
+          }
+        },
+        "max_pressure": {
+          "mean_waiting_time_seconds": {
+            "diff": -4.606279407181449,
+            "ci_low": -7.153373376869327,
+            "ci_high": -2.0591854374935714,
+            "p": 0.0027130275161121684,
+            "reduction_pct": 12.508494707236691,
+            "wins": 9,
+            "n": 10
+          },
+          "mean_waiting_time_stopped_seconds": {
+            "diff": -4.036507911560826,
+            "ci_low": -6.517445955867233,
+            "ci_high": -1.5555698672544196,
+            "p": 0.0050711464679761165,
+            "reduction_pct": 9.981096594387632,
+            "wins": 9,
+            "n": 10
+          }
+        }
+      }
+    }
+  }
+}
