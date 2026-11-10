@@ -42,10 +42,15 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--v2-dqn-model", type=Path, default=models / "dqn-v2-traffiq-best.pt")
     parser.add_argument("--v3-dqn-model", type=Path, default=models / "dqn-v3-fase-curta-best.pt",
                         help="Checkpoint do estado v3 (só cenários *_ped; inclua v3 em --versions).")
+    parser.add_argument("--global-dqn-model", type=Path, default=models / "dqn-fase-livre-ped40-best.pt",
+                        help="Modelo global, experimento de seleção livre de fase (inclua global em --versions).")
     add_vision_arguments(parser)
     parser.add_argument("--step-log-dir", type=Path, default=base_dir.parent / "results" / "logs",
                         help="Com --perception visual, grava um JSONL por versão neste diretório.")
     parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument("--pedestrian-interval", type=float, default=None,
+                        help="Teste de sensibilidade: fase de pedestres obrigatória por tempo (N s), como nos "
+                             "cruzamentos sintéticos, em vez de depois de todo verde Sul.")
     return parser.parse_args()
 
 
@@ -55,11 +60,15 @@ def main() -> None:
     seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
     names = [value.strip() for value in args.versions.split(",") if value.strip()]
     config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
+    if args.pedestrian_interval is not None:
+        config["pedestrians"]["interval_seconds"] = args.pedestrian_interval
     scenario = args.scenario or config["sumo"].get("default_scenario")
     output = args.output or base_dir.parent / "results" / "evaluation" / f"versoes-{scenario}-{args.perception}.json"
-    versions = build_version_policies(config, names, args.v1_dqn_model, args.v2_dqn_model, args.v3_dqn_model)
+    versions = build_version_policies(config, names, args.v1_dqn_model, args.v2_dqn_model, args.v3_dqn_model,
+                                      args.global_dqn_model, base_dir / "configs" / "generic.yaml", scenario)
     report: dict[str, Any] = {"perception": args.perception, "scenario": scenario, "seeds": seeds,
-                              "warmup_s": args.warmup_seconds, "control_s": args.control_seconds, "versions": {}}
+                              "warmup_s": args.warmup_seconds, "control_s": args.control_seconds,
+                              "pedestrian_interval_s": args.pedestrian_interval, "versions": {}}
     bridge = UnityBridge.from_config(config) if args.perception == "visual" else None
     try:
         observer = None

@@ -72,6 +72,32 @@ class PedestrianPhaseTests(unittest.TestCase):
         self.assertEqual(controller.greens_until_pedestrian(), 0)
         run_until(controller, time + 1, PhaseManager.PEDESTRIAN_GREEN)
 
+    def test_time_rule_puts_pedestrians_after_any_green_once_interval_elapsed(self) -> None:
+        pedestrians = {**SP_CONFIG["pedestrians"], "interval_seconds": 40}
+        controller = DqnTrafficController("tls", {**CONFIG, "pedestrians": pedestrians}, pedestrian_phase=True)
+        greens, before, ends, starts = [PhaseManager.EAST_WEST_GREEN], [], [], []
+        for time in range(0, 600):
+            # Sem trocar pela política, cada verde vai ao máximo (40 s) e a fase fica devida ao sair dele.
+            decision = controller.update(time, controller.KEEP)
+            if decision["action"] != "set_phase":
+                continue
+            name = decision["phase_name"]
+            if name in {PhaseManager.EAST_WEST_GREEN, PhaseManager.SOUTH_GREEN}:
+                greens.append(name)
+            elif name == PhaseManager.PEDESTRIAN_GREEN:
+                starts.append(time)
+                before.append(greens[-1])
+            if name == PhaseManager.EAST_WEST_GREEN or name == PhaseManager.SOUTH_GREEN:
+                if controller.history[-2:-1] == [PhaseManager.PEDESTRIAN_CLEARANCE]:
+                    ends.append(time)
+        self.assertGreater(len(starts), 3)
+        # A fase vem depois do verde que estiver terminando, L/O ou Sul.
+        self.assertEqual(set(before), {PhaseManager.EAST_WEST_GREEN, PhaseManager.SOUTH_GREEN})
+        # Nunca antes de 40 s do fim da anterior; e no máximo um ciclo de verdes depois.
+        gaps = [start - end for end, start in zip(ends, starts[1:])]
+        self.assertTrue(all(40 <= gap <= 40 + 14 + 4 for gap in gaps), gaps)
+        self.assertEqual(controller.greens_until_pedestrian(), 0 if controller.pedestrian_due() else 1)
+
     def test_policy_cannot_end_the_pedestrian_phase(self) -> None:
         controller = DqnTrafficController("tls", CONFIG, pedestrian_phase=True)
         time = run_until(controller, 1, PhaseManager.SOUTH_GREEN)

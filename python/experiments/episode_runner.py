@@ -117,6 +117,8 @@ class EpisodeOutcome:
     losses: list[float] = field(default_factory=list)
     phase_seconds: Counter = field(default_factory=Counter)
     metrics: dict[str, Any] = field(default_factory=dict)
+    # Inícios da fase de pedestres no controle (ambiente genérico; espera estimada pelo HCM).
+    pedestrian_starts: list[float] = field(default_factory=list)
 
     @property
     def mean_reward(self) -> float:
@@ -168,6 +170,10 @@ def run_episode(
     metrics = metrics or ExperimentMetricsCollector(warmup_until_s=settings.warmup_s)
     outcome = EpisodeOutcome()
     last_state: np.ndarray | None = None
+    # Políticas que dependem do estado do controlador (modelo global com a regra de pedestres por tempo).
+    bind_controller = getattr(policy, "bind_controller", None)
+    if bind_controller is not None:
+        bind_controller(controller)
     total_steps = int(round(settings.warmup_s + settings.control_s))
     for _ in range(total_steps):
         sim_time = client.step()

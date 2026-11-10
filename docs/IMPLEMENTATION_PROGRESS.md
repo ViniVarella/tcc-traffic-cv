@@ -52,6 +52,311 @@ Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTA
 - Prova de conceito com os detectores do SUMO vira a v1 do produto, e as
   demais sobem um número (atual: v5): 2026-10-20 — seção **Numeração do
   produto com a prova de conceito** abaixo.
+- Modelo global (TraffIQ v6.0, atual): um DQN com escolha livre de fase,
+  para qualquer cruzamento, treinado só em cruzamentos sintéticos. Começou
+  como experimento em 2026-11-05 e passou a versão do produto depois do
+  retreino com a fase de pedestres por tempo (`dqn-fase-livre-ped40-best.pt`,
+  2026-11-08) — seção **Modelo global** abaixo.
+
+## Modelo global: DQN genérico com seleção livre de fase (2026-11-05; TraffIQ v6.0)
+
+Branch `feat/selecao-livre-de-fase`. Começou como **experimento**, ao lado do
+TraffIQ v5.0 (DQN estado v2, `dqn-v2-traffiq-best.pt`), e é a **versão atual
+do produto, v6.0** (id `global` no código, checkpoint
+`dqn-fase-livre-ped40-best.pt`). Os trechos abaixo que o chamam de
+experimento ou dizem que "não é versão do produto" são o registro de cada
+etapa, escritos antes dessa decisão.
+
+**Pergunta.** Um único modelo, sem treino por cruzamento, controla
+cruzamentos com outros números de faixas e de fases? E ele pode escolher a
+próxima fase verde livremente (por exemplo 1 → 3 → 2), em vez de seguir o
+ciclo?
+
+**Ambiente** (só SUMO, percepção *ground truth*, sem pedestres nem viaturas):
+
+- `sumo/intersection.py` lê o semáforo de qualquer `.net.xml`. As fases verdes
+  são os estados do programa com verde e sem amarelo, e o grupo de cada fase
+  são as faixas de entrada com algum link verde nela. As ROIs são os últimos
+  60 m de cada faixa; no SP, valem as ROIs das câmeras (`sp.yaml`).
+- `controller/phase_selection_controller.py`: a ação é a fase verde
+  escolhida. O amarelo é calculado link a link (só onde o verde acaba),
+  seguido de all-red de 1 s. Os verdes mínimo (10 s) e máximo (40 s) continuam
+  obrigatórios; no verde máximo, a fase atual sai da máscara.
+- **Justiça:** uma fase com veículo parado há mais de
+  `(n − 1)·(verde máx. + amarelo + all-red)` no vermelho vira a única opção.
+  Com isso, nenhuma fase espera mais do que esperaria no tempo fixo.
+- **Cruzamentos sintéticos** (`experiments.build_generic_intersections`,
+  gerados pelo `netconvert`; não edite à mão), cada um com 3 demandas Poisson
+  (baixa, média e desbalanceada):
+
+  | Cruzamento | Fases verdes | Uso |
+  |---|---|---|
+  | `cruz-2x2` | 4 (uma por aproximação) | treino |
+  | `cruz-opostas` | 4 (opostas + conversões protegidas à esquerda) | treino |
+  | `t-3` | 3 | treino |
+  | `t-avenida` | 2 | treino |
+  | `cruz-assimetrico` (1 a 3 faixas por aproximação) | 4 | **teste** |
+  | SP (`calibrated`, `original`) | 2 | **teste** |
+
+- **Portão 1 (aprovado):** no SP, o tempo fixo e o max-pressure por esse
+  ambiente reproduzem os números de `versoes-calibrated-oracle.json`. A
+  comparação com o especialista vale, portanto, no mesmo ambiente.
+
+**Modelo** (estado `phase_select_2`):
+
+- Uma linha por fase, com as features do grupo (densidades e contagens
+  absolutas de parados, veículos e faixas), as da fase atual, o tempo de verde
+  e o tempo no vermelho. A linha é preenchida até 8 fases, com máscara.
+- Rede *dueling* com pesos compartilhados entre fases: a média e o máximo das
+  linhas resumem o cruzamento, e cada fase recebe uma vantagem. A rede não
+  depende da ordem nem do número de fases (há teste para isso).
+- Treino em três etapas, todas só nos cruzamentos de treino:
+  1. 48 episódios de demonstração do max-pressure (DQfD, Hester et al. 2018);
+  2. 480 episódios com a perda de imitação. O resultado foi uma cópia do
+     max-pressure (validação −0,0246 contra −0,0247);
+  3. 480 episódios de RL **sem imitação**, a partir da etapa 2. A validação
+     foi de −0,0246 para −0,0165, enquanto o max-pressure fica em −0,0247 e o
+     tempo fixo em −0,0576.
+
+  O checkpoint é escolhido só pela validação nos cruzamentos de treino.
+- **Primeira tentativa** (estado `phase_select_1`, só densidades, sem
+  demonstrações): dava o mesmo verde a todas as fases e ficava pior que o
+  tempo fixo no cruzamento de teste de 4 fases (53,5 s contra 32,2 s).
+  Registro em `results/models/arquivo/dqn-fase-livre-estado1-*`.
+
+**Resultado nos cruzamentos de teste** (nunca vistos no treino). Seeds
+201–203, 300 s de aquecimento e 1800 s de controle. Os valores são a média e o
+IC de 95% (t de Student, gl = 2); a redução é pareada por seed contra o tempo
+fixo:
+
+| Cenário | Política | Espera média (s) | Espera parado (s) | Fila de inserção (veíc.) | Redução da espera |
+|---|---|---|---|---|---|
+| cruz-assimetrico/baixa | Tempo fixo | 22,6 [17,6; 27,7] | 31,7 [28,1; 35,3] | 0,0 | — |
+| | Max-pressure acíclico | 9,7 [6,5; 12,9] | 14,7 [10,5; 19,0] | 0,0 | 56,7% [33,5; 80,0] |
+| | **DQN genérico** | **6,5 [4,9; 8,0]** | **10,8 [9,1; 12,5]** | 0,0 | **71,2% [58,2; 84,1]** |
+| cruz-assimetrico/media | Tempo fixo | 32,2 [28,4; 36,0] | 38,6 [34,6; 42,7] | 0,0 | — |
+| | Max-pressure acíclico | 19,5 [18,9; 20,1] | 24,2 [22,7; 25,8] | 0,0 | 39,3% [30,5; 48,0] |
+| | **DQN genérico** | **16,4 [10,9; 22,0]** | **20,3 [14,9; 25,7]** | 0,0 | **49,1% [34,5; 63,6]** |
+| cruz-assimetrico/desbalanceada | Tempo fixo | 34,9 [32,0; 37,7] | 41,6 [39,2; 44,0] | 32,5 [8,3; 56,7] | — |
+| | Max-pressure acíclico | **19,9 [18,1; 21,6]** | **24,1 [22,2; 26,1]** | 39,2 [26,3; 52,1] | **43,0% [39,3; 46,7]** |
+| | DQN genérico | 20,8 [18,7; 22,8] | 26,0 [23,6; 28,4] | **24,7 [23,4; 26,0]** | 40,4% [36,4; 44,4] |
+| SP calibrated | Tempo fixo | 13,0 [12,1; 13,8] | 23,1 [20,2; 26,1] | 0,2 | — |
+| | Max-pressure acíclico | 4,7 [3,8; 5,7] | 8,0 [7,0; 8,9] | 0,0 | 63,6% [57,9; 69,3] |
+| | **DQN genérico** | **3,9 [3,3; 4,5]** | 8,0 [7,8; 8,3] | 0,0 | **70,1% [63,7; 76,5]** |
+| | Especialista (DQN estado v2) | 4,1 [3,7; 4,6] | **7,9 [6,9; 8,9]** | 0,0 | 68,0% [62,5; 73,5] |
+| SP original | Tempo fixo | 14,9 [14,8; 15,1] | 22,7 [22,7; 22,7] | 19,0 [14,5; 23,5] | — |
+| | Max-pressure acíclico | 4,6 [4,3; 4,8] | 7,3 [7,1; 7,6] | 0,5 | 69,4% [67,7; 71,1] |
+| | DQN genérico | 4,5 [4,2; 4,9] | 7,3 [7,1; 7,5] | 0,5 | 69,7% [67,0; 72,4] |
+| | Especialista (DQN estado v2) | 4,5 [4,2; 4,8] | 7,2 [6,9; 7,6] | 0,5 | 70,1% [67,9; 72,2] |
+
+**Portão 2 (aprovado):** o DQN genérico vence o tempo fixo em todos os
+cenários de teste e empata com o max-pressure ou fica à frente dele.
+
+- **SP calibrated:** sem nunca ter visto o SP, o genérico alcança 103% da
+  redução do especialista (70,1% contra 68,0%); os ICs se sobrepõem.
+- **cruz-assimetrico/desbalanceada:** a espera média fica 0,9 s acima da do
+  max-pressure (ICs sobrepostos), mas a fila de inserção é 37% menor (24,7
+  contra 39,2 veículos). Quem está na fila de inserção não entra na espera
+  média.
+- Nenhuma política teve teleportes.
+
+**Limitações:**
+
+- São 3 seeds, então os ICs são largos (gl = 2).
+- No SP, com 2 fases, a escolha livre equivale a manter ou trocar.
+- Os cruzamentos sintéticos não têm faixa exclusiva de conversão à direita
+  nem pedestres.
+- A percepção é *ground truth*: nos cruzamentos novos, a visão exigiria
+  calibrar as câmeras.
+
+**Modelo global no painel e no `compare_versions` (2026-11-07).** O modelo
+passou a se chamar **modelo global**, com id `global` no código; o checkpoint
+continua sendo `dqn-fase-livre-rl-best.pt`.
+
+- No SP, com 2 fases verdes, escolher a fase é o mesmo que manter ou trocar.
+  Por isso, `GlobalPhasePolicy` (`experiments/version_policies.py`) o põe no
+  mesmo laço das outras versões, com a mesma camada de segurança, visão,
+  preempção, pedestres e telemetria.
+- O adaptador faz três coisas:
+  - traduz as features `(câmera, faixa)` para `(edge, lane_k)`;
+  - monta o estado `phase_select_2`, com o vermelho da outra fase igual ao
+    verde atual + amarelo + all-red;
+  - devolve "trocar" quando o modelo escolhe a outra fase.
+- Conferência: `compare_versions --versions global --perception oracle`
+  reproduz seed a seed o ambiente genérico (calibrated 4,032 / 3,597 /
+  4,013 s; original 4,510 / 4,671 / 4,383 s).
+- No painel do Eureka, ele aparece como "Modelo global (IA para qualquer
+  cruzamento)".
+- Não é versão do produto. Ainda não foi avaliado com visão nem no
+  `calibrated_ped`, onde nunca viu pedestres; nesse cenário, a fase de
+  pedestres fica fora da conta do vermelho.
+- `experiments.run_phase_selection_visual` avalia o modelo com visão pelo
+  ambiente genérico, comparando com `versoes-<cenário>-visual.json`. Para isso,
+  a Unity precisa estar em Play Mode.
+
+**Estado `phase_select_3` e treino com pedestres (2026-11-07).** O estado
+ganhou duas features por fase, `switch_in` e `switch_out`: o tempo perdido
+para entrar e para sair da fase (amarelo + all-red + fase de pedestres,
+÷ 30 s). O controlador genérico ganhou a fase exclusiva de pedestres
+(7 + 11 s com todos os veículos no vermelho depois do último verde), e os
+cruzamentos de treino e o `cruz-assimetrico` ganharam variantes `+ped`. O
+novo checkpoint, `dqn-fase-livre-v3-best.pt` (480 episódios em 24 cenários,
+demonstrações do max-pressure seguidas de RL sem imitação, melhor no
+episódio 383), passou a ser o padrão do `global` (painel, `compare_versions`,
+`evaluate_preemption`, `evaluate_phase_selection`).
+
+Percepção *ground truth*, seeds 201–203, espera média / espera parado (s):
+
+| Cenário | Tempo fixo | Max-pressure | DQN estado v2 (v5.0) | Global `rl` | Global `v3` |
+|---|---|---|---|---|---|
+| SP `calibrated_ped` | 20,8 / 34,3 | 26,5 / 29,4 | 14,2 / 18,2 | 19,6 / 24,2 | **13,4 / 18,4** |
+| SP `calibrated` | 13,0 / 23,1 | 4,7 / 8,0 | 4,1 / 7,9 | 3,9 / 8,0 | 3,9 / 7,9 |
+| SP `original` | 14,9 / 22,7 | 4,6 / 7,3 | 4,5 / 7,2 | 4,5 / 7,3 | 4,5 / 7,3 |
+| `cruz-assimetrico` baixa | 22,6 / 31,7 | 9,7 / 14,7 | — | **6,5 / 10,8** | 7,5 / 12,4 |
+| `cruz-assimetrico` media | 32,2 / 38,6 | 19,5 / 24,2 | — | **16,4 / 20,3** | 19,2 / 23,4 |
+| `cruz-assimetrico` desbalanceada | 34,9 / 41,6 | 19,9 / 24,1 | — | 20,8 / 26,0 | 21,7 / 25,8 |
+| `cruz-assimetrico` baixa+ped | 31,1 / 40,2 | 13,4 / 18,8 | — | — | **7,1 / 11,7** |
+| `cruz-assimetrico` media+ped | 51,7 / 56,3 | 25,9 / 31,2 | — | — | **20,2 / 24,9** |
+| `cruz-assimetrico` desbalanceada+ped | 57,8 / 63,2 | 21,2 / 25,5 | — | — | 22,5 / 27,0 |
+
+- Com pedestres, o modelo global passa a v5.0 no SP sem nunca ter visto o
+  cruzamento; o max-pressure, que não pondera o custo da fase de pedestres,
+  fica pior que o tempo fixo.
+- Os pedestres do SP esperam um pouco mais que com a v5.0 (27,9 s contra
+  23,4 s em média; tempo fixo 56,6 s).
+- Sem pedestres, o `cruz-assimetrico` piorou 1–3 s em relação ao checkpoint
+  `rl`. Na demanda desbalanceada, o max-pressure tem a menor espera, mas
+  deixa cerca do dobro de veículos na fila de inserção.
+- **10 seeds (201–210), teste t pareado** (a partir de
+  `versoes-*-oracle-10seeds*.json` e `fase-livre-*-test-10seeds.json`; as
+  estatísticas e figuras do artigo ficam na branch `docs/artigo-final`):
+  - SP `calibrated`: 4,0 s contra max-pressure 5,0 s (p < 0,001) e
+    especialista 4,2 s (p = 0,056);
+  - SP `calibrated_ped`: 13,1 s contra especialista 14,1 s (p < 0,001, 10/10
+    seeds) e max-pressure 26,5 s;
+  - SP `original`: empate de todos os adaptativos (~4,5 s);
+  - `cruz-assimetrico`: vence o max-pressure em baixa e média, com e sem
+    pedestres (p ≤ 0,010), e empata na desbalanceada (p ≥ 0,5) com menos
+    da metade da fila de inserção;
+  - contra o checkpoint `rl`, a piora sem pedestres só se confirma na demanda
+    baixa (+1,3 s, p < 0,001); com pedestres, o `v3` é melhor na baixa
+    (−1,3 s, p = 0,002).
+
+**Fase de pedestres obrigatória por tempo, N = 40 s (2026-11-08).** Os
+resultados do `v3` com pedestres no `cruz-assimetrico` **não valem**: a regra
+"pedestres depois do último verde" (copiada do SP) era evitável com a escolha
+livre de fase, e o `v3` quase nunca a acionava (~8 s de fase de pedestres
+por seed, contra 450–500 s do tempo fixo e do max-pressure). No SP a regra
+continua a de antes (depois de todo verde Sul), porque lá a ordem é fixa.
+
+- Regra nova (`PhaseSelectionController(pedestrian_interval_s=...)`,
+  `pedestrian_phase.interval_seconds` em `generic.yaml`): N s depois do fim da
+  última fase de pedestres ela fica pendente e entra na próxima troca de
+  verde, vinda de qualquer fase; o verde máximo força essa troca. Os custos
+  `switch_in`/`switch_out` incluem os 18 s quando ela está pendente, e a
+  liberação passa por `"r"*n` (todo verde passa pelo amarelo).
+- Escolha de N pelo nível de serviço do pedestre do HCM 2000 (espera média
+  ≈ Σ(C − g)² / (2ΣC), g = 7 s), com tempo fixo e max-pressure nas seeds de
+  validação 1001–1005 (`experiments.sweep_pedestrian_interval`,
+  `results/evaluation/intervalo-pedestres.json`). Max-pressure, carros /
+  pedestres (s):
+
+  | N | Baixa | Média | Desbalanceada |
+  |---|---|---|---|
+  | 30 | 23,8 / 24,5 | 41,2 / 25,8 | 40,9 / 25,4 |
+  | 40 | 19,8 / 29,5 | 39,1 / 30,5 | 35,6 / 28,8 |
+  | 60 | 17,6 / 38,7 | 35,2 / 38,8 | 29,0 / 38,9 |
+
+  Escolhido N = 40 (decisão do usuário): níveis C a D para os pedestres.
+- Retreino com a mesma receita (`dqn-fase-livre-ped40-best.pt`, melhor no
+  episódio 239; log `dqn-fase-livre-ped40-pretrain.jsonl`), agora padrão do
+  `global` (painel, `compare_versions`, `evaluate_preemption`,
+  `evaluate_phase_selection`, `run_phase_selection_visual`). O modelo faz a
+  fase de pedestres tanto quanto o max-pressure (~25 vezes em 30 min).
+- 10 seeds (201–210), espera média (s), teste t pareado contra o max-pressure:
+
+  | Cenário | Tempo fixo | Max-pressure | Especialista | Global `ped40` |
+  |---|---|---|---|---|
+  | SP `calibrated` | 12,9 | 5,0 | 4,2 | 4,4 (−0,6 vs MP; +0,2 vs especialista, p = 0,023) |
+  | SP `calibrated_ped` | 20,7 | 26,5 | 14,1 | 14,7 (−11,8 vs MP; +0,7 vs especialista); pedestres 22,9 s (especialista 22,4) |
+  | SP `original` | 14,9 | 4,6 | 4,5 | 4,7 (empate com o MP) |
+  | `cruz-assimetrico` baixa | 21,7 | 9,9 | — | 7,9 (−2,0, p < 0,001) |
+  | `cruz-assimetrico` media | 31,8 | 20,3 | — | 19,1 (empate, p = 0,18) |
+  | `cruz-assimetrico` desbalanceada | 33,7 | 19,9 | — | 19,7 (empate) |
+  | `cruz-assimetrico` baixa+ped | 38,8 | 20,9 | — | 17,6 (−3,3, p = 0,001) |
+  | `cruz-assimetrico` media+ped | 60,0 | 39,1 | — | **45,4 (+6,2, perde 10/10)** |
+  | `cruz-assimetrico` desbalanceada+ped | 58,7 | 36,8 | — | 32,2 (−4,6, p = 0,003) |
+
+- Contra o checkpoint `rl`, sem pedestres, a piora continua: +1,5 s na baixa
+  e +3,5 s na média (p ≤ 0,002). Hipótese não provada: o mesmo modelo agora
+  divide a capacidade entre cenários com e sem pedestres.
+- Preempção (V2I, `preempcao-*-oracle-global-ped40.json`): 18/18 viaturas sem
+  parar; perda média 0,4 s (`calibrated`) e 0,9 s (`calibrated_ped`).
+- Percepção visual (Unity, YOLO de 2 classes + ByteTrack, seeds 201–203,
+  `missing_frames` = 0; `versoes-*-visual-global.json`), espera média (s),
+  teste t pareado; as outras versões vêm de `versoes-*-visual.json`:
+
+  | Cenário | Global visual | Global *ground truth* | Especialista visual | Max-pressure visual | Tempo fixo visual |
+  |---|---|---|---|---|---|
+  | `calibrated` | 4,67 | 4,49 (p = 0,26) | 4,31 (p = 0,015) | 4,77 (p = 0,64) | 12,98 (−64%) |
+  | `calibrated_ped` | 15,6 | 14,7 (p = 0,17) | 14,2 (p = 0,08) | 21,0 (p = 0,011) | 20,8 (−25%) |
+
+  Espera dos pedestres no `calibrated_ped`: 24,2 s (*ground truth* 23,2; max-pressure 24,2;
+  especialista 25,0). Fila de inserção média ≤ 0,3 veículo. A visão custa
+  ao global +0,2 s e +1,0 s (não significativos), na ordem do especialista.
+- Preempção com câmeras (`preempcao-calibrated-visual-global.json`,
+  `calibrated`, seeds 201–203, 18 viaturas, `missing_frames` = 0), perda total
+  (entrada + rede) / sem parar, contra o especialista com câmeras
+  (`preempcao-calibrated-visual.json`): V2I 1,3 s / 18 de 18 (especialista
+  1,4 s / 18); só visão 4,2 s / 14 de 18 (especialista 2,7 s / 16); ambos
+  1,4 s / 18 de 18 (1,4 s / 18). Visão: 18/18 detectadas, 0 alarmes falsos.
+  Só a detecção visual fica pior que no especialista (3 seeds; não testado).
+  Sem preempção, também com câmeras (`preempcao-calibrated-visual-global-v2i.json`,
+  2026-11-10, `missing_frames` = 0, mesmo comando com `--detections v2i`):
+  9,8 s / 6 de 18 (*ground truth*: 10,8 s / 7 de 18); o V2I da mesma rodada
+  repetiu 1,3 s / 18 de 18. Espera do tráfego 4,6 s sem e 4,8 s com preempção.
+- Teste de sensibilidade (pedido do usuário): a regra por tempo (N = 40 s)
+  também no SP, só como registro (`compare_versions --pedestrian-interval 40`,
+  `versoes-calibrated_ped-oracle-10seeds-ped-tempo40.json`; o padrão do SP
+  continua "depois de todo verde Sul"). Seeds 201–210, *ground truth*,
+  veículos / pedestres (s), regra atual → por tempo:
+
+  | Controlador | Regra atual | Por tempo (40 s) |
+  |---|---|---|
+  | Tempo fixo | 20,7 / 55,2 | 28,5 / 28,5 |
+  | Max-pressure | 26,5 / 20,9 | 16,2 / 33,6 |
+  | Especialista (v2) | 14,1 / 22,4 | 10,9 / 33,6 |
+  | Global `ped40` | 14,7 / 22,9 | 12,4 / 33,9 |
+
+  Com ciclos curtos (controle adaptativo), "a cada verde Sul" dá a fase de
+  pedestres com mais frequência que "40 s + a próxima troca": os veículos
+  melhoram e os pedestres pioram ~11 s (nível C → D do HCM). No tempo fixo
+  (ciclo de ~109 s) é o contrário. A ordem não muda: o global vence o
+  max-pressure (−3,8 s, p < 0,001) e fica atrás do especialista (+1,5 s);
+  pedestres empatados entre os três adaptativos. A regra só troca espera de
+  pedestre por espera de veículo; mantida a regra atual no SP.
+- Tentativa descartada: ajuste fino do `ped40` (480 episódios, lr 3·10⁻⁴,
+  validação em 3 seeds; `dqn-fase-livre-ped40b-*`). Venceu na validação, mas
+  no teste não melhorou a baixa (+0,6 s, p = 0,09) e piorou o SP com
+  pedestres (veículos +1,1 s, pedestres +2,2 s, p ≤ 0,002). O SP não está na
+  validação. `--learning-rate` passou a valer também com `--init-checkpoint`.
+
+**Comandos** (a partir de `python/`; só SUMO):
+
+```bash
+../.venv/bin/python -m experiments.build_generic_intersections
+# etapas 1 e 2: demonstrações + imitação
+../.venv/bin/python -m experiments.pretrain_phase_selection --episodes 480 --validation-interval 48
+# etapa 3: RL sem imitação, a partir da etapa 2 (renomeie o best da etapa 2 para dqn-fase-livre-imitacao-best.pt)
+../.venv/bin/python -m experiments.pretrain_phase_selection --episodes 480 --validation-interval 48 \
+  --init-checkpoint ../results/models/dqn-fase-livre-imitacao-best.pt --demo-episodes 0 \
+  --demo-batch-fraction 0 --demo-loss-weight 0 --epsilon-start 0.2 \
+  --checkpoint-output ../results/models/dqn-fase-livre-rl-last.pt \
+  --best-checkpoint-output ../results/models/dqn-fase-livre-rl-best.pt \
+  --log-output ../results/logs/dqn-fase-livre-rl-pretrain.jsonl
+# avaliação nos cruzamentos de teste (padrão: dqn-fase-livre-ped40-best.pt)
+../.venv/bin/python -m experiments.evaluate_phase_selection --output ../results/evaluation/fase-livre-rl-test.json
+```
 
 ## Numeração do produto com a prova de conceito (2026-10-20)
 

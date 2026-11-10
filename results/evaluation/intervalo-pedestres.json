@@ -1,0 +1,1260 @@
+{
+  "seeds": [
+    1001,
+    1002,
+    1003,
+    1004,
+    1005
+  ],
+  "green_seconds": 7.0,
+  "results": {
+    "30": {
+      "cruz-assimetrico/baixa+ped": {
+        "fixed_time": {
+          "summary": {
+            "wait_s": 36.34887103394078,
+            "stopped_wait_s": 44.55087286269274,
+            "pending": 0.005333333333333333,
+            "pedestrian_seconds": 498.0,
+            "pedestrian_mean_wait_s": 26.160399529964746,
+            "pedestrian_max_wait_s": 59.0,
+            "pedestrian_mean_interval_s": 65.46153846153847
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 36.79216354344123,
+              "stopped_wait_s": 43.36746987951807,
+              "pending": 0.0044444444444444444,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.160399529964746,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 65.46153846153847,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1002,
+              "wait_s": 36.89572649572649,
+              "stopped_wait_s": 45.92340425531915,
+              "pending": 0.006111111111111111,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.160399529964746,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 65.46153846153847,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1003,
+              "wait_s": 35.04270462633452,
+              "stopped_wait_s": 42.44396551724138,
+              "pending": 0.0033333333333333335,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.160399529964746,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 65.46153846153847,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1004,
+              "wait_s": 39.34464285714286,
+              "stopped_wait_s": 48.424175824175826,
+              "pending": 0.005,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.160399529964746,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 65.46153846153847,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1005,
+              "wait_s": 33.669117647058826,
+              "stopped_wait_s": 42.5953488372093,
+              "pending": 0.0077777777777777776,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.160399529964746,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 65.46153846153847,
+              "pedestrian_phases": 27
+            }
+          ]
+        },
+        "max_pressure": {
+          "summary": {
+            "wait_s": 23.821917170514773,
+            "stopped_wait_s": 28.832090662642923,
+            "pending": 0.0057777777777777775,
+            "pedestrian_seconds": 527.4,
+            "pedestrian_mean_wait_s": 24.489195017755776,
+            "pedestrian_max_wait_s": 74.2,
+            "pedestrian_mean_interval_s": 61.598148148148155
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 21.902155887230514,
+              "stopped_wait_s": 27.063524590163933,
+              "pending": 0.005,
+              "pedestrian_seconds": 534,
+              "pedestrian_mean_wait_s": 24.330133798720187,
+              "pedestrian_max_wait_s": 73.0,
+              "pedestrian_mean_interval_s": 61.392857142857146,
+              "pedestrian_phases": 29
+            },
+            {
+              "seed": 1002,
+              "wait_s": 23.863406408094434,
+              "stopped_wait_s": 28.76219512195122,
+              "pending": 0.005555555555555556,
+              "pedestrian_seconds": 516,
+              "pedestrian_mean_wait_s": 25.11245572609209,
+              "pedestrian_max_wait_s": 78.0,
+              "pedestrian_mean_interval_s": 62.74074074074074,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1003,
+              "wait_s": 23.476868327402133,
+              "stopped_wait_s": 28.558441558441558,
+              "pending": 0.0033333333333333335,
+              "pedestrian_seconds": 534,
+              "pedestrian_mean_wait_s": 23.863582793164408,
+              "pedestrian_max_wait_s": 68.0,
+              "pedestrian_mean_interval_s": 60.607142857142854,
+              "pedestrian_phases": 29
+            },
+            {
+              "seed": 1004,
+              "wait_s": 23.96842105263158,
+              "stopped_wait_s": 28.641509433962263,
+              "pending": 0.005555555555555556,
+              "pedestrian_seconds": 534,
+              "pedestrian_mean_wait_s": 24.376463700234194,
+              "pedestrian_max_wait_s": 83.0,
+              "pedestrian_mean_interval_s": 61.0,
+              "pedestrian_phases": 29
+            },
+            {
+              "seed": 1005,
+              "wait_s": 25.89873417721519,
+              "stopped_wait_s": 31.13478260869565,
+              "pending": 0.009444444444444445,
+              "pedestrian_seconds": 519,
+              "pedestrian_mean_wait_s": 24.763339070567987,
+              "pedestrian_max_wait_s": 69.0,
+              "pedestrian_mean_interval_s": 62.25,
+              "pedestrian_phases": 29
+            }
+          ]
+        }
+      },
+      "cruz-assimetrico/media+ped": {
+        "fixed_time": {
+          "summary": {
+            "wait_s": 61.74047616643363,
+            "stopped_wait_s": 64.40633440933286,
+            "pending": 39.34977777777778,
+            "pedestrian_seconds": 498.0,
+            "pedestrian_mean_wait_s": 26.160399529964746,
+            "pedestrian_max_wait_s": 59.0,
+            "pedestrian_mean_interval_s": 65.46153846153847
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 66.03863134657837,
+              "stopped_wait_s": 67.75877689694224,
+              "pending": 22.138333333333332,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.160399529964746,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 65.46153846153847,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1002,
+              "wait_s": 60.45627802690583,
+              "stopped_wait_s": 63.8189349112426,
+              "pending": 42.24,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.160399529964746,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 65.46153846153847,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1003,
+              "wait_s": 61.07847533632287,
+              "stopped_wait_s": 63.4988344988345,
+              "pending": 41.19555555555556,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.160399529964746,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 65.46153846153847,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1004,
+              "wait_s": 59.56990521327014,
+              "stopped_wait_s": 62.84625,
+              "pending": 53.931666666666665,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.160399529964746,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 65.46153846153847,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1005,
+              "wait_s": 61.55909090909091,
+              "stopped_wait_s": 64.10887573964497,
+              "pending": 37.24333333333333,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.160399529964746,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 65.46153846153847,
+              "pedestrian_phases": 27
+            }
+          ]
+        },
+        "max_pressure": {
+          "summary": {
+            "wait_s": 41.18957150829361,
+            "stopped_wait_s": 44.92061343064819,
+            "pending": 58.940222222222225,
+            "pedestrian_seconds": 512.4,
+            "pedestrian_mean_wait_s": 25.814379096890526,
+            "pedestrian_max_wait_s": 80.0,
+            "pedestrian_mean_interval_s": 63.70834350834351
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 40.61904761904762,
+              "stopped_wait_s": 44.10340775558167,
+              "pending": 52.03277777777778,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.975438596491227,
+              "pedestrian_max_wait_s": 83.0,
+              "pedestrian_mean_interval_s": 65.76923076923077,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1002,
+              "wait_s": 41.473981900452486,
+              "stopped_wait_s": 45.15147783251231,
+              "pending": 69.90166666666667,
+              "pedestrian_seconds": 516,
+              "pedestrian_mean_wait_s": 25.85295823665893,
+              "pedestrian_max_wait_s": 78.0,
+              "pedestrian_mean_interval_s": 63.851851851851855,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1003,
+              "wait_s": 43.03243243243243,
+              "stopped_wait_s": 45.18161180476731,
+              "pending": 48.35111111111111,
+              "pedestrian_seconds": 522,
+              "pedestrian_mean_wait_s": 24.68735632183908,
+              "pedestrian_max_wait_s": 73.0,
+              "pedestrian_mean_interval_s": 62.142857142857146,
+              "pedestrian_phases": 29
+            },
+            {
+              "seed": 1004,
+              "wait_s": 39.07126436781609,
+              "stopped_wait_s": 44.31812255541069,
+              "pending": 68.37833333333333,
+              "pedestrian_seconds": 516,
+              "pedestrian_mean_wait_s": 25.39668442865601,
+              "pedestrian_max_wait_s": 83.0,
+              "pedestrian_mean_interval_s": 62.55555555555556,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1005,
+              "wait_s": 41.751131221719454,
+              "stopped_wait_s": 45.84844720496894,
+              "pending": 56.03722222222222,
+              "pedestrian_seconds": 510,
+              "pedestrian_mean_wait_s": 26.159457900807382,
+              "pedestrian_max_wait_s": 83.0,
+              "pedestrian_mean_interval_s": 64.22222222222223,
+              "pedestrian_phases": 28
+            }
+          ]
+        }
+      },
+      "cruz-assimetrico/desbalanceada+ped": {
+        "fixed_time": {
+          "summary": {
+            "wait_s": 57.56701203728254,
+            "stopped_wait_s": 62.3424212987242,
+            "pending": 117.042,
+            "pedestrian_seconds": 498.0,
+            "pedestrian_mean_wait_s": 26.244724566463695,
+            "pedestrian_max_wait_s": 59.0,
+            "pedestrian_mean_interval_s": 65.67692307692307
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 56.899002493765586,
+              "stopped_wait_s": 61.33467741935484,
+              "pending": 105.94944444444444,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.160399529964746,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 65.46153846153847,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1002,
+              "wait_s": 57.38788659793814,
+              "stopped_wait_s": 62.634317862165965,
+              "pending": 133.06055555555557,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1003,
+              "wait_s": 56.87179487179487,
+              "stopped_wait_s": 62.478873239436616,
+              "pending": 119.13444444444444,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.160399529964746,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 65.46153846153847,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1004,
+              "wait_s": 58.388535031847134,
+              "stopped_wait_s": 62.87379972565158,
+              "pending": 117.84,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.160399529964746,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 65.46153846153847,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1005,
+              "wait_s": 58.287841191066995,
+              "stopped_wait_s": 62.39043824701195,
+              "pending": 109.22555555555556,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 27
+            }
+          ]
+        },
+        "max_pressure": {
+          "summary": {
+            "wait_s": 40.875406174331204,
+            "stopped_wait_s": 44.778780318029234,
+            "pending": 110.31577777777777,
+            "pedestrian_seconds": 512.4,
+            "pedestrian_mean_wait_s": 25.364831116381385,
+            "pedestrian_max_wait_s": 71.6,
+            "pedestrian_mean_interval_s": 63.580911680911676
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 40.25567502986858,
+              "stopped_wait_s": 43.364221364221365,
+              "pending": 101.75722222222223,
+              "pedestrian_seconds": 516,
+              "pedestrian_mean_wait_s": 24.7479216152019,
+              "pedestrian_max_wait_s": 69.0,
+              "pedestrian_mean_interval_s": 62.370370370370374,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1002,
+              "wait_s": 38.61614906832298,
+              "stopped_wait_s": 42.93646408839779,
+              "pending": 129.68777777777777,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.452380952380953,
+              "pedestrian_max_wait_s": 88.0,
+              "pedestrian_mean_interval_s": 65.42307692307692,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1003,
+              "wait_s": 37.74909090909091,
+              "stopped_wait_s": 42.487039563437925,
+              "pending": 111.67055555555555,
+              "pedestrian_seconds": 516,
+              "pedestrian_mean_wait_s": 24.856298048492018,
+              "pedestrian_max_wait_s": 69.0,
+              "pedestrian_mean_interval_s": 62.629629629629626,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1004,
+              "wait_s": 44.220443349753694,
+              "stopped_wait_s": 47.74867021276596,
+              "pending": 104.12555555555555,
+              "pedestrian_seconds": 516,
+              "pedestrian_mean_wait_s": 25.4027293844367,
+              "pedestrian_max_wait_s": 64.0,
+              "pedestrian_mean_interval_s": 63.77777777777778,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1005,
+              "wait_s": 43.53567251461988,
+              "stopped_wait_s": 47.35750636132315,
+              "pending": 104.33777777777777,
+              "pedestrian_seconds": 516,
+              "pedestrian_mean_wait_s": 25.364825581395348,
+              "pedestrian_max_wait_s": 68.0,
+              "pedestrian_mean_interval_s": 63.7037037037037,
+              "pedestrian_phases": 28
+            }
+          ]
+        }
+      }
+    },
+    "40": {
+      "cruz-assimetrico/baixa+ped": {
+        "fixed_time": {
+          "summary": {
+            "wait_s": 39.23466580678671,
+            "stopped_wait_s": 48.27478563708843,
+            "pending": 0.0054444444444444445,
+            "pedestrian_seconds": 498.0,
+            "pedestrian_mean_wait_s": 26.371212121212118,
+            "pedestrian_max_wait_s": 59.0,
+            "pedestrian_mean_interval_s": 66.0
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 37.277870216306155,
+              "stopped_wait_s": 49.13157894736842,
+              "pending": 0.0038888888888888888,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1002,
+              "wait_s": 38.61382799325464,
+              "stopped_wait_s": 47.704166666666666,
+              "pending": 0.005555555555555556,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1003,
+              "wait_s": 39.63333333333333,
+              "stopped_wait_s": 47.86228813559322,
+              "pending": 0.0038888888888888888,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1004,
+              "wait_s": 40.35663082437276,
+              "stopped_wait_s": 48.220556745182016,
+              "pending": 0.005,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1005,
+              "wait_s": 40.291666666666664,
+              "stopped_wait_s": 48.45533769063181,
+              "pending": 0.008888888888888889,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            }
+          ]
+        },
+        "max_pressure": {
+          "summary": {
+            "wait_s": 19.804915872659937,
+            "stopped_wait_s": 24.753147898899513,
+            "pending": 0.005222222222222223,
+            "pedestrian_seconds": 455.0,
+            "pedestrian_mean_wait_s": 29.45205081327603,
+            "pedestrian_max_wait_s": 81.6,
+            "pedestrian_mean_interval_s": 71.685
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 21.148026315789473,
+              "stopped_wait_s": 26.348360655737704,
+              "pending": 0.0038888888888888888,
+              "pedestrian_seconds": 450,
+              "pedestrian_mean_wait_s": 29.640746934225195,
+              "pedestrian_max_wait_s": 88.0,
+              "pedestrian_mean_interval_s": 71.76,
+              "pedestrian_phases": 26
+            },
+            {
+              "seed": 1002,
+              "wait_s": 18.8330550918197,
+              "stopped_wait_s": 23.90042372881356,
+              "pending": 0.005555555555555556,
+              "pedestrian_seconds": 450,
+              "pedestrian_mean_wait_s": 29.70069005175388,
+              "pedestrian_max_wait_s": 78.0,
+              "pedestrian_mean_interval_s": 72.45833333333333,
+              "pedestrian_phases": 25
+            },
+            {
+              "seed": 1003,
+              "wait_s": 16.903114186851212,
+              "stopped_wait_s": 21.662971175166298,
+              "pending": 0.0033333333333333335,
+              "pedestrian_seconds": 457,
+              "pedestrian_mean_wait_s": 29.270844991606044,
+              "pedestrian_max_wait_s": 77.0,
+              "pedestrian_mean_interval_s": 71.48,
+              "pedestrian_phases": 26
+            },
+            {
+              "seed": 1004,
+              "wait_s": 21.353765323992995,
+              "stopped_wait_s": 25.669473684210526,
+              "pending": 0.005,
+              "pedestrian_seconds": 468,
+              "pedestrian_mean_wait_s": 28.284646348476137,
+              "pedestrian_max_wait_s": 72.0,
+              "pedestrian_mean_interval_s": 69.56,
+              "pedestrian_phases": 26
+            },
+            {
+              "seed": 1005,
+              "wait_s": 20.786618444846294,
+              "stopped_wait_s": 26.184510250569478,
+              "pending": 0.008333333333333333,
+              "pedestrian_seconds": 450,
+              "pedestrian_mean_wait_s": 30.363325740318906,
+              "pedestrian_max_wait_s": 93.0,
+              "pedestrian_mean_interval_s": 73.16666666666667,
+              "pedestrian_phases": 25
+            }
+          ]
+        }
+      },
+      "cruz-assimetrico/media+ped": {
+        "fixed_time": {
+          "summary": {
+            "wait_s": 60.55966868908122,
+            "stopped_wait_s": 63.38513584809719,
+            "pending": 27.011333333333333,
+            "pedestrian_seconds": 498.0,
+            "pedestrian_mean_wait_s": 26.371212121212118,
+            "pedestrian_max_wait_s": 59.0,
+            "pedestrian_mean_interval_s": 66.0
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 61.36798336798337,
+              "stopped_wait_s": 63.27545551982851,
+              "pending": 14.596111111111112,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1002,
+              "wait_s": 60.020320855614976,
+              "stopped_wait_s": 62.98428731762065,
+              "pending": 32.44833333333333,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1003,
+              "wait_s": 60.776923076923076,
+              "stopped_wait_s": 63.644418872266975,
+              "pending": 30.836111111111112,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1004,
+              "wait_s": 60.29832402234637,
+              "stopped_wait_s": 63.4159811985899,
+              "pending": 34.846111111111114,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1005,
+              "wait_s": 60.334792122538296,
+              "stopped_wait_s": 63.60553633217993,
+              "pending": 22.33,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            }
+          ]
+        },
+        "max_pressure": {
+          "summary": {
+            "wait_s": 39.122381267337374,
+            "stopped_wait_s": 42.537450022800044,
+            "pending": 39.688,
+            "pedestrian_seconds": 446.4,
+            "pedestrian_mean_wait_s": 30.521009293943564,
+            "pedestrian_max_wait_s": 89.4,
+            "pedestrian_mean_interval_s": 73.72753623188405
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 38.07962771458118,
+              "stopped_wait_s": 41.5140924464487,
+              "pending": 30.59111111111111,
+              "pedestrian_seconds": 450,
+              "pedestrian_mean_wait_s": 30.07690108633505,
+              "pedestrian_max_wait_s": 87.0,
+              "pedestrian_mean_interval_s": 72.875,
+              "pedestrian_phases": 25
+            },
+            {
+              "seed": 1002,
+              "wait_s": 40.55016181229774,
+              "stopped_wait_s": 43.05841924398626,
+              "pending": 50.725,
+              "pedestrian_seconds": 450,
+              "pedestrian_mean_wait_s": 30.7743661971831,
+              "pedestrian_max_wait_s": 97.0,
+              "pedestrian_mean_interval_s": 73.95833333333333,
+              "pedestrian_phases": 25
+            },
+            {
+              "seed": 1003,
+              "wait_s": 38.39978448275862,
+              "stopped_wait_s": 43.404384896467725,
+              "pending": 41.333888888888886,
+              "pedestrian_seconds": 432,
+              "pedestrian_mean_wait_s": 31.47084295612009,
+              "pedestrian_max_wait_s": 97.0,
+              "pedestrian_mean_interval_s": 75.30434782608695,
+              "pedestrian_phases": 24
+            },
+            {
+              "seed": 1004,
+              "wait_s": 40.59405940594059,
+              "stopped_wait_s": 44.03341288782816,
+              "pending": 46.58277777777778,
+              "pedestrian_seconds": 450,
+              "pedestrian_mean_wait_s": 30.066704675028507,
+              "pedestrian_max_wait_s": 83.0,
+              "pedestrian_mean_interval_s": 73.08333333333333,
+              "pedestrian_phases": 25
+            },
+            {
+              "seed": 1005,
+              "wait_s": 37.988272921108745,
+              "stopped_wait_s": 40.676940639269404,
+              "pending": 29.20722222222222,
+              "pedestrian_seconds": 450,
+              "pedestrian_mean_wait_s": 30.216231555051078,
+              "pedestrian_max_wait_s": 83.0,
+              "pedestrian_mean_interval_s": 73.41666666666667,
+              "pedestrian_phases": 25
+            }
+          ]
+        }
+      },
+      "cruz-assimetrico/desbalanceada+ped": {
+        "fixed_time": {
+          "summary": {
+            "wait_s": 59.68144061957994,
+            "stopped_wait_s": 64.92940801746624,
+            "pending": 100.32222222222222,
+            "pedestrian_seconds": 498.0,
+            "pedestrian_mean_wait_s": 26.371212121212118,
+            "pedestrian_max_wait_s": 59.0,
+            "pedestrian_mean_interval_s": 66.0
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 59.69915764139591,
+              "stopped_wait_s": 65.27631578947368,
+              "pending": 88.825,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1002,
+              "wait_s": 59.935242839352426,
+              "stopped_wait_s": 64.34224598930481,
+              "pending": 116.08055555555555,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1003,
+              "wait_s": 60.12935323383085,
+              "stopped_wait_s": 65.59565807327002,
+              "pending": 103.10722222222222,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1004,
+              "wait_s": 58.40563725490196,
+              "stopped_wait_s": 64.31713900134953,
+              "pending": 99.97222222222223,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            },
+            {
+              "seed": 1005,
+              "wait_s": 60.23781212841855,
+              "stopped_wait_s": 65.11568123393316,
+              "pending": 93.62611111111111,
+              "pedestrian_seconds": 498,
+              "pedestrian_mean_wait_s": 26.37121212121212,
+              "pedestrian_max_wait_s": 59.0,
+              "pedestrian_mean_interval_s": 66.0,
+              "pedestrian_phases": 28
+            }
+          ]
+        },
+        "max_pressure": {
+          "summary": {
+            "wait_s": 35.5784803431025,
+            "stopped_wait_s": 39.70485133735027,
+            "pending": 93.92233333333334,
+            "pedestrian_seconds": 462.8,
+            "pedestrian_mean_wait_s": 28.838221846979344,
+            "pedestrian_max_wait_s": 76.0,
+            "pedestrian_mean_interval_s": 70.52966666666667
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 32.97605473204105,
+              "stopped_wait_s": 36.79389312977099,
+              "pending": 87.1061111111111,
+              "pedestrian_seconds": 460,
+              "pedestrian_mean_wait_s": 29.273262331838566,
+              "pedestrian_max_wait_s": 79.0,
+              "pedestrian_mean_interval_s": 71.36,
+              "pedestrian_phases": 26
+            },
+            {
+              "seed": 1002,
+              "wait_s": 33.224414303329226,
+              "stopped_wait_s": 37.475660639777466,
+              "pending": 119.645,
+              "pedestrian_seconds": 468,
+              "pedestrian_mean_wait_s": 27.986622073578594,
+              "pedestrian_max_wait_s": 72.0,
+              "pedestrian_mean_interval_s": 69.0,
+              "pedestrian_phases": 27
+            },
+            {
+              "seed": 1003,
+              "wait_s": 36.08736717827627,
+              "stopped_wait_s": 39.955555555555556,
+              "pending": 88.64833333333333,
+              "pedestrian_seconds": 468,
+              "pedestrian_mean_wait_s": 28.74403409090909,
+              "pedestrian_max_wait_s": 73.0,
+              "pedestrian_mean_interval_s": 70.4,
+              "pedestrian_phases": 26
+            },
+            {
+              "seed": 1004,
+              "wait_s": 39.212765957446805,
+              "stopped_wait_s": 42.69498069498069,
+              "pending": 87.02666666666667,
+              "pedestrian_seconds": 468,
+              "pedestrian_mean_wait_s": 28.39982778415614,
+              "pedestrian_max_wait_s": 73.0,
+              "pedestrian_mean_interval_s": 69.68,
+              "pedestrian_phases": 26
+            },
+            {
+              "seed": 1005,
+              "wait_s": 36.391799544419136,
+              "stopped_wait_s": 41.604166666666664,
+              "pending": 87.18555555555555,
+              "pedestrian_seconds": 450,
+              "pedestrian_mean_wait_s": 29.78736295441431,
+              "pedestrian_max_wait_s": 83.0,
+              "pedestrian_mean_interval_s": 72.20833333333333,
+              "pedestrian_phases": 25
+            }
+          ]
+        }
+      }
+    },
+    "60": {
+      "cruz-assimetrico/baixa+ped": {
+        "fixed_time": {
+          "summary": {
+            "wait_s": 29.8912204948527,
+            "stopped_wait_s": 38.938259806913756,
+            "pending": 0.005555555555555555,
+            "pedestrian_seconds": 288.0,
+            "pedestrian_mean_wait_s": 50.21491228070175,
+            "pedestrian_max_wait_s": 107.0,
+            "pedestrian_mean_interval_s": 114.0
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 27.88107202680067,
+              "stopped_wait_s": 37.23713646532438,
+              "pending": 0.0044444444444444444,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            },
+            {
+              "seed": 1002,
+              "wait_s": 30.99830220713073,
+              "stopped_wait_s": 40.12747252747253,
+              "pending": 0.005,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            },
+            {
+              "seed": 1003,
+              "wait_s": 27.8804920913884,
+              "stopped_wait_s": 39.26732673267327,
+              "pending": 0.0038888888888888888,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            },
+            {
+              "seed": 1004,
+              "wait_s": 33.17173524150268,
+              "stopped_wait_s": 40.57549234135667,
+              "pending": 0.005555555555555556,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            },
+            {
+              "seed": 1005,
+              "wait_s": 29.524500907441016,
+              "stopped_wait_s": 37.483870967741936,
+              "pending": 0.008888888888888889,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            }
+          ]
+        },
+        "max_pressure": {
+          "summary": {
+            "wait_s": 17.561506071867505,
+            "stopped_wait_s": 22.759723301008997,
+            "pending": 0.005,
+            "pedestrian_seconds": 360.0,
+            "pedestrian_mean_wait_s": 38.68396908160972,
+            "pedestrian_max_wait_s": 98.4,
+            "pedestrian_mean_interval_s": 90.36842105263159
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 17.673949579831934,
+              "stopped_wait_s": 23.52572706935123,
+              "pending": 0.0038888888888888888,
+              "pedestrian_seconds": 360,
+              "pedestrian_mean_wait_s": 39.10685483870968,
+              "pedestrian_max_wait_s": 96.0,
+              "pedestrian_mean_interval_s": 91.36842105263158,
+              "pedestrian_phases": 20
+            },
+            {
+              "seed": 1002,
+              "wait_s": 16.258389261744966,
+              "stopped_wait_s": 20.793991416309012,
+              "pending": 0.005555555555555556,
+              "pedestrian_seconds": 360,
+              "pedestrian_mean_wait_s": 38.02564858490566,
+              "pedestrian_max_wait_s": 96.0,
+              "pedestrian_mean_interval_s": 89.26315789473684,
+              "pedestrian_phases": 20
+            },
+            {
+              "seed": 1003,
+              "wait_s": 18.916230366492147,
+              "stopped_wait_s": 23.98008849557522,
+              "pending": 0.002777777777777778,
+              "pedestrian_seconds": 360,
+              "pedestrian_mean_wait_s": 37.749851807943095,
+              "pedestrian_max_wait_s": 92.0,
+              "pedestrian_mean_interval_s": 88.78947368421052,
+              "pedestrian_phases": 20
+            },
+            {
+              "seed": 1004,
+              "wait_s": 18.30366492146597,
+              "stopped_wait_s": 23.410714285714285,
+              "pending": 0.0044444444444444444,
+              "pedestrian_seconds": 360,
+              "pedestrian_mean_wait_s": 39.84314285714286,
+              "pedestrian_max_wait_s": 106.0,
+              "pedestrian_mean_interval_s": 92.10526315789474,
+              "pedestrian_phases": 20
+            },
+            {
+              "seed": 1005,
+              "wait_s": 16.655296229802513,
+              "stopped_wait_s": 22.08809523809524,
+              "pending": 0.008333333333333333,
+              "pedestrian_seconds": 360,
+              "pedestrian_mean_wait_s": 38.69434731934732,
+              "pedestrian_max_wait_s": 102.0,
+              "pedestrian_mean_interval_s": 90.3157894736842,
+              "pedestrian_phases": 20
+            }
+          ]
+        }
+      },
+      "cruz-assimetrico/media+ped": {
+        "fixed_time": {
+          "summary": {
+            "wait_s": 50.76380734642524,
+            "stopped_wait_s": 55.38230309489004,
+            "pending": 8.974555555555558,
+            "pedestrian_seconds": 288.0,
+            "pedestrian_mean_wait_s": 50.21491228070175,
+            "pedestrian_max_wait_s": 107.0,
+            "pedestrian_mean_interval_s": 114.0
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 45.50934119960669,
+              "stopped_wait_s": 50.03567567567568,
+              "pending": 3.7144444444444447,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            },
+            {
+              "seed": 1002,
+              "wait_s": 50.1005076142132,
+              "stopped_wait_s": 55.323991031390136,
+              "pending": 14.080555555555556,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            },
+            {
+              "seed": 1003,
+              "wait_s": 53.77981651376147,
+              "stopped_wait_s": 57.533260632497274,
+              "pending": 12.733333333333333,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            },
+            {
+              "seed": 1004,
+              "wait_s": 56.26168224299065,
+              "stopped_wait_s": 59.93362831858407,
+              "pending": 5.705555555555556,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            },
+            {
+              "seed": 1005,
+              "wait_s": 48.16768916155419,
+              "stopped_wait_s": 54.0849598163031,
+              "pending": 8.63888888888889,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            }
+          ]
+        },
+        "max_pressure": {
+          "summary": {
+            "wait_s": 35.20148683040436,
+            "stopped_wait_s": 38.81657777694856,
+            "pending": 29.355,
+            "pedestrian_seconds": 352.8,
+            "pedestrian_mean_wait_s": 38.763519600889204,
+            "pedestrian_max_wait_s": 98.6,
+            "pedestrian_mean_interval_s": 90.58245614035087
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 35.913967611336034,
+              "stopped_wait_s": 39.33813747228381,
+              "pending": 23.727777777777778,
+              "pedestrian_seconds": 360,
+              "pedestrian_mean_wait_s": 37.98759598346131,
+              "pedestrian_max_wait_s": 101.0,
+              "pedestrian_mean_interval_s": 89.10526315789474,
+              "pedestrian_phases": 20
+            },
+            {
+              "seed": 1002,
+              "wait_s": 33.56046267087277,
+              "stopped_wait_s": 37.68122786304605,
+              "pending": 41.12444444444444,
+              "pedestrian_seconds": 342,
+              "pedestrian_mean_wait_s": 39.665363800360794,
+              "pedestrian_max_wait_s": 102.0,
+              "pedestrian_mean_interval_s": 92.38888888888889,
+              "pedestrian_phases": 19
+            },
+            {
+              "seed": 1003,
+              "wait_s": 33.48069105691057,
+              "stopped_wait_s": 37.608447488584474,
+              "pending": 27.333333333333332,
+              "pedestrian_seconds": 360,
+              "pedestrian_mean_wait_s": 38.59014002333722,
+              "pedestrian_max_wait_s": 96.0,
+              "pedestrian_mean_interval_s": 90.21052631578948,
+              "pedestrian_phases": 20
+            },
+            {
+              "seed": 1004,
+              "wait_s": 36.69111570247934,
+              "stopped_wait_s": 39.50723025583982,
+              "pending": 31.83,
+              "pedestrian_seconds": 360,
+              "pedestrian_mean_wait_s": 38.005011792452834,
+              "pedestrian_max_wait_s": 92.0,
+              "pedestrian_mean_interval_s": 89.26315789473684,
+              "pedestrian_phases": 20
+            },
+            {
+              "seed": 1005,
+              "wait_s": 36.36119711042311,
+              "stopped_wait_s": 39.94784580498866,
+              "pending": 22.759444444444444,
+              "pedestrian_seconds": 342,
+              "pedestrian_mean_wait_s": 39.56948640483384,
+              "pedestrian_max_wait_s": 102.0,
+              "pedestrian_mean_interval_s": 91.94444444444444,
+              "pedestrian_phases": 19
+            }
+          ]
+        }
+      },
+      "cruz-assimetrico/desbalanceada+ped": {
+        "fixed_time": {
+          "summary": {
+            "wait_s": 56.80594917115593,
+            "stopped_wait_s": 62.094443904518414,
+            "pending": 57.41977777777778,
+            "pedestrian_seconds": 288.0,
+            "pedestrian_mean_wait_s": 50.21491228070175,
+            "pedestrian_max_wait_s": 107.0,
+            "pedestrian_mean_interval_s": 114.0
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 56.8309705561614,
+              "stopped_wait_s": 60.8098016336056,
+              "pending": 45.806111111111115,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            },
+            {
+              "seed": 1002,
+              "wait_s": 56.43050847457627,
+              "stopped_wait_s": 61.88475836431227,
+              "pending": 79.46277777777777,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            },
+            {
+              "seed": 1003,
+              "wait_s": 57.22133938706016,
+              "stopped_wait_s": 63.09386733416771,
+              "pending": 59.355555555555554,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            },
+            {
+              "seed": 1004,
+              "wait_s": 56.95449500554939,
+              "stopped_wait_s": 62.733496332518335,
+              "pending": 53.375,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            },
+            {
+              "seed": 1005,
+              "wait_s": 56.59243243243243,
+              "stopped_wait_s": 61.950295857988166,
+              "pending": 49.099444444444444,
+              "pedestrian_seconds": 288,
+              "pedestrian_mean_wait_s": 50.21491228070175,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 114.0,
+              "pedestrian_phases": 16
+            }
+          ]
+        },
+        "max_pressure": {
+          "summary": {
+            "wait_s": 28.964392385964914,
+            "stopped_wait_s": 32.68626453365497,
+            "pending": 81.14922222222222,
+            "pedestrian_seconds": 356.0,
+            "pedestrian_mean_wait_s": 38.94777554976307,
+            "pedestrian_max_wait_s": 98.4,
+            "pedestrian_mean_interval_s": 91.02578947368421
+          },
+          "runs": [
+            {
+              "seed": 1001,
+              "wait_s": 27.0989010989011,
+              "stopped_wait_s": 30.979899497487438,
+              "pending": 71.26944444444445,
+              "pedestrian_seconds": 342,
+              "pedestrian_mean_wait_s": 39.47282608695652,
+              "pedestrian_max_wait_s": 101.0,
+              "pedestrian_mean_interval_s": 92.0,
+              "pedestrian_phases": 19
+            },
+            {
+              "seed": 1002,
+              "wait_s": 29.95433255269321,
+              "stopped_wait_s": 33.48298429319372,
+              "pending": 105.01277777777777,
+              "pedestrian_seconds": 360,
+              "pedestrian_mean_wait_s": 38.76042873696408,
+              "pedestrian_max_wait_s": 91.0,
+              "pedestrian_mean_interval_s": 90.84210526315789,
+              "pedestrian_phases": 20
+            },
+            {
+              "seed": 1003,
+              "wait_s": 30.356502242152466,
+              "stopped_wait_s": 34.53826530612245,
+              "pending": 77.56277777777778,
+              "pedestrian_seconds": 354,
+              "pedestrian_mean_wait_s": 39.70904436860068,
+              "pedestrian_max_wait_s": 102.0,
+              "pedestrian_mean_interval_s": 92.52631578947368,
+              "pedestrian_phases": 20
+            },
+            {
+              "seed": 1004,
+              "wait_s": 28.578708946772366,
+              "stopped_wait_s": 31.983523447401776,
+              "pending": 80.33166666666666,
+              "pedestrian_seconds": 364,
+              "pedestrian_mean_wait_s": 37.65866741953698,
+              "pedestrian_max_wait_s": 91.0,
+              "pedestrian_mean_interval_s": 88.55,
+              "pedestrian_phases": 21
+            },
+            {
+              "seed": 1005,
+              "wait_s": 28.833517089305403,
+              "stopped_wait_s": 32.44665012406948,
+              "pending": 71.56944444444444,
+              "pedestrian_seconds": 360,
+              "pedestrian_mean_wait_s": 39.13791113675707,
+              "pedestrian_max_wait_s": 107.0,
+              "pedestrian_mean_interval_s": 91.21052631578948,
+              "pedestrian_phases": 20
+            }
+          ]
+        }
+      }
+    }
+  }
+}

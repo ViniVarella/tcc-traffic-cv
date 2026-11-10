@@ -39,8 +39,8 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     add_scenario_argument(parser)
     parser.add_argument("--perception", choices=("oracle", "visual"), default="oracle")
     parser.add_argument("--detections", default=None,
-                        help=f"Fontes do pedido de preempção, entre {','.join(EMERGENCY_DETECTIONS)}. "
-                             "Padrão: v2i (oracle) ou v2i,vision,both (visual).")
+                        help=f"Fontes do pedido de preempção, entre {','.join(EMERGENCY_DETECTIONS)}, ou none "
+                             "(só o modo sem preempção). Padrão: v2i (oracle) ou v2i,vision,both (visual).")
     parser.add_argument("--skip-no-preemption", action="store_true",
                         help="Não roda o modo sem preempção (para refazer só os modos com preempção).")
     parser.add_argument("--versions", default="baseline,v2,max_pressure")
@@ -51,6 +51,8 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--v2-dqn-model", type=Path, default=models / "dqn-v2-traffiq-best.pt")
     parser.add_argument("--v3-dqn-model", type=Path, default=models / "dqn-v3-fase-curta-best.pt",
                         help="Checkpoint do estado v3 (só cenários *_ped; inclua v3 em --versions).")
+    parser.add_argument("--global-dqn-model", type=Path, default=models / "dqn-fase-livre-ped40-best.pt",
+                        help="Modelo global, experimento de seleção livre de fase (inclua global em --versions).")
     add_vision_arguments(parser)
     parser.add_argument("--step-log-dir", type=Path, default=base_dir.parent / "results" / "logs",
                         help="Com --perception visual, grava um JSONL por versão e modo neste diretório.")
@@ -69,9 +71,14 @@ def main() -> None:
     seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
     detections = [item.strip() for item in (args.detections or ("v2i" if args.perception == "oracle" else "v2i,vision,both")).split(",")
                   if item.strip()]
+    if detections == ["none"]:
+        # Só o modo sem preempção (por exemplo, para medi-lo com a câmera sem refazer os outros).
+        if args.skip_no_preemption:
+            raise ValueError("--detections none não combina com --skip-no-preemption.")
+        detections = []
     if any(item not in EMERGENCY_DETECTIONS for item in detections):
         raise ValueError(f"--detections aceita {EMERGENCY_DETECTIONS}.")
-    if args.perception == "oracle" and detections != ["v2i"]:
+    if args.perception == "oracle" and detections not in (["v2i"], []):
         raise ValueError("A detecção visual das viaturas exige --perception visual (Unity em Play Mode).")
     config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
     scenario = args.scenario or config["sumo"].get("default_scenario")
@@ -79,7 +86,8 @@ def main() -> None:
     emergency = EmergencySettings.from_config(config)
     preemption = PreemptionSettings.from_config(config)
     versions = build_version_policies(config, [item.strip() for item in args.versions.split(",") if item.strip()],
-                                      args.v1_dqn_model, args.v2_dqn_model, args.v3_dqn_model)
+                                      args.v1_dqn_model, args.v2_dqn_model, args.v3_dqn_model,
+                                      args.global_dqn_model, base_dir / "configs" / "generic.yaml", scenario)
     modes = [] if args.skip_no_preemption else [("sem_preempcao", None, "v2i")]
     modes += [(f"com_preempcao_{item}", preemption, item) for item in detections]
     report: dict[str, Any] = {"perception": args.perception, "detections": detections, "scenario": scenario, "seeds": seeds,

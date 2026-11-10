@@ -291,6 +291,11 @@ class SumoClient:
         self._ensure_started()
         traci.trafficlight.setPhaseDuration(tls_id, float(duration))
 
+    def set_traffic_light_state(self, tls_id: str, state: str) -> None:
+        """Impõe a string de sinais; o SUMO a mantém até o próximo comando."""
+        self._ensure_started()
+        traci.trafficlight.setRedYellowGreenState(tls_id, state)
+
     def get_pending_vehicle_count(self) -> int:
         """Retorna o numero de veiculos ainda esperados na simulacao."""
         self._ensure_started()

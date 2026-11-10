@@ -1,0 +1,97 @@
+# Experimento de seleção livre de fase (branch feat/selecao-livre-de-fase): um
+# único DQN para cruzamentos com qualquer número de faixas e fases, só com SUMO
+# e percepção ground truth. Os cruzamentos sintéticos são gerados por
+# experiments.build_generic_intersections; o SP entra só como teste (nunca é
+# visto no treino). Mesmas regras de segurança e normalizações do sp.yaml.
+
+sumo:
+  step_length: 1.0
+  traci_port: 8873
+
+traffic_control:
+  min_green_seconds: 10
+  max_green_seconds: 40
+  yellow_seconds: 3
+  all_red_seconds: 1
+
+# ROI de cada faixa de entrada: os últimos 60 m até a linha de retenção (como as
+# câmeras do SP). Até 8 fases verdes por cruzamento.
+roi_length_m: 60
+max_phases: 8
+
+lane_state:
+  kinematics:
+    stop_speed_mps: 1.39
+    stop_time_s: 1.0
+    move_speed_mps: 2.0
+    vehicle_length_m: 5.0
+    ghost_ttl_s: 3.0
+
+dqn:
+  max_speed_mps: 13.89
+  waiting_reference_seconds: 60
+
+# Fase exclusiva de pedestres (estado phase_select_3): nos cruzamentos com
+# pedestrian_variants, cada demanda ganha a variante "<demanda>+ped", com todos
+# os veículos no vermelho por 7 s de verde + 11 s de liberação, como no SP.
+# A fase é obrigatória por tempo: interval_seconds depois do fim da última, ela
+# entra na próxima troca de verde, venha de qual fase vier (com seleção livre,
+# "depois do último verde" deixava a política evitá-la). N = 40 s, escolhido
+# pelo usuário com experiments.sweep_pedestrian_interval (espera HCM dos
+# pedestres de ~29–31 s com o max-pressure, nível C a D). As redes sintéticas
+# não têm pedestres: a variante reproduz o custo da fase para os veículos.
+pedestrian_phase:
+  green_seconds: 7
+  clearance_seconds: 11
+  interval_seconds: 40
+
+intersections:
+  cruz-2x2:
+    split: train
+    pedestrian_variants: true
+    net: ../sumo/generic/cruz-2x2/cruz-2x2.net.xml
+    scenarios:
+      baixa: ../sumo/generic/cruz-2x2/cruz-2x2.baixa.sumocfg
+      media: ../sumo/generic/cruz-2x2/cruz-2x2.media.sumocfg
+      desbalanceada: ../sumo/generic/cruz-2x2/cruz-2x2.desbalanceada.sumocfg
+  cruz-opostas:
+    split: train
+    pedestrian_variants: true
+    net: ../sumo/generic/cruz-opostas/cruz-opostas.net.xml
+    scenarios:
+      baixa: ../sumo/generic/cruz-opostas/cruz-opostas.baixa.sumocfg
+      media: ../sumo/generic/cruz-opostas/cruz-opostas.media.sumocfg
+      desbalanceada: ../sumo/generic/cruz-opostas/cruz-opostas.desbalanceada.sumocfg
+  t-3:
+    split: train
+    pedestrian_variants: true
+    net: ../sumo/generic/t-3/t-3.net.xml
+    scenarios:
+      baixa: ../sumo/generic/t-3/t-3.baixa.sumocfg
+      media: ../sumo/generic/t-3/t-3.media.sumocfg
+      desbalanceada: ../sumo/generic/t-3/t-3.desbalanceada.sumocfg
+  t-avenida:
+    split: train
+    pedestrian_variants: true
+    net: ../sumo/generic/t-avenida/t-avenida.net.xml
+    scenarios:
+      baixa: ../sumo/generic/t-avenida/t-avenida.baixa.sumocfg
+      media: ../sumo/generic/t-avenida/t-avenida.media.sumocfg
+      desbalanceada: ../sumo/generic/t-avenida/t-avenida.desbalanceada.sumocfg
+  cruz-assimetrico:
+    split: test
+    pedestrian_variants: true
+    net: ../sumo/generic/cruz-assimetrico/cruz-assimetrico.net.xml
+    scenarios:
+      baixa: ../sumo/generic/cruz-assimetrico/cruz-assimetrico.baixa.sumocfg
+      media: ../sumo/generic/cruz-assimetrico/cruz-assimetrico.media.sumocfg
+      desbalanceada: ../sumo/generic/cruz-assimetrico/cruz-assimetrico.desbalanceada.sumocfg
+  sp:
+    split: test
+    tls_id: clusterJ0_J14_J2_J7
+    # ROIs reais das câmeras: os resultados se comparam com versoes-*-oracle.json.
+    roi_profile: configs/sp.yaml
+    net: ../sumo/sp/Cruzamento.net.xml
+    scenarios:
+      calibrated: ../sumo/sp/Cruzamento.calibrated.sumocfg
+      original: ../sumo/sp/Cruzamento.sumocfg
