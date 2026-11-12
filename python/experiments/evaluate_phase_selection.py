@@ -17,6 +17,7 @@ from pathlib import Path
 from statistics import fmean, stdev
 from typing import Any
 
+from paths import PYTHON_DIR
 from controller.phase_selection_agent import PhaseSelectionAgent
 from controller.phase_selection_policies import MaxPressurePhasePolicy, PhaseDqnPolicy
 from experiments.episode_runner import EpisodeSettings
@@ -71,7 +72,7 @@ def specialist_runs(path: Path, seeds: list[int]) -> list[dict[str, Any]] | None
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     parser = argparse.ArgumentParser(description="Avalia a seleção livre de fase nos cruzamentos de teste.")
     parser.add_argument("--config", type=Path, default=base_dir / "configs" / "generic.yaml")
     parser.add_argument("--dqn-model", type=Path, default=base_dir.parent / "results" / "models" / "dqn-fase-livre-ped40-best.pt")

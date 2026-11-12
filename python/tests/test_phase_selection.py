@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
+from paths import PYTHON_DIR
 from controller.phase_selection_agent import PhaseAgentConfig, PhaseSelectionAgent
 from controller.phase_selection_controller import PhaseSelectionController, all_red_state, yellow_state
 from controller.phase_selection_policies import FixedTimePhasePolicy, MaxPressurePhasePolicy
@@ -329,7 +330,7 @@ class ScenarioTests(unittest.TestCase):
 
         from experiments.phase_selection_environment import load_scenarios
 
-        base = Path(__file__).resolve().parents[1]
+        base = PYTHON_DIR
         scenarios = load_scenarios(yaml.safe_load((base / "configs" / "generic.yaml").read_text(encoding="utf-8")), base)
         names = {scenario.name: scenario for scenario in scenarios}
         self.assertEqual(names["t-3/media+ped"].pedestrian_s, 18.0)
@@ -342,7 +343,7 @@ class VisualKeyTests(unittest.TestCase):
         import yaml
         from experiments.phase_selection_environment import camera_key_map, profile_geometries, remap_features
 
-        profile = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs" / "sp.yaml").read_text(encoding="utf-8"))
+        profile = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
         key_map = camera_key_map(profile)
         self.assertEqual(key_map[("south", "lane_0")], ("E3", "lane_0"))
         self.assertEqual(set(key_map.values()), set(profile_geometries(profile)))  # mesmas chaves das ROIs do ambiente
@@ -364,7 +365,7 @@ class GlobalPhasePolicyTests(unittest.TestCase):
 
         from experiments.version_policies import GlobalPhasePolicy
 
-        config = Path(__file__).resolve().parents[1] / "configs" / "generic.yaml"
+        config = PYTHON_DIR / "configs" / "generic.yaml"
         import yaml
 
         sp = yaml.safe_load((config.parent / "sp.yaml").read_text(encoding="utf-8"))
@@ -385,7 +386,7 @@ class GlobalPhasePolicyTests(unittest.TestCase):
 
         from experiments.version_policies import GlobalPhasePolicy
 
-        config = Path(__file__).resolve().parents[1] / "configs" / "generic.yaml"
+        config = PYTHON_DIR / "configs" / "generic.yaml"
         sp = yaml.safe_load((config.parent / "sp.yaml").read_text(encoding="utf-8"))
         policy = GlobalPhasePolicy(PhaseSelectionAgent(PhaseAgentConfig(max_phases=8), seed=1), config, sp, pedestrian_phase=True)
         lanes = {key: features(2) for key in policy.key_map}

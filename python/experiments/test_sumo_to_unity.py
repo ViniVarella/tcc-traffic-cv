@@ -12,6 +12,7 @@ from typing import Any
 
 import yaml
 
+from paths import PYTHON_DIR
 from bridge import FrameBundleCollector, UnityBridge
 from experiments.scenario_config import add_scenario_argument
 from sumo import GroundTruthCollector, SumoClient, SumoStateExtractor
@@ -113,7 +114,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
 
 def main() -> None:
     """Extrai estado real do SUMO e envia para a Unity por alguns steps."""
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     if args.steps <= 0:
         raise ValueError("--steps deve ser maior que zero.")

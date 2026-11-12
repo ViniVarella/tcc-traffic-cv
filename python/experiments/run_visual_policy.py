@@ -15,6 +15,7 @@ from typing import Any
 
 import yaml
 
+from paths import PYTHON_DIR
 from bridge import UnityBridge
 from controller import DqnAgent
 from controller.policies import FixedCyclePolicy, MaxPressurePolicy
@@ -53,7 +54,7 @@ def build_policy(args: argparse.Namespace) -> tuple[str, Policy]:
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
     config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))

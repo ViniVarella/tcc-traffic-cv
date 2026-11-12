@@ -6,15 +6,15 @@ import unittest
 
 import numpy as np
 
-from pathlib import Path
 
 import yaml
 
+from paths import PYTHON_DIR
 from vision.lane_features import LaneFeatures
 from vision.visual_state import SP_LANE_ORDER, LaneFeatureStateEncoder, VisualStateEncoder, build_state_encoder
 
 
-SP_CONFIG = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs" / "sp.yaml").read_text(encoding="utf-8"))
+SP_CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 
 
 class VisualStateEncoderTests(unittest.TestCase):

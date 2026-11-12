@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import math
-from pathlib import Path
 import unittest
 
 import yaml
 
+from paths import PYTHON_DIR, SP_NETWORK_DIR
 from experiments.build_pedestrian_network import (crossing_lengths, flows_xml, pedestrian_flows, pedestrian_program,
                                                   shift_lane_ids, wait_at_stop_line)
 
 
-PED_NET = Path(__file__).resolve().parents[2] / "sumo" / "sp" / "Cruzamento.ped.net.xml"
-CONFIG = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs" / "sp.yaml").read_text(encoding="utf-8"))
+PED_NET = SP_NETWORK_DIR / "Cruzamento.ped.net.xml"
+CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 VEHICLE_STATES = ["GGGrrrrrrG", "yyyrrrrrry", "rrrrrrrrrr", "rrrGgGGGGr", "rrryyyyyyr"]
 
 

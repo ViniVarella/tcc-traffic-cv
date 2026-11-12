@@ -9,6 +9,7 @@ from typing import Any
 
 import yaml
 
+from paths import PYTHON_DIR
 from controller import DqnAgent
 from vision import build_state_encoder
 from vision.lane_feature_evaluation import action_agreement, feature_gap, ground_offset_estimate
@@ -24,7 +25,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     records: list[dict[str, Any]] = []
     for path in args.step_log:

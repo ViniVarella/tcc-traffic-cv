@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from paths import PYTHON_DIR
 from experiments.scenario_config import add_scenario_argument
 from sumo import SumoClient
 
@@ -32,7 +33,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
 
 def main() -> None:
     """Inicia SP, valida TLS/E2 e testa uma mudança controlada de fase."""
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     config_path = args.config.resolve()
     config = load_config(config_path)

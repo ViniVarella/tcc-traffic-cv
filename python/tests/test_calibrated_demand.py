@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import unittest
 
+from paths import REPO_DIR
 from experiments.build_calibrated_demand import (
     APPROACHES, Flow, approach_demand, kept_share, read_summary, read_labels, scale_flows,
 )
 
 
-SP_DATA = Path(__file__).resolve().parents[2] / "simjamcv" / "DigitalTwinsforSmartCities" / "SP"
+SP_DATA = REPO_DIR / "simjamcv" / "DigitalTwinsforSmartCities" / "SP"
 
 
 class KeptShareTests(unittest.TestCase):

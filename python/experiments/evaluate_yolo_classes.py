@@ -16,6 +16,7 @@ from typing import Any
 from PIL import Image
 import yaml
 
+from paths import DEFAULT_YOLO_MODEL, PYTHON_DIR
 from vision.dataset_classes import DATASET_CLASSES
 from vision.detection_evaluation import Box, DetectionTally, distance_band
 from vision.lane_features import load_lane_geometries
@@ -29,7 +30,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     root = base_dir.parent
     parser = argparse.ArgumentParser(description="Avalia o YOLO por classe e por faixa de distância.")
     parser.add_argument("--config", type=Path, default=base_dir / "configs" / "sp.yaml")
-    parser.add_argument("--model", type=Path, default=root / "runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt")
+    parser.add_argument("--model", type=Path, default=DEFAULT_YOLO_MODEL)
     parser.add_argument("--dataset", type=Path, default=root / "results/datasets/unity-cam60-2cls-s3")
     parser.add_argument("--split", default="test")
     parser.add_argument("--confidence", type=float, default=0.15, help="Mesmo limiar da visão em operação.")
@@ -55,7 +56,7 @@ def read_labels(path: Path, width: int, height: int) -> list[Box]:
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     from ultralytics import YOLO
 

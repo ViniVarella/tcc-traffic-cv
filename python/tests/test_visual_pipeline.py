@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import unittest
 
 import cv2
 import numpy as np
 
+from paths import PYTHON_DIR
 from bridge import FramePacket
 from bridge.frame_bundle import CapturedFrame, FrameBundle
 from vision.visual_pipeline import VisualPipeline, load_calibrations, parse_class_ids, queue_counts_by_camera
 
 
-PYTHON_DIR = Path(__file__).resolve().parents[1]
 WIDTH, HEIGHT = 640, 360
 
 

@@ -31,6 +31,8 @@ import subprocess
 import tempfile
 import xml.etree.ElementTree as ElementTree
 
+from paths import SP_NETWORK_DIR
+
 TLS_ID = "clusterJ0_J14_J2_J7"
 PEDESTRIAN_EDGES = ("E0", "E1", "E2", "E3", "E5", "E6")
 LANE_ID = re.compile(r'lane="(E\d+)_(\d+)"')
@@ -149,7 +151,7 @@ def l_paths(net_path: Path) -> list[tuple[str, str, float]]:
 
 
 def main() -> None:
-    root = Path(__file__).resolve().parents[2] / "sumo" / "sp"
+    root = SP_NETWORK_DIR
     parser = argparse.ArgumentParser(description="Gera a variante com pedestres do cenário SP.")
     parser.add_argument("--pedestrians-per-hour", type=float, default=300.0)
     parser.add_argument("--walking-speed", type=float, default=1.2, help="Velocidade de projeto (m/s) do verde de pedestre.")

@@ -9,6 +9,7 @@ from time import perf_counter
 
 import cv2
 
+from paths import PYTHON_DIR
 from vision import ByteTrackVehicleTracker, QueueEstimator, ROICounter, VisualDebugger, YoloVehicleDetector, load_camera_calibration
 from vision.roi_counter import filter_detections_to_roi, select_counting_objects
 
@@ -82,7 +83,7 @@ def step_ids_for_camera(frames_root: Path, camera_id: str) -> set[int]:
 
 def main() -> None:
     """Processa apenas steps presentes em todas as câmeras esperadas."""
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     camera_ids = tuple(camera_id.strip() for camera_id in args.camera_ids.split(",") if camera_id.strip())
     if not camera_ids:

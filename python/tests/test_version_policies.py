@@ -9,11 +9,12 @@ import unittest
 import numpy as np
 import yaml
 
+from paths import PYTHON_DIR
 from experiments.version_policies import DqnV1Policy, HeuristicV1Policy, build_version_policies, lane_counts
 from vision.lane_features import LaneFeatures
 
 
-CONFIG = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs" / "sp.yaml").read_text(encoding="utf-8"))
+CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 EAST_WEST = SimpleNamespace(name="EAST_WEST_GREEN", phase_index=0)
 SOUTH = SimpleNamespace(name="SOUTH_GREEN", phase_index=3)
 

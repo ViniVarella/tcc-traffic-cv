@@ -18,6 +18,7 @@ import sys
 
 import uvicorn
 
+from paths import PYTHON_DIR
 from dashboard.app import PanelSettings, create_app
 from experiments.visual_observer import add_vision_arguments
 
@@ -81,7 +82,7 @@ class PanelServer(uvicorn.Server):
 def main() -> None:
     argv = sys.argv[1:]
     args = parse_args(argv)
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     generic = choose_detector(args, argv, base_dir / "yolov8n.pt")
     app = create_app(PanelSettings(base_dir, args, args.warmup_seconds, args.control_seconds, generic_detector=generic))
     PanelServer(uvicorn.Config(app, host=args.host, port=args.port, timeout_graceful_shutdown=2)).run()

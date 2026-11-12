@@ -20,6 +20,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any
 
+from paths import PYTHON_DIR
 from controller.phase_selection_agent import PhaseAgentConfig, PhaseSelectionAgent
 from controller.phase_selection_policies import FixedTimePhasePolicy, MaxPressurePhasePolicy, PhaseDqnPolicy
 from controller.phase_selection_state import ROW_FEATURES_BY_VERSION
@@ -81,7 +82,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     settings = EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval, args.gamma)
     environment = PhaseSelectionEnvironment.from_file(args.config.resolve(), settings)

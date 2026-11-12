@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import unittest
 
 import yaml
 
+from paths import PYTHON_DIR
 from sumo.emergency import EmergencySettings, EmergencyTraffic, build_schedule
 
 
-CONFIG = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs" / "sp.yaml").read_text(encoding="utf-8"))
+CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 EDGES = {"south": "E3", "east": "E2", "west": "E6"}
 
 

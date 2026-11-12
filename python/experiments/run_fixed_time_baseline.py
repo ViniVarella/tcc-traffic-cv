@@ -10,6 +10,7 @@ from typing import Any
 
 import yaml
 
+from paths import PYTHON_DIR
 from experiments.scenario_config import add_scenario_argument
 from sumo import ExperimentMetricsCollector, SumoClient
 
@@ -26,7 +27,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     if args.steps <= 0 or args.send_interval < 0:
         raise ValueError("--steps deve ser positivo e --send-interval não pode ser negativo.")

@@ -15,6 +15,7 @@ from typing import Any
 
 import yaml
 
+from paths import PYTHON_DIR
 from controller import DqnAgent
 from controller.policies import FixedCyclePolicy, MaxPressurePolicy
 from experiments.episode_runner import DqnPolicy, EpisodeSettings, Policy
@@ -60,7 +61,7 @@ def evaluate(environment: Environment, policy: Policy, seeds: list[int], **run_o
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
     config = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))

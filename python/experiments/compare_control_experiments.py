@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from paths import PYTHON_DIR
+
 
 METRICS = (
     "arrived_vehicles",
@@ -43,7 +45,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     baseline = json.loads(args.baseline.read_text(encoding="utf-8"))
     adaptive = json.loads(args.visual_adaptive.read_text(encoding="utf-8"))

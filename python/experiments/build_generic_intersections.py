@@ -24,6 +24,8 @@ from pathlib import Path
 import subprocess
 import tempfile
 
+from paths import PYTHON_DIR
+
 
 APPROACHES = {"N": (0.0, 200.0), "S": (0.0, -200.0), "E": (200.0, 0.0), "W": (-200.0, 0.0)}
 TURN_SHARES = {"r": 0.2, "s": 0.6, "l": 0.2}
@@ -136,7 +138,7 @@ def sumocfg_xml(net: str, routes: str) -> str:
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     parser = argparse.ArgumentParser(description="Gera os cruzamentos sintéticos da seleção livre de fase.")
     parser.add_argument("--output-dir", type=Path, default=base_dir.parent / "sumo" / "generic")
     args = parser.parse_args()

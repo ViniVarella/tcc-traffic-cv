@@ -12,6 +12,7 @@ from typing import Any
 import numpy as np
 import yaml
 
+from paths import PYTHON_DIR
 from bridge import FrameBundleCollector, UnityBridge
 from controller import DqnAgent, DqnConfig, DqnTrafficController
 from experiments.scenario_config import add_scenario_argument
@@ -138,7 +139,7 @@ def _validation_score(results: list[EpisodeResult], steps_per_episode: int) -> f
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     if min(args.episodes, args.steps_per_episode, args.validation_episodes, args.validation_interval) <= 0:
         raise ValueError("--episodes, --steps-per-episode, --validation-episodes e --validation-interval devem ser positivos.")

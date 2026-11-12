@@ -16,6 +16,7 @@ from typing import Any
 
 import numpy as np
 
+from paths import PYTHON_DIR
 from controller.phase_selection_policies import MaxPressurePhasePolicy
 from experiments.episode_runner import EpisodeSettings
 from experiments.phase_selection_environment import PhaseSelectionEnvironment, pedestrian_hcm_delay
@@ -25,7 +26,7 @@ POLICIES = {"fixed_time": fixed_time, "max_pressure": lambda layout: MaxPressure
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     parser = argparse.ArgumentParser(description="Compara intervalos N da fase de pedestres por tempo.")
     parser.add_argument("--config", type=Path, default=base_dir / "configs" / "generic.yaml")
     parser.add_argument("--intervals", default="30,40,60")

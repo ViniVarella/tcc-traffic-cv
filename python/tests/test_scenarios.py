@@ -8,12 +8,12 @@ import unittest
 
 import yaml
 
+from paths import PYTHON_DIR
 from experiments.scenario_config import add_scenario_argument
 from sumo import SumoClient
 from sumo.scenarios import resolve_sumo_scenario
 
 
-PYTHON_DIR = Path(__file__).resolve().parents[1]
 CONFIG = {
     "sumo": {
         "scenarios": {"calibrated": "../sumo/sp/Cruzamento.calibrated.sumocfg", "original": "../sumo/sp/Cruzamento.sumocfg"},

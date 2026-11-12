@@ -18,6 +18,7 @@ import numpy as np
 import yaml
 from sumolib.geomhelper import polygonOffsetWithMinimumDistanceToPoint
 
+from paths import PYTHON_DIR
 from vision.lane_geometry import order_lane_quad
 
 
@@ -131,7 +132,7 @@ def measure_lane_rois(config: dict[str, Any], net_path: Path, additional_path: P
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     config = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
     calibration_dir = base_dir.parent / "unity" / "TraffIQ-TCC" / "Assets" / "Calibration"

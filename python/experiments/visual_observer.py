@@ -16,6 +16,7 @@ import json
 from time import sleep
 from typing import Any
 
+from paths import DEFAULT_YOLO_MODEL
 from bridge import FrameBundleCollector
 from controller.preemption import EmergencyRequest
 from sumo import SumoStateExtractor
@@ -137,7 +138,7 @@ class UnityVisualObserver:
 def add_vision_arguments(parser: Any) -> None:
     """Argumentos de câmera/YOLO/ByteTrack compartilhados pelos scripts visuais v2."""
     parser.add_argument("--camera-ids", default="south,east,west")
-    parser.add_argument("--model", default="../runs/results/models/yolov8n-unity-cam60-2cls-960/weights/best.pt")
+    parser.add_argument("--model", default=str(DEFAULT_YOLO_MODEL))
     parser.add_argument("--classes", default="0,1",
                         help="Detector ajustado: 0 vehicle, 1 emergency (as duas entram nas contagens). "
                              "Pesos de uma classe (run-002): 0; pesos COCO: 2,3,5,7.")

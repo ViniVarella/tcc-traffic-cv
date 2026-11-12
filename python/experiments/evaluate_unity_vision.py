@@ -10,6 +10,7 @@ from typing import Any
 
 import yaml
 
+from paths import PYTHON_DIR
 from vision.e2_evaluation import lane_comparison_rows, metrics_by_lane
 
 
@@ -83,7 +84,7 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     vision_records = load_jsonl(args.vision_summary)
     ground_truth_records = load_jsonl(args.ground_truth)

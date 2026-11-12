@@ -17,6 +17,7 @@ from typing import Any
 
 import yaml
 
+from paths import PYTHON_DIR
 from bridge import UnityBridge
 from controller import DqnAgent
 from experiments.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
@@ -52,7 +53,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     if args.episodes <= 0 or args.validation_interval <= 0:
         raise ValueError("--episodes e --validation-interval devem ser positivos.")

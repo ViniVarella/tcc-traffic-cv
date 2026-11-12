@@ -13,12 +13,13 @@ import tempfile
 
 from types import SimpleNamespace
 
+from paths import PYTHON_DIR
 from dashboard.app import (FIXED_TIME_REFERENCE_S, FIXED_TIME_STOPPED_REFERENCE_S, SCENARIOS, EpisodeRunner, NoCacheStaticFiles,
                            PanelSettings, StartRequest, emergency_board, load_fixed_time_reference)
 from experiments.api_server import GENERIC_CLASSES, choose_detector, parse_args
 
 
-BASE_DIR = Path(__file__).resolve().parents[1]
+BASE_DIR = PYTHON_DIR
 
 
 class EpisodeRunnerValidationTests(unittest.TestCase):

@@ -22,6 +22,8 @@ from pathlib import Path
 import re
 import xml.etree.ElementTree as ElementTree
 
+from paths import REPO_DIR
+
 # Pasta do SimJamCV → edge de entrada no SUMO.
 APPROACHES = {"DadosLeste": "E2", "DadosSul": "E3", "DadosOeste": "E6"}
 KEPT_LABELS = frozenset({"car", "van", "truck", "bus"})
@@ -126,7 +128,7 @@ CAPACITY_PER_HOUR = {"E2": 1680.0, "E3": 3280.0, "E6": 840.0}
 
 
 def main() -> None:
-    root = Path(__file__).resolve().parents[2]
+    root = REPO_DIR
     parser = argparse.ArgumentParser(description="Gera a demanda calibrada (sem motos) do cenário SP.")
     parser.add_argument("--data", type=Path, default=root / "simjamcv" / "DigitalTwinsforSmartCities" / "SP")
     parser.add_argument("--proportions", type=Path, default=root / "sumo" / "sp" / "Cruzamento.calibrated-motos.rou.xml")

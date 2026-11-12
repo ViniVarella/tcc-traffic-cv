@@ -7,6 +7,7 @@ from typing import Any
 
 import yaml
 
+from paths import PYTHON_DIR
 from sumo import GroundTruthCollector, SumoClient, SumoStateExtractor
 
 
@@ -17,7 +18,7 @@ def load_config(config_path: Path) -> dict[str, Any]:
 
 def main() -> None:
     """Inicia o SUMO, avanca alguns steps e imprime estado basico."""
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     config = load_config(base_dir / "config.yaml")
 
     sumo_client = SumoClient.from_config(config=config, base_dir=base_dir)

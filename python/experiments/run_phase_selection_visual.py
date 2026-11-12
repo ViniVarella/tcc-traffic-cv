@@ -18,6 +18,7 @@ from typing import Any
 
 import yaml
 
+from paths import PYTHON_DIR
 from bridge import UnityBridge
 from controller.phase_selection_agent import PhaseSelectionAgent
 from controller.phase_selection_policies import MaxPressurePhasePolicy, PhaseDqnPolicy
@@ -66,7 +67,7 @@ def reference_runs(path: Path, seeds: list[int], settings: EpisodeSettings) -> d
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
     settings = EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval)

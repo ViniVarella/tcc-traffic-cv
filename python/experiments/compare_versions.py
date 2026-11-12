@@ -19,6 +19,7 @@ from typing import Any
 
 import yaml
 
+from paths import PYTHON_DIR
 from bridge import UnityBridge
 from experiments.episode_runner import EpisodeSettings
 from experiments.evaluate_policies_sumo import evaluate
@@ -55,7 +56,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
     names = [value.strip() for value in args.versions.split(",") if value.strip()]

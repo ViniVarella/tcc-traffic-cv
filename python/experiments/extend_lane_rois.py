@@ -21,6 +21,7 @@ import numpy as np
 import yaml
 from sumolib.geomhelper import polygonOffsetWithMinimumDistanceToPoint, positionAtShapeOffset
 
+from paths import PYTHON_DIR
 from experiments.check_lane_geometry import ground_to_image_point, image_point_to_ground, lane_shapes
 from vision.lane_geometry import order_lane_quad
 
@@ -120,7 +121,7 @@ def extend_calibration(calibration: dict[str, Any], lanes: dict[str, str], shape
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     config = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
     shapes = lane_shapes(args.net)

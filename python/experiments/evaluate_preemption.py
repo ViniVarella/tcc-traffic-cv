@@ -22,6 +22,7 @@ from typing import Any
 
 import yaml
 
+from paths import PYTHON_DIR
 from bridge import UnityBridge
 from controller.preemption import PreemptionSettings
 from experiments.episode_runner import EpisodeSettings
@@ -66,7 +67,7 @@ def _mean(values: list[float | None]) -> float | None:
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
     detections = [item.strip() for item in (args.detections or ("v2i" if args.perception == "oracle" else "v2i,vision,both")).split(",")

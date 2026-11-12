@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
 import unittest
 
 import numpy as np
 import yaml
 
+from paths import PYTHON_DIR
 from sumo.emergency import EmergencySettings, EmergencyTraffic
 from vision.lane_features import LaneGeometry
 from vision.visual_emergency import VisualEmergencyDetector, VisualEmergencySettings, emergency_sightings
 
 
-CONFIG = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs" / "sp.yaml").read_text(encoding="utf-8"))
+CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 
 
 class DetectorTests(unittest.TestCase):

@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import unittest
 
-from pathlib import Path
 
 import yaml
 
+from paths import PYTHON_DIR
 from controller import DqnTrafficController
 from controller.phase_manager import PhaseManager, PhaseState
 from experiments.episode_runner import encode_state
 from vision import build_state_encoder
 
 
-SP_CONFIG = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs" / "sp.yaml").read_text(encoding="utf-8"))
+SP_CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 
 
 PHASES = {"primary_green": 0, "primary_yellow": 1, "all_red": 2, "secondary_green": 3, "secondary_yellow": 4,

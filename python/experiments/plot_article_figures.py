@@ -25,6 +25,8 @@ import numpy as np  # noqa: E402
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch  # noqa: E402
 from scipy import stats  # noqa: E402
 
+from paths import REPO_DIR
+
 # Cores por controlador (paleta categórica validada; o tempo fixo é a referência neutra).
 COLORS = {"baseline": "#a3a29c", "max_pressure": "#eb6834", "v2": "#1baf7a", "global": "#2a78d6", "v1": "#eda100"}
 LABELS = {"baseline": "Tempo fixo", "max_pressure": "Max-pressure", "v1": "Regra de fila (v2.0)",
@@ -301,7 +303,7 @@ def markdown(sp: dict[str, Any], generic: dict[str, Any]) -> str:
 
 
 def main() -> None:
-    root = Path(__file__).resolve().parents[2]
+    root = REPO_DIR
     parser = argparse.ArgumentParser(description="Gráficos e estatísticas do artigo final.")
     parser.add_argument("--evaluation-dir", type=Path, default=root / "results" / "evaluation")
     parser.add_argument("--model", default="ped40", help="Sufixo das avaliações do modelo global (checkpoint dqn-fase-livre-<model>-best.pt).")

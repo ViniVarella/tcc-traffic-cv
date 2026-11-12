@@ -17,6 +17,7 @@ from typing import Any
 
 import yaml
 
+from paths import PYTHON_DIR
 from controller import DqnAgent, DqnConfig
 from controller.policies import FixedCyclePolicy, MaxPressurePolicy
 from experiments.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
@@ -59,7 +60,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parents[1]
+    base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     if min(args.episodes, args.validation_episodes, args.validation_interval) <= 0:
         raise ValueError("--episodes, --validation-episodes e --validation-interval devem ser positivos.")
