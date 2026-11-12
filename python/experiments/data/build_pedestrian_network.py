@@ -85,7 +85,7 @@ def pedestrian_flows(edges: Sequence[str], total_per_hour: float, end_s: float) 
 def flows_xml(flows: Sequence[tuple[str, str, str, float]], end_s: float) -> str:
     lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
-        "<!-- Gerado por python -m experiments.build_pedestrian_network. Demanda",
+        "<!-- Gerado por python -m experiments.data.build_pedestrian_network. Demanda",
         "     sintética (o drone não mediu pedestres): chegadas Poisson entre as",
         "     calçadas de todas as vias, divididas igualmente entre os pares. -->",
         '<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
@@ -191,7 +191,7 @@ def main() -> None:
                          ("Cruzamento.calibrated.ped.sumocfg", "Cruzamento.calibrated.rou.xml")):
         (root / name).write_text(sumocfg("Cruzamento.ped.net.xml", [routes, "Cruzamento.pedestrians.rou.xml"],
                                          "Cruzamento.ped.add.xml",
-                                         f"Variante com pedestres de {routes} (gerada por experiments.build_pedestrian_network)."),
+                                         f"Variante com pedestres de {routes} (gerada por experiments.data.build_pedestrian_network)."),
                                  encoding="utf-8")
 
     paths = l_paths(target)

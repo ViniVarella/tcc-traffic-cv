@@ -107,7 +107,7 @@ def movements(net_path: Path) -> dict[str, list[tuple[str, str]]]:
 
 
 def routes_xml(spec: IntersectionSpec, demand: str, moves: dict[str, list[tuple[str, str]]]) -> str:
-    lines = ["<routes>", f"    <!-- Gerado por experiments.build_generic_intersections ({spec.name}, demanda {demand}). -->"]
+    lines = ["<routes>", f"    <!-- Gerado por experiments.data.build_generic_intersections ({spec.name}, demanda {demand}). -->"]
     index = 0
     for approach, per_lane in spec.demands[demand].items():
         edge = f"in_{approach}"

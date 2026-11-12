@@ -6,7 +6,7 @@ from pathlib import Path
 from PIL import Image
 
 from bridge import UnityBridge
-from experiments.build_unity_yolo_dataset import CaptureRun, DatasetSplit, assign_runs, build_dataset, mask_yolo_lines, yolo_line
+from experiments.data.build_unity_yolo_dataset import CaptureRun, DatasetSplit, assign_runs, build_dataset, mask_yolo_lines, yolo_line
 from vision.dataset_classes import DATASET_CLASSES, class_for_vehicle_type
 
 

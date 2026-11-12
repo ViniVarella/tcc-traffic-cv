@@ -2,7 +2,7 @@
 
 Cada step controlado gera uma linha JSONL com as features visuais, as do
 oráculo TraCI calculadas em paralelo (só registro) e a decisão. Esse log
-alimenta ``experiments.evaluate_lane_features``. As métricas de tráfego vão
+alimenta ``experiments.evaluate.evaluate_lane_features``. As métricas de tráfego vão
 para ``--output`` no mesmo formato de ``evaluate_policies_sumo``.
 """
 

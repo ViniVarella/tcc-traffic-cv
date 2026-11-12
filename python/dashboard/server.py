@@ -2,7 +2,7 @@
 
 Com a Unity em Play Mode na cena SPImport:
 
-    ../.venv/bin/python -m experiments.api_server
+    ../.venv/bin/python -m dashboard.server
 
 e abra http://127.0.0.1:8000/. Escolha cenário, versão e fonte da preempção e
 clique em Iniciar. Só um SUMO por vez (porta TraCI 8873): não rode outro

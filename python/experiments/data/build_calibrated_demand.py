@@ -97,7 +97,7 @@ def routes_xml(flows: Sequence[Flow], rows: Sequence[tuple[str, str, float, floa
         '<?xml version="1.0" encoding="UTF-8"?>',
         "",
         "<!-- Demanda calibrada pelos videos de drone (simjamcv/DigitalTwinsforSmartCities/SP),",
-        "     gerada por python -m experiments.build_calibrated_demand.",
+        "     gerada por python -m experiments.data.build_calibrated_demand.",
         "",
         "     Por aproximacao: throughput_per_hour do SimJamCV x fracao de carros, vans,",
         "     caminhoes e onibus em vehicles.csv. Motos e \"triciclos\" ficam de fora (andam",

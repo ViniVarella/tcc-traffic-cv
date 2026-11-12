@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 
 from paths import REPO_DIR
-from experiments.build_calibrated_demand import (
+from experiments.data.build_calibrated_demand import (
     APPROACHES, Flow, approach_demand, kept_share, read_summary, read_labels, scale_flows,
 )
 

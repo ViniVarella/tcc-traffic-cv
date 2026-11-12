@@ -8,7 +8,7 @@ import unittest
 import yaml
 
 from paths import PYTHON_DIR, SP_NETWORK_DIR
-from experiments.build_pedestrian_network import (crossing_lengths, flows_xml, pedestrian_flows, pedestrian_program,
+from experiments.data.build_pedestrian_network import (crossing_lengths, flows_xml, pedestrian_flows, pedestrian_program,
                                                   shift_lane_ids, wait_at_stop_line)
 
 
