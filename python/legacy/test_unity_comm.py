@@ -58,7 +58,7 @@ def build_fake_state(step: int) -> SimulationState:
 def main() -> None:
     """Envia alguns estados fake para a Unity usando host e porta do config."""
     base_dir = PYTHON_DIR
-    config = load_config(base_dir / "config.yaml")
+    config = load_config(base_dir / "legacy" / "config.yaml")
     unity = UnityBridge.from_config(config)
 
     try:

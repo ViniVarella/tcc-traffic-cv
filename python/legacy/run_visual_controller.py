@@ -13,7 +13,7 @@ import yaml
 from paths import PYTHON_DIR
 from bridge import FrameBundleCollector, UnityBridge
 from controller import DqnAgent, DqnTrafficController
-from controller.traffic_controller import TrafficController
+from legacy.traffic_controller import TrafficController
 from experiments.scenario_config import add_scenario_argument
 from sumo import ExperimentMetricsCollector, SumoClient, SumoStateExtractor
 from vision import ByteTrackVehicleTracker, VisualDebugger, VisualStateEncoder, YoloVehicleDetector, build_state_encoder

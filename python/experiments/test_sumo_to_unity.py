@@ -33,13 +33,13 @@ def camera_output_path(output_dir: Path, camera_id: str) -> Path:
 
 
 def parse_args(base_dir: Path) -> argparse.Namespace:
-    """Permite testar perfis de cenário sem alterar o config.yaml padrão."""
+    """Argumentos; o perfil padrão é o cenário SP (configs/sp.yaml)."""
     parser = argparse.ArgumentParser(description="Envia estado SUMO para Unity via UDP.")
     parser.add_argument(
         "--config",
         type=Path,
-        default=base_dir / "config.yaml",
-        help="Perfil YAML a ser executado.",
+        default=base_dir / "configs" / "sp.yaml",
+        help="Perfil YAML a ser executado (padrão: cenário SP; o perfil legado fica em legacy/config.yaml).",
     )
     parser.add_argument(
         "--steps",

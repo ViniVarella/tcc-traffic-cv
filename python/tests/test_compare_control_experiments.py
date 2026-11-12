@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from experiments.compare_control_experiments import compare_metrics
+from legacy.compare_control_experiments import compare_metrics
 
 
 class CompareControlExperimentsTests(unittest.TestCase):

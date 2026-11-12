@@ -19,7 +19,7 @@ def load_config(config_path: Path) -> dict[str, Any]:
 def main() -> None:
     """Inicia o SUMO, avanca alguns steps e imprime estado basico."""
     base_dir = PYTHON_DIR
-    config = load_config(base_dir / "config.yaml")
+    config = load_config(base_dir / "legacy" / "config.yaml")
 
     sumo_client = SumoClient.from_config(config=config, base_dir=base_dir)
     state_extractor = SumoStateExtractor()

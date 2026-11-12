@@ -41,8 +41,8 @@ class ResolveScenarioTests(unittest.TestCase):
             resolve_sumo_scenario(config)
 
     def test_legacy_profile_with_config_path_has_no_named_scenario(self) -> None:
-        config = {"sumo": {"config_path": "../sumo/fictional/RL.sumocfg"}}
-        self.assertEqual(resolve_sumo_scenario(config), (None, "../sumo/fictional/RL.sumocfg"))
+        config = {"sumo": {"config_path": "../legacy/sumo/fictional/RL.sumocfg"}}
+        self.assertEqual(resolve_sumo_scenario(config), (None, "../legacy/sumo/fictional/RL.sumocfg"))
         with self.assertRaises(ValueError):
             resolve_sumo_scenario(config, "calibrated")
 

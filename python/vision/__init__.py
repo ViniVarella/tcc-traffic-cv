@@ -17,7 +17,6 @@ __all__ = [
     "ByteTrackVehicleTracker",
     "QueueEstimator",
     "ROICounter",
-    "VehicleTracker",
     "VisualDebugger",
     "YoloVehicleDetector",
     "load_camera_calibration",
@@ -27,7 +26,6 @@ _LAZY_IMPORTS = {
     "QueueEstimator": (".queue_estimator", "QueueEstimator"),
     "ByteTrackVehicleTracker": (".byte_track_tracker", "ByteTrackVehicleTracker"),
     "ROICounter": (".roi_counter", "ROICounter"),
-    "VehicleTracker": (".sort_tracker", "VehicleTracker"),
     "VisualDebugger": (".visual_debug", "VisualDebugger"),
     "YoloVehicleDetector": (".yolo_detector", "YoloVehicleDetector"),
 }

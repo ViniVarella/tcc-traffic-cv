@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from .phase_manager import SUMO_PHASE_HOLD_SECONDS, PhaseManager
-from .policies import QueueBasedPolicy
+from controller.phase_manager import SUMO_PHASE_HOLD_SECONDS, PhaseManager
+from controller.policies import QueueBasedPolicy
 
 
 class TrafficController:
