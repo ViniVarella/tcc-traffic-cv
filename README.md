@@ -158,7 +158,7 @@ estágios, sem novo treino:
   *dueling* Q(p) = V(s) + A(p, s) − Ā(s). Abre-se o estágio válido de maior
   nota; escolher o atual equivale a manter. São 26.306 parâmetros, que não
   dependem do número nem da ordem dos estágios.
-- **Camada de segurança** (`controller/phase_selection_controller.py`):
+- **Camada de segurança** (`controller/phase_selection/controller.py`):
   amarelo calculado link a link, all-red de 1 s, verde mínimo de 10 s e
   máximo de 40 s. **Regra de justiça:** um estágio com veículo parado que
   fica no vermelho mais do que ficaria no pior caso do tempo fixo, com verde
@@ -167,7 +167,7 @@ estágios, sem novo treino:
   nota.
 - **Treino** (só SUMO, percepção *ground truth*): quatro cruzamentos
   sintéticos (`cruz-2x2`, `cruz-opostas`, `t-3` e `t-avenida`, gerados em
-  `sumo/generic/` por `experiments.build_generic_intersections`), cada um com
+  `sumo/generic/` por `experiments.data.build_generic_intersections`), cada um com
   demanda baixa, média e desbalanceada, com e sem pedestres (24 cenários).
   Primeiro, demonstrações e imitação do max-pressure (DQfD); depois, Double
   DQN sem imitação. Nos sintéticos, a fase de pedestres é obrigatória por
@@ -239,8 +239,8 @@ Só a lógica de decisão muda. As tabelas comparam **controladores** (quem
 decide), rotulados pelo modelo: a regra de fila é a da v2.0, o DQN estado v1 é o
 da v2.1 e o DQN estado v2 é o da v3.0 à v5.0. A v1.0 (prova de conceito com os
 detectores do SUMO) fica de fora, porque usa outra percepção. As regras de cada controlador estão em
-`python/experiments/version_policies.py`, e o comparador é
-`python -m experiments.compare_versions`.
+`python/simulation/version_policies.py`, e o comparador é
+`python -m experiments.evaluate.compare_versions`.
 
 As tabelas desta seção são as das versões até a v5.0 (seeds 201–203). O
 modelo global (v6.0) entra no mesmo comparador com `--versions global`; os
@@ -461,12 +461,12 @@ ambiente virtual fica em `..\.venv\Scripts\python`.
    ```bash
    cd python
    ../.venv/bin/python -m unittest discover -s tests -p 'test_*.py'      # sem SUMO nem Unity
-   ../.venv/bin/python -m experiments.test_sp_traci --config configs/sp.yaml   # SUMO
+   ../.venv/bin/python -m experiments.checks.check_sp_traci --config configs/sp.yaml   # SUMO
    ```
 
 6. **Rode o painel**: na Unity, com a cena `SPImport` aberta, entre em Play
    Mode; no terminal, a partir de `python/`, rode
-   `../.venv/bin/python -m experiments.api_server` e abra
+   `../.venv/bin/python -m dashboard.server` e abra
    http://127.0.0.1:8000/. Só um SUMO pode rodar por vez (porta 8873).
 
 ## Como reproduzir
@@ -479,11 +479,11 @@ cd python
 ../.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
 
 # Pré-treino só no SUMO (percepção ground truth; sem Unity)
-../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn
+../.venv/bin/python -m experiments.train.pretrain_dqn_sumo --double-dqn
 
 # Todas as versões no mesmo ambiente, percepção ground truth (sem Unity; alguns minutos)
-../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception oracle
-../.venv/bin/python -m experiments.compare_versions --scenario original --perception oracle
+../.venv/bin/python -m experiments.evaluate.compare_versions --scenario calibrated --perception oracle
+../.venv/bin/python -m experiments.evaluate.compare_versions --scenario original --perception oracle
 ```
 
 Modelo global (v6.0), só SUMO. O `global` fica fora da lista padrão do
@@ -491,35 +491,35 @@ Modelo global (v6.0), só SUMO. O `global` fica fora da lista padrão do
 
 ```bash
 # Cruzamentos sintéticos de treino e de teste (sumo/generic/; não edite à mão)
-../.venv/bin/python -m experiments.build_generic_intersections
+../.venv/bin/python -m experiments.data.build_generic_intersections
 
 # Treino (demonstrações + imitação do max-pressure; a etapa de RL sem imitação
 # está em docs/IMPLEMENTATION_PROGRESS.md)
-../.venv/bin/python -m experiments.pretrain_phase_selection --episodes 480 --validation-interval 48
+../.venv/bin/python -m experiments.train.pretrain_phase_selection --episodes 480 --validation-interval 48
 
 # Cruzamentos de teste nunca vistos (padrão: dqn-fase-livre-ped40-best.pt)
-../.venv/bin/python -m experiments.evaluate_phase_selection --seeds 201,202,203,204,205,206,207,208,209,210 \
+../.venv/bin/python -m experiments.evaluate.evaluate_phase_selection --seeds 201,202,203,204,205,206,207,208,209,210 \
   --output ../results/evaluation/fase-livre-test.json
 
 # Cruzamento de SP, com e sem pedestres, contra as outras versões
-../.venv/bin/python -m experiments.compare_versions --scenario calibrated_ped --perception oracle \
+../.venv/bin/python -m experiments.evaluate.compare_versions --scenario calibrated_ped --perception oracle \
   --versions baseline,v2,max_pressure,global
 
 # Prioridade para viaturas com o modelo global
-../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated --versions baseline,global,max_pressure
+../.venv/bin/python -m experiments.evaluate.evaluate_preemption --scenario calibrated --versions baseline,global,max_pressure
 ```
 
 Com a Unity aberta na cena `SPImport`, com o Dataset Capture desativado e em
 Play Mode (reinicie o Play Mode antes de cada comando):
 
 ```bash
-../.venv/bin/python -m experiments.run_visual_policy --scenario calibrated --policy dqn \
+../.venv/bin/python -m experiments.evaluate.run_visual_policy --scenario calibrated --policy dqn \
   --dqn-model ../results/models/dqn-v2-traffiq-best.pt --seeds 201,202,203 --control-seconds 1800 \
   --step-log-output ../results/logs/teste-visual-dqn.jsonl \
   --output ../results/evaluation/teste-visual-dqn.json
 
 # Diferença visão × ground truth a partir do log por step (sem Unity)
-../.venv/bin/python -m experiments.evaluate_lane_features \
+../.venv/bin/python -m experiments.evaluate.evaluate_lane_features \
   --step-log ../results/logs/teste-visual-dqn.jsonl \
   --dqn-model ../results/models/dqn-v2-traffiq-best.pt
 ```
@@ -528,7 +528,7 @@ Play Mode (reinicie o Play Mode antes de cada comando):
 rodando):
 
 ```bash
-../.venv/bin/python -m experiments.api_server   # abra http://127.0.0.1:8000/
+../.venv/bin/python -m dashboard.server   # abra http://127.0.0.1:8000/
 ```
 
 No PyCharm, a configuração **Painel TraffIQ** (pasta `.run/`, compartilhada
@@ -562,7 +562,7 @@ comercial exige a assinatura Premium do RigModels.com. Para recriar o prefab:
 1. Na Unity, com `SPImport` aberta, rode *Traffic Vision > Vehicles > Create
    SP Emergency Prefab* e salve a cena.
 2. Para conferir, entre em Play Mode e rode
-   `python -m experiments.test_sumo_to_unity --config configs/sp.yaml --steps 120 --send-interval 0.1 --emergency-interval 20`.
+   `python -m experiments.checks.check_sumo_to_unity --config configs/sp.yaml --steps 120 --send-interval 0.1 --emergency-interval 20`.
    Se a ambulância andar de ré, rode *Flip SP Emergency Prefab*.
 
 Sem o prefab, as viaturas de emergência aparecem como blocos vermelhos.
@@ -575,15 +575,24 @@ Sem o prefab, as viaturas de emergência aparecem como blocos vermelhos.
 - `python/bridge`: comunicação Python ↔ Unity (UDP de estado, TCP de frames
   agrupados por `step_id`).
 - `python/vision`: YOLO, ByteTrack, ROIs, pipeline visual por câmera,
-  homografia das ROIs, features por faixa e encoders de estado v1/v2.
-- `python/controller`: DQN, camada de segurança de fases, modelo global
-  (`phase_selection_*`: estado, agente e controlador com escolha livre de
-  estágio), política
-  heurística, ciclo fixo, max-pressure, recompensa e pontos de decisão.
+  homografia das ROIs, projeção da câmera e features por faixa.
+- `python/controller`: recompensa e transições SMDP comuns, e um subpacote
+  por linha de controle:
+  - `keep_switch/`: manter ou trocar o verde no programa do SP (regra de
+    fila, tempo fixo, max-pressure e DQN estado v1–v3; v2.0–v5.0), com a
+    camada de segurança `DqnTrafficController` e a prioridade para viaturas;
+  - `phase_selection/`: escolha livre de estágio em qualquer cruzamento
+    (modelo global, v6.0).
+- `python/simulation`: biblioteca dos episódios (laço único, ambientes do SP e
+  de qualquer cruzamento, observador visual, versões do produto, estatísticas).
 - `python/dashboard` e `python/static`: painel web TraffIQ (FastAPI) da
-  demonstração ao vivo.
-- `python/experiments`: scripts de execução, treino e avaliação
-  (`python -m experiments.<nome>`).
+  demonstração ao vivo (`python -m dashboard.server`).
+- `python/experiments`: só scripts de linha de comando, agrupados em `train/`,
+  `evaluate/`, `data/`, `checks/` (verificações manuais com SUMO/Unity) e
+  `article/` (`python -m experiments.<grupo>.<script>`).
+- `python/paths.py`: caminhos do repositório usados por scripts e testes.
+- `python/legacy` e `legacy/`: código da v2.x, testes antigos e protótipos,
+  fora do pipeline atual (ver os README de cada pasta).
 - `sumo/sp`: rede, demandas (original e calibrada) e detectores do cenário SP.
 - `sumo/generic`: cruzamentos sintéticos do modelo global (treino e o
   `cruz-assimetrico` de teste), com o perfil `python/configs/generic.yaml`.
@@ -609,12 +618,12 @@ construção do pipeline.
 ### Visão local (sem SUMO e sem Unity)
 
 Validação preliminar do YOLO + ByteTrack + ROI com uma imagem ou um vídeo
-local, usando o perfil legado `python/config.yaml`:
+local, usando o perfil legado `python/legacy/config.yaml`:
 
 ```bash
 cd python
-../.venv/bin/python -m experiments.test_vision --input ../samples/traffic_top_view.mp4
-../.venv/bin/python -m experiments.test_vision --input ../samples/minha_imagem.jpg
+../.venv/bin/python -m legacy.test_vision --input ../samples/traffic_top_view.mp4
+../.venv/bin/python -m legacy.test_vision --input ../samples/minha_imagem.jpg
 ```
 
 Os frames de debug são salvos em `results/frames` com bounding boxes,
@@ -622,14 +631,14 @@ Os frames de debug são salvos em `results/frames` com bounding boxes,
 
 ### SUMO via TraCI
 
-`test_sumo_traci` roda o cenário legado do `config.yaml`. `test_sp_traci`
+`legacy.test_sumo_traci` roda o cenário legado do `legacy/config.yaml`. `check_sp_traci`
 inicia o cenário SP, valida o semáforo `clusterJ0_J14_J2_J7`, os sete
 detectores E2 e uma troca controlada para a fase verde secundária, sem Unity:
 
 ```bash
 cd python
-../.venv/bin/python -m experiments.test_sumo_traci
-../.venv/bin/python -m experiments.test_sp_traci --scenario calibrated
+../.venv/bin/python -m legacy.test_sumo_traci
+../.venv/bin/python -m experiments.checks.check_sp_traci --scenario calibrated
 ```
 
 O perfil SP usa a porta TraCI local `8873`. A conexão TraCI é sempre fechada
@@ -684,7 +693,7 @@ modifica o ambiente ou a malha das vias; pressione `Cmd+S` depois de executá-lo
 
 ```bash
 cd python
-../.venv/bin/python -m experiments.test_unity_comm
+../.venv/bin/python -m legacy.test_unity_comm
 ```
 
 Na Unity, anexe
@@ -699,7 +708,7 @@ recebidos.
 
 ```bash
 cd python
-../.venv/bin/python -m experiments.test_sumo_to_unity --config configs/sp.yaml --steps 120 --send-interval 0.1
+../.venv/bin/python -m experiments.checks.check_sumo_to_unity --config configs/sp.yaml --steps 120 --send-interval 0.1
 ```
 
 Na cena `SPImport` a sincronização já está configurada
@@ -713,16 +722,16 @@ Entre em Play Mode antes de executar o script. O terminal deve imprimir
 
 Os scripts originais das versões anteriores, com o pipeline de contagem da
 época, continuam disponíveis com a Unity em Play Mode. Para comparar versões,
-use `experiments.compare_versions`.
+use `experiments.evaluate.compare_versions`.
 
 ```bash
 cd python
-../.venv/bin/python -m experiments.run_fixed_time_baseline --scenario original --steps 100 --seed 201 \
+../.venv/bin/python -m legacy.run_fixed_time_baseline --scenario original --steps 100 --seed 201 \
   --output ../results/evaluation/fixed-time-baseline.json
-../.venv/bin/python -m experiments.run_visual_controller --scenario original --steps 100 --seed 201 \
+../.venv/bin/python -m legacy.run_visual_controller --scenario original --steps 100 --seed 201 \
   --camera-ids south,east,west --model ../runs/results/models/yolov8n-unity-run-002-mask/weights/best.pt \
   --classes 0 --metrics-output ../results/evaluation/visual-controller-metrics.json
-../.venv/bin/python -m experiments.compare_control_experiments \
+../.venv/bin/python -m legacy.compare_control_experiments \
   --baseline ../results/evaluation/fixed-time-baseline.json \
   --visual-adaptive ../results/evaluation/visual-controller-metrics.json \
   --output ../results/evaluation/fixed-vs-visual-controller.json

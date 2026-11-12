@@ -58,8 +58,8 @@ SUMO ──TraCI──> Python ──UDP/JSON (estado)──> Unity (veículos, 
 | Prova de conceito (E2/TraCI; produto v1) | `optimization/SP/` (`sp_env.py`, `traci8.DQN.py`, `traci9_comp.py`) | detectores E2 + lanes via TraCI | Keras |
 
 `optimization/SP` é a v1 do produto (prova de conceito) e não é substituto de
-`python/experiments/train_visual_dqn.py`. Não reutilize seus comandos no
-pipeline `python/` sem revisão. `optimization/Teste` e `optimization/EUA` são
+`python/legacy/train_visual_dqn.py`. Não reutilize seus comandos no
+pipeline `python/` sem revisão. `legacy/optimization/Teste` e `legacy/optimization/EUA` são
 protótipos antigos.
 
 ### Separação estado × recompensa
@@ -77,28 +77,48 @@ protótipos antigos.
 
 ```text
 python/                 código Python (rodar comandos a partir daqui)
-  configs/sp.yaml       fonte de verdade do cenário SP
+  paths.py              caminhos do repositório (PYTHON_DIR, REPO_DIR, MODELS_DIR...);
+                        use-os em vez de Path(__file__).parents[n]
+  configs/sp.yaml       fonte de verdade do cenário SP (generic.yaml: cruzamentos do global)
   sumo/                 traci_client.py, scenarios.py, lane_feature_source.py (ground truth TraCI),
-                        state_extractor.py, experiment_metrics.py, ground_truth.py
+                        state_extractor.py, experiment_metrics.py, ground_truth.py,
+                        intersection.py (estágios e faixas de qualquer .net.xml), emergency.py
   bridge/               unity_comm.py (UDP/TCP), frame_bundle.py, protocol.py, serialization.py
   vision/               yolo_detector, byte_track_tracker, roi_counter, queue_estimator,
-                        camera_calibration, visual_pipeline (laço por câmera compartilhado),
+                        camera_calibration, camera_projection, visual_pipeline (laço por câmera),
                         lane_geometry (homografia das ROIs), lane_features (contrato v2),
-                        visual_lane_features, visual_state (encoders v1/v2), e2_evaluation
-  controller/           dqn_agent.py, dqn_traffic_controller.py, phase_manager.py,
-                        traffic_controller.py (heurístico), policies.py, rewards.py,
-                        decision_scheduler.py
-  experiments/          entry points (python -m experiments.<nome>)
-  dashboard/            painel web FastAPI (app.py, telemetry.py); entrada experiments.api_server,
+                        visual_lane_features, visual_emergency, e2_evaluation
+  controller/           rewards.py, smdp.py (comuns às duas linhas)
+    keep_switch/        linha manter/trocar no programa do SP (v2.0–v5.0): agent (DqnAgent),
+                        state (encoders v1–v3), traffic_controller (DqnTrafficController, camada
+                        de segurança), phase_manager, decision_scheduler, policies, preemption
+    phase_selection/    linha de escolha livre de estágio (global, v6.0): agent, state,
+                        controller (camada de segurança genérica), policies
+  simulation/           biblioteca dos episódios: episode (laço único), sp_environment
+                        (SpEnvironment), phase_selection_environment, visual_observer,
+                        version_policies, scenario_config, checkpoint_selection,
+                        statistics, policy_evaluation
+  experiments/          só entry points (python -m experiments.<grupo>.<script>):
+                        train/, evaluate/, data/, checks/ (verificações manuais com
+                        SUMO/Unity, não unittest), article/
+  dashboard/            painel web FastAPI (app.py, telemetry.py); entrada dashboard.server,
                         páginas em python/static/
+  legacy/               Python da v2.x e testes antigos (python -m legacy.<módulo>)
   tests/                unittest (test_*.py)
 sumo/sp/                rede, rotas e detectores do cenário SP (Cruzamento.*)
+sumo/generic/           cruzamentos sintéticos do modelo global (gerados; não edite)
 unity/TraffIQ-TCC/      projeto Unity 6000.0.53f1 (Unity 6, URP, macOS/Metal)
 optimization/SP/        linha paralela E2/Keras (ver acima)
+legacy/                 protótipos antigos (optimization/Teste, EUA, rede fictícia, .keras)
 simjamcv/               dados de drone/SimJamComputerVision (referência de calibração)
 results/, runs/         saídas locais de experimentos e modelos — ignoradas pelo Git
 docs/                   guias de implementação e integração Sumo2Unity
 ```
+
+Dependências entre pacotes: `experiments/` e `dashboard/` usam `simulation/`,
+que usa `controller/`, `sumo/`, `vision/` e `bridge/`. Nada da biblioteca
+importa de `experiments/`; uma função usada por mais de um script vai para a
+biblioteca.
 
 `optimization/SP/Cruzamento.{net,rou,add}.xml` são cópias de `sumo/sp/`; se
 alterar um, verifique o outro. Exceção deliberada: `sumo/sp/Cruzamento.calibrated.rou.xml`
@@ -114,7 +134,7 @@ cópia em `optimization/SP` (que segue com a calibração antiga).
     (andam no corredor e não formam fila; "triciclos" são motos mal
     classificadas; rótulos de pedestre do SimJamCV não são confiáveis).
     Pesados entram como carros. Leste 976 veíc/h (v/c≈0,58), Sul 727 (0,22),
-    Oeste 139 (0,17). Gerada por `experiments.build_calibrated_demand`; não
+    Oeste 139 (0,17). Gerada por `experiments.data.build_calibrated_demand`; não
     edite a rota à mão. É o cenário principal.
   - `calibrated_motos`: **registro histórico** — a calibração anterior, que
     contava motos como carros e saturava o Leste (v/c≈1,0, contra 6,6 s de
@@ -127,22 +147,22 @@ cópia em `optimization/SP` (que segue com a calibração antiga).
   3 verde South, 4 amarelo South. String de estado com 10 links.
 - Segurança: verde mín. 10 s, máx. 40 s, amarelo 3 s, all-red 1 s. O programa
   estático do `.net.xml` (42/3/1/41/3, sem all-red após o amarelo South) é só
-  o baseline `run_fixed_time_baseline`. Quando o Python controla, `apply()`
+  o baseline legado `legacy.run_fixed_time_baseline`. Quando o Python controla, `apply()`
   faz `setPhase` + `setPhaseDuration(SUMO_PHASE_HOLD_SECONDS)` para o SUMO nunca
   avançar sozinho, e steps sem frames chamam `update_without_vision()` (nunca
   pule o controlador — isso dessincronizava as fases).
 - Faixas monitoradas (7): south 4 (edge E3), east 2 (E2), west 1 (E6).
-  Ordem estável das features em `vision/visual_state.py::SP_LANE_ORDER`.
+  Ordem estável das features em `controller/keep_switch/state.py::SP_LANE_ORDER`.
 - Detectores E2 `e2_0..e2_6` em `sumo/sp/Cruzamento.add.xml` (IDs são contrato
   com `sp.yaml` e scripts; não renomeie). Eles cobrem 42,6–45,8 m; as ROIs das
   câmeras cobrem **60 m** por faixa (`lane_geometry` em `sp.yaml`, medido por
-  `experiments.check_lane_geometry` e protegido por teste). Compare visão com
+  `experiments.data.check_lane_geometry` e protegido por teste). Compare visão com
   TraCI no intervalo da ROI, não no do E2.
 - As poses das câmeras (menus *Create SP … Camera* em `SpSouthCameraSetup.cs`)
   foram calculadas para enquadrar linha de retenção + 60 m sem oclusão pelos
   postes. Se mover uma câmera ou um poste, recalcule as poses e regenere as
   ROIs: desenhe a borda próxima na calibração, rode
-  `experiments.extend_lane_rois --length 60`, importe com *Traffic Vision >
+  `experiments.data.extend_lane_rois --length 60`, importe com *Traffic Vision >
   Cameras > Import SP Calibration JSON* e salve a cena (a cena é a fonte que o
   "Export calibration JSON" regrava).
 - Métricas de avaliação devem incluir a fila de inserção (`*_pending_vehicles`):
@@ -159,12 +179,12 @@ cópia em `optimization/SP` (que segue com a calibração antiga).
   aquecimento, e emite o aviso V2I (*vehicle-to-infrastructure*, veículo → controlador do
   semáforo; `EmergencyRequest`: aproximação e tempo
   até a linha de retenção) desde `announce_before_s` antes de entrarem.
-- `controller/preemption.py` atende uma viatura por vez (menor tempo estimado,
+- `controller/keep_switch/preemption.py` atende uma viatura por vez (menor tempo estimado,
   dentro de `activation_eta_s`) até ela cruzar a linha;
   `DqnTrafficController.update_preemption` mantém o verde-alvo além do máximo
   e pode encurtar o verde mínimo (decisão do usuário), **nunca** amarelo nem
   all-red. Durante a preempção a política não é consultada.
-- Fonte do pedido (`Environment.run(emergency_detection=...)`): `v2i`,
+- Fonte do pedido (`SpEnvironment.run(emergency_detection=...)`): `v2i`,
   `vision` ou `both` (união). A visão (`vision/visual_emergency.py`) trabalha
   por aproximação, não por `track_id` (a 1 fps a viatura cruza a ROI em ~4
   frames): classe `emergency` dentro de uma ROI em `confirm_frames` frames
@@ -176,7 +196,7 @@ cópia em `optimization/SP` (que segue com a calibração antiga).
   que no Leste saturado chega a minutos: use `mean_total_loss_at_crossing_s`
   (inserção + perda na rede).
 - Parâmetros em `emergency:` no `sp.yaml`; avaliação em
-  `experiments.evaluate_preemption` (mesma agenda para todas as políticas;
+  `experiments.evaluate.evaluate_preemption` (mesma agenda para todas as políticas;
   `--perception visual` com Unity compara `v2i`, `vision` e `both`).
 - Alterar `sp.yaml` pode invalidar calibrações de câmera, o state encoder e
   checkpoints.
@@ -184,7 +204,7 @@ cópia em `optimization/SP` (que segue com a calibração antiga).
 ## Pedestres (cenários `calibrated_ped` e `original_ped`)
 
 - Rede `sumo/sp/Cruzamento.ped.net.xml`, gerada por
-  `experiments.build_pedestrian_network` a partir da rede sem pedestres (que
+  `experiments.data.build_pedestrian_network` a partir da rede sem pedestres (que
   não muda): calçadas, 4 faixas de pedestre (links 10–13 do semáforo; os de
   veículos continuam 0–9), `personFlow` Poisson entre as calçadas (300/h) e
   `.ped.add.xml`/`.ped.sumocfg`. Não edite a rede à mão: rode o gerador.
@@ -206,7 +226,7 @@ cópia em `optimization/SP` (que segue com a calibração antiga).
   fase de pedestres ainda não iniciada é adiada pela viatura e vem no
   all-red seguinte, logo depois do verde dela; o ciclo retoma pelo verde que
   viria). Esperar mais um verde Sul deixava pedestres até 7 min parados.
-- `Environment` detecta a rede com pedestres pelo semáforo
+- `SpEnvironment` detecta a rede com pedestres pelo semáforo
   (`pedestrian_link_count`) e liga a fase e as métricas de pedestre
   (`sumo/pedestrian_metrics.py`).
 - Recompensa nos cenários com pedestres: `(1 − w)·veículos − w·pedestres`
@@ -233,14 +253,14 @@ Há duas versões de estado (`DqnConfig.state_version`; checkpoints sem o campo
 carregam como v1):
 
 - **v1 (legado, 13 entradas):** contagens suavizadas por faixa + fase + tempo
-  (`VisualStateEncoder`). Treino `train_visual_dqn.py`; execução
-  `run_visual_controller.py` (decide a cada step). Os scripts v2 são
+  (`VisualStateEncoder`). Treino `legacy.train_visual_dqn`; execução
+  `legacy.run_visual_controller` (decide a cada step). Os scripts v2 são
   `pretrain_dqn_sumo`, `evaluate_policies_sumo`, `run_visual_policy` e
-  `finetune_dqn_visual`, todos sobre `sumo_environment.Environment`.
+  `finetune_dqn_visual`, todos sobre `simulation.sp_environment.SpEnvironment`.
 - **v3 (44 entradas, só cenários com pedestres):** o estado v2 com o one-hot
   das 7 fases (inclui verde e liberação de pedestres) + "verdes até a fase
   de pedestres" (÷ 3). v1/v2 rodam na rede com pedestres vendo essas fases
-  como all-red (`episode_runner.encode_state`).
+  como all-red (`simulation.episode.encode_state`).
 - **v2 (41 entradas):** por faixa, `LaneFeatures` = contagem, parados,
   ocupação, velocidade média e espera, normalizados pela capacidade da ROI
   (comprimento / 7,5 m), + fase one-hot + tempo (`LaneFeatureStateEncoder`,
@@ -254,13 +274,13 @@ carregam como v1):
     modelo na posição da frente do veículo no SUMO; `lane_state.visual_ground_offset_m`
     corrige o ponto de solo da visão.
   - A política só decide em pontos de decisão (verde, entre verde mínimo e
-    máximo, a cada 5 s; `controller/decision_scheduler.py`); entre eles o
+    máximo, a cada 5 s; `controller/keep_switch/decision_scheduler.py`); entre eles o
     controlador recebe KEEP. Transições são SMDP (recompensa acumulada,
     desconto `gamma ** k`, γ por segundo).
   - Recompensa (`controller/rewards.py`): nível em [−1, 0] sobre as lanes de
     entrada inteiras (parados, espera nativa, fila de inserção), vinda do
     TraCI — não é entrada da política.
-  - Laço único em `experiments/episode_runner.py` para pré-treino, ajuste
+  - Laço único em `simulation/episode.py` para pré-treino, ajuste
     fino e avaliação; muda só a função `observe`.
 - Ações: `keep` (0) e `switch` (1). O DQN só escolhe manter/trocar;
   `DqnTrafficController` + `PhaseManager` aplicam verde mínimo/máximo, amarelo
@@ -275,8 +295,8 @@ carregam como v1):
   rotulá-la como percepção *ground truth*.
 - **Compare versões só no mesmo ambiente**: mesmo cenário, seeds, aquecimento,
   duração, camada de segurança, métricas e percepção; muda só a decisão. Use
-  `experiments.compare_versions` (regras das versões em
-  `experiments/version_policies.py`). Resultados de protocolos diferentes
+  `experiments.evaluate.compare_versions` (regras das versões em
+  `simulation/version_policies.py`). Resultados de protocolos diferentes
   ficam só como registro histórico, nunca em tabela comparativa.
 - A Unity só renderiza e envia frames com o editor em foco, a menos que
   *Run In Background* esteja ligado (Project Settings > Player > Resolution
@@ -362,17 +382,17 @@ Todos a partir de `python/`:
 # (tests/ não tem __init__.py: "unittest tests.test_x" não funciona)
 
 # Sanidade SUMO (sem Unity)
-../.venv/bin/python -m experiments.test_sp_traci --config configs/sp.yaml
+../.venv/bin/python -m experiments.checks.check_sp_traci --config configs/sp.yaml
 
 # SUMO -> Unity (Unity em Play Mode na cena SPImport)
-../.venv/bin/python -m experiments.test_sumo_to_unity --config configs/sp.yaml --steps 120 --send-interval 0.1
+../.venv/bin/python -m experiments.checks.check_sumo_to_unity --config configs/sp.yaml --steps 120 --send-interval 0.1
 
 # Baseline de tempo fixo (sem Unity)
-../.venv/bin/python -m experiments.run_fixed_time_baseline --config configs/sp.yaml --steps 100 --seed 201 \
+../.venv/bin/python -m legacy.run_fixed_time_baseline --config configs/sp.yaml --steps 100 --seed 201 \
   --output ../results/evaluation/fixed-time-baseline-test-seed-201.json
 
 # Controlador visual (Unity em Play Mode). Sem --dqn-model = heurístico; com = DQN.
-../.venv/bin/python -m experiments.run_visual_controller --config configs/sp.yaml --steps 100 --seed 201 \
+../.venv/bin/python -m legacy.run_visual_controller --config configs/sp.yaml --steps 100 --seed 201 \
   --send-interval 0.1 --camera-ids south,east,west \
   --model ../runs/results/models/yolov8n-unity-run-002-mask/weights/best.pt --classes 0 \
   --confidence 0.15 --frame-rate 1 --track-match-threshold 0.6 \
@@ -382,68 +402,68 @@ Todos a partir de `python/`:
   --metrics-output ../results/evaluation/visual-dqn-metrics-test-seed-201.json
 
 # Comparação de dois JSONs de métricas
-../.venv/bin/python -m experiments.compare_control_experiments \
+../.venv/bin/python -m legacy.compare_control_experiments \
   --baseline <a.json> --visual-adaptive <b.json> --output <saida.json>
 
 # Pré-treino do DQN v2 só com SUMO. Use os dois cenários: treinada só no
 # calibrado, a v2 especializa e piora com demanda equilibrada. Referência
 # (demanda sem motos): dqn-v2-traffiq-best.pt, padrão dos scripts v2.
-../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated,original \
+../.venv/bin/python -m experiments.train.pretrain_dqn_sumo --double-dqn --scenarios calibrated,original \
   --checkpoint-output ../results/models/dqn-v2-traffiq-last.pt --best-checkpoint-output ../results/models/dqn-v2-traffiq-best.pt
 
 # Gerar a demanda calibrada (sem motos) a partir dos dados do drone
-../.venv/bin/python -m experiments.build_calibrated_demand
+../.venv/bin/python -m experiments.data.build_calibrated_demand
 
 # Avaliar ciclo fixo, max-pressure e checkpoints v2 com percepção ground truth (só SUMO)
-../.venv/bin/python -m experiments.evaluate_policies_sumo --scenario calibrated \
+../.venv/bin/python -m experiments.evaluate.evaluate_policies_sumo --scenario calibrated \
   --dqn-model ../results/models/dqn-v2-pretrain-best.pt --output ../results/evaluation/policies-sumo-oracle-calibrated.json
 
 # Todos os controladores (ids do código: baseline, v1, v1.1, v2, max_pressure) no mesmo ambiente
-../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception oracle   # só SUMO
-../.venv/bin/python -m experiments.compare_versions --scenario calibrated --perception visual   # Unity em Play Mode
+../.venv/bin/python -m experiments.evaluate.compare_versions --scenario calibrated --perception oracle   # só SUMO
+../.venv/bin/python -m experiments.evaluate.compare_versions --scenario calibrated --perception visual   # Unity em Play Mode
 
 # Política v2 com visão (Unity em Play Mode) + log visão × ground truth por step
-../.venv/bin/python -m experiments.run_visual_policy --policy dqn --dqn-model <checkpoint-v2> --seeds 1001
-../.venv/bin/python -m experiments.evaluate_lane_features --step-log <log.jsonl> --dqn-model <checkpoint-v2>
+../.venv/bin/python -m experiments.evaluate.run_visual_policy --policy dqn --dqn-model <checkpoint-v2> --seeds 1001
+../.venv/bin/python -m experiments.evaluate.evaluate_lane_features --step-log <log.jsonl> --dqn-model <checkpoint-v2>
 
 # Ajuste fino visual a partir do pré-treino (Unity em Play Mode; horas)
-../.venv/bin/python -m experiments.finetune_dqn_visual --init-checkpoint ../results/models/dqn-v2-pretrain-best.pt
+../.venv/bin/python -m experiments.train.finetune_dqn_visual --init-checkpoint ../results/models/dqn-v2-pretrain-best.pt
 
 # Rede com pedestres (regenera os arquivos .ped do cenário SP)
-../.venv/bin/python -m experiments.build_pedestrian_network
+../.venv/bin/python -m experiments.data.build_pedestrian_network
 
 # Pré-treino do DQN v3 (com pedestres; referência: w = 0,3, 100 episódios, seeds 51–150)
-../.venv/bin/python -m experiments.pretrain_dqn_sumo --double-dqn --scenarios calibrated_ped,original_ped --state-version 3 \
+../.venv/bin/python -m experiments.train.pretrain_dqn_sumo --double-dqn --scenarios calibrated_ped,original_ped --state-version 3 \
   --episodes 100 --seed-start 51 --pedestrian-reward-weight 0.3 \
   --checkpoint-output ../results/models/dqn-v3-fase-curta-last.pt --best-checkpoint-output ../results/models/dqn-v3-fase-curta-best.pt
 
 # Versões com pedestres (ground truth); v3 só entra se pedido
-../.venv/bin/python -m experiments.compare_versions --scenario calibrated_ped --perception oracle --versions baseline,v1,v2,v3,max_pressure
+../.venv/bin/python -m experiments.evaluate.compare_versions --scenario calibrated_ped --perception oracle --versions baseline,v1,v2,v3,max_pressure
 
 # Preempção para emergências (mesma agenda de viaturas; só SUMO)
-../.venv/bin/python -m experiments.evaluate_preemption --scenario calibrated
+../.venv/bin/python -m experiments.evaluate.evaluate_preemption --scenario calibrated
 
 # Painel web de demonstração (Unity em Play Mode; http://127.0.0.1:8000/). Mesmo
-# Environment.run e mesmas versões das avaliações; botão de viatura usa
+# SpEnvironment.run e mesmas versões das avaliações; botão de viatura usa
 # EmergencyTraffic.dispatch. Não é avaliação: não use seus números em tabelas.
 # Aquecimento de 300 s, como as avaliações; a "redução" é uma estimativa (1 seed)
 # na mesma métrica (espera por veículo, sem viaturas) contra o tempo fixo de
 # results/evaluation. Sem o detector ajustado, só sobe com --allow-generic-detector
 # (yolov8n.pt COCO, sem detecção visual de ambulâncias).
-../.venv/bin/python -m experiments.api_server
+../.venv/bin/python -m dashboard.server
 # (no PyCharm: Run Configurations compartilhadas em .run/ — "Painel TraffIQ" e "Testes unitários")
 
 # Estender ROIs de faixa a partir da borda próxima desenhada na calibração
-../.venv/bin/python -m experiments.extend_lane_rois --length 60
+../.venv/bin/python -m experiments.data.extend_lane_rois --length 60
 
 # Conferir ROIs de faixa × lanes SUMO (sem SUMO/Unity)
-../.venv/bin/python -m experiments.check_lane_geometry
+../.venv/bin/python -m experiments.data.check_lane_geometry
 
 # YOLO de duas classes por classe e faixa de distância no split de teste (sem SUMO/Unity)
-../.venv/bin/python -m experiments.evaluate_yolo_classes
+../.venv/bin/python -m experiments.evaluate.evaluate_yolo_classes
 
 # Treino legado do DQN v1 (longo; exige Unity em Play Mode e YOLO). Confira --help antes.
-../.venv/bin/python -m experiments.train_visual_dqn --help
+../.venv/bin/python -m legacy.train_visual_dqn --help
 ```
 
 Sem `--seed`, o SUMO usa `experiment.seed` do `sp.yaml`. No cenário `original`
