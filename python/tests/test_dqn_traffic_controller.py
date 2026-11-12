@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 
 from controller import DqnTrafficController
-from controller.phase_manager import SUMO_PHASE_HOLD_SECONDS
+from controller.keep_switch.phase_manager import SUMO_PHASE_HOLD_SECONDS
 
 
 CONFIG = {"traffic_light": {"phases": {"primary_green": 0, "primary_yellow": 1, "all_red": 2, "secondary_green": 3, "secondary_yellow": 4}}, "traffic_control": {"min_green_seconds": 10, "max_green_seconds": 40, "yellow_seconds": 3, "all_red_seconds": 1}}

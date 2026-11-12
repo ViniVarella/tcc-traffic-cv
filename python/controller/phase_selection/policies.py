@@ -9,9 +9,10 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any
 
-from .phase_selection_agent import PhaseSelectionAgent
-from .phase_selection_state import PhaseObservation
+from .agent import PhaseSelectionAgent
+from .state import PhaseObservation
 
 
 def cyclic_order(current: int, count: int) -> list[int]:
@@ -29,6 +30,11 @@ class FixedTimePhasePolicy:
 
     def __init__(self, durations_s: Sequence[float], min_green_s: float = 10.0, max_green_s: float = 40.0) -> None:
         self.durations_s = tuple(min(max_green_s, max(min_green_s, float(value))) for value in durations_s)
+
+    @classmethod
+    def from_layout(cls, layout: Any) -> FixedTimePhasePolicy:
+        """Tempo fixo com as durações de verde do programa estático do cruzamento."""
+        return cls([green.duration_s for green in layout.greens])
 
     def __call__(self, observation: PhaseObservation) -> int:
         current = observation.current

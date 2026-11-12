@@ -20,11 +20,11 @@ import yaml
 from paths import PYTHON_DIR
 from bridge import UnityBridge
 from controller import DqnAgent
-from experiments.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
-from experiments.episode_runner import DqnPolicy, EpisodeSettings, EpsilonSchedule
-from experiments.scenario_config import add_scenario_argument
-from experiments.sumo_environment import Environment
-from experiments.visual_observer import StepLogger, add_vision_arguments, build_unity_observer
+from simulation.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
+from simulation.episode import DqnPolicy, EpisodeSettings, EpsilonSchedule
+from simulation.scenario_config import add_scenario_argument
+from simulation.sp_environment import SpEnvironment
+from simulation.visual_observer import StepLogger, add_vision_arguments, build_unity_observer
 
 
 def parse_args(base_dir: Path) -> argparse.Namespace:
@@ -63,7 +63,7 @@ def main() -> None:
         raise ValueError("Seeds de ajuste fino devem ser disjuntas do pré-treino (1–40), da validação e do teste (201–203).")
 
     config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
-    environment = Environment(config, base_dir, args.scenario, EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval))
+    environment = SpEnvironment(config, base_dir, args.scenario, EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval))
     agent = DqnAgent.load(args.init_checkpoint, device="cpu")
     if agent.config.state_version != 2:
         raise ValueError(f"{args.init_checkpoint} não é um checkpoint de estado v2.")

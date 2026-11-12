@@ -17,12 +17,11 @@ from typing import Any
 import numpy as np
 
 from paths import PYTHON_DIR
-from controller.phase_selection_policies import MaxPressurePhasePolicy
-from experiments.episode_runner import EpisodeSettings
-from experiments.phase_selection_environment import PhaseSelectionEnvironment, pedestrian_hcm_delay
-from experiments.pretrain_phase_selection import fixed_time
+from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy
+from simulation.episode import EpisodeSettings
+from simulation.phase_selection_environment import PhaseSelectionEnvironment, pedestrian_hcm_delay
 
-POLICIES = {"fixed_time": fixed_time, "max_pressure": lambda layout: MaxPressurePhasePolicy()}
+POLICIES = {"fixed_time": FixedTimePhasePolicy.from_layout, "max_pressure": lambda layout: MaxPressurePhasePolicy()}
 
 
 def main() -> None:

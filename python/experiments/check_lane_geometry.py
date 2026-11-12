@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 from pathlib import Path
 from typing import Any
 import xml.etree.ElementTree as ElementTree
@@ -19,6 +18,8 @@ import yaml
 from sumolib.geomhelper import polygonOffsetWithMinimumDistanceToPoint
 
 from paths import PYTHON_DIR
+from sumo.intersection import lane_shapes
+from vision.camera_projection import image_point_to_ground
 from vision.lane_geometry import order_lane_quad
 
 
@@ -29,49 +30,6 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--additional", type=Path, default=base_dir.parent / "sumo" / "sp" / "Cruzamento.add.xml")
     parser.add_argument("--output", type=Path, default=None, help="JSON opcional com o relatório por faixa.")
     return parser.parse_args()
-
-
-def camera_rotation(euler_degrees: dict[str, float]) -> np.ndarray:
-    """Matriz de rotação da Unity (Quaternion.Euler aplica Z, depois X, depois Y)."""
-    x, y, z = (math.radians(float(euler_degrees[axis])) for axis in ("x", "y", "z"))
-    rotation_x = np.array([[1, 0, 0], [0, math.cos(x), -math.sin(x)], [0, math.sin(x), math.cos(x)]])
-    rotation_y = np.array([[math.cos(y), 0, math.sin(y)], [0, 1, 0], [-math.sin(y), 0, math.cos(y)]])
-    rotation_z = np.array([[math.cos(z), -math.sin(z), 0], [math.sin(z), math.cos(z), 0], [0, 0, 1]])
-    return rotation_y @ rotation_x @ rotation_z
-
-
-def image_point_to_ground(pose: dict[str, Any], aspect: float, u: float, v: float) -> tuple[float, float]:
-    """Projeta (u, v) normalizados, origem no topo, no plano y=0; retorna (x, y) SUMO."""
-    tan_half = math.tan(math.radians(float(pose["fieldOfView"])) / 2.0)
-    direction_camera = np.array([(2.0 * u - 1.0) * tan_half * aspect, (1.0 - 2.0 * v) * tan_half, 1.0])
-    direction = camera_rotation(pose["rotationEulerDegrees"]) @ direction_camera
-    origin = np.array([pose["position"][axis] for axis in ("x", "y", "z")], dtype=float)
-    if direction[1] >= 0:
-        raise ValueError(f"O ponto ({u:.3f}, {v:.3f}) não intercepta o solo.")
-    ground = origin + direction * (-origin[1] / direction[1])
-    # Unity x = SUMO x e Unity z = SUMO y (netOffset 0,0; ver state_extractor).
-    return float(ground[0]), float(ground[2])
-
-
-def ground_to_image_point(pose: dict[str, Any], aspect: float, x: float, y: float) -> tuple[float, float]:
-    """Inverso de ``image_point_to_ground``: (x, y) SUMO no chão -> (u, v) normalizados."""
-    origin = np.array([pose["position"][axis] for axis in ("x", "y", "z")], dtype=float)
-    camera = camera_rotation(pose["rotationEulerDegrees"]).T @ (np.array([x, 0.0, y]) - origin)
-    if camera[2] <= 0:
-        raise ValueError(f"O ponto ({x:.2f}, {y:.2f}) está atrás da câmera.")
-    tan_half = math.tan(math.radians(float(pose["fieldOfView"])) / 2.0)
-    return (
-        float((camera[0] / camera[2] / (tan_half * aspect) + 1.0) / 2.0),
-        float((1.0 - camera[1] / camera[2] / tan_half) / 2.0),
-    )
-
-
-def lane_shapes(net_path: Path) -> dict[str, tuple[list[tuple[float, float]], float]]:
-    shapes = {}
-    for lane in ElementTree.parse(net_path).getroot().iter("lane"):
-        points = [tuple(float(value) for value in pair.split(",")) for pair in lane.attrib["shape"].split()]
-        shapes[lane.attrib["id"]] = (points, float(lane.attrib.get("width", 3.2)))
-    return shapes
 
 
 def detector_extents(additional_path: Path) -> dict[str, dict[str, Any]]:

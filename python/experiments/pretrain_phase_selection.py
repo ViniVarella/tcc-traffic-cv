@@ -21,16 +21,12 @@ from time import perf_counter
 from typing import Any
 
 from paths import PYTHON_DIR
-from controller.phase_selection_agent import PhaseAgentConfig, PhaseSelectionAgent
-from controller.phase_selection_policies import FixedTimePhasePolicy, MaxPressurePhasePolicy, PhaseDqnPolicy
-from controller.phase_selection_state import ROW_FEATURES_BY_VERSION
-from experiments.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
-from experiments.episode_runner import EpisodeSettings, EpsilonSchedule
-from experiments.phase_selection_environment import PhaseSelectionEnvironment, PolicyFactory
-
-
-def fixed_time(layout: Any) -> FixedTimePhasePolicy:
-    return FixedTimePhasePolicy([green.duration_s for green in layout.greens])
+from controller.phase_selection.agent import PhaseAgentConfig, PhaseSelectionAgent
+from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy, PhaseDqnPolicy
+from controller.phase_selection.state import ROW_FEATURES_BY_VERSION
+from simulation.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
+from simulation.episode import EpisodeSettings, EpsilonSchedule
+from simulation.phase_selection_environment import PhaseSelectionEnvironment, PolicyFactory
 
 
 class DemonstrationLearner:
@@ -137,7 +133,7 @@ def main() -> None:
         return score, None if not rates else sum(rates) / len(rates)
 
     try:
-        for label, reference in (("fixed_time", fixed_time), ("max_pressure", lambda layout: MaxPressurePhasePolicy())):
+        for label, reference in (("fixed_time", FixedTimePhasePolicy.from_layout), ("max_pressure", lambda layout: MaxPressurePhasePolicy())):
             score, switch_rate = validate(label, reference)
             print(f"phase_select_reference policy={label} validation_score={score:.4f} switch_rate={switch_rate}", flush=True)
         demonstrator = DemonstrationLearner(agent)

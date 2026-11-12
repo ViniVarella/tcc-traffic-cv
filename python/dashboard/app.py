@@ -1,8 +1,8 @@
 """Painel web (FastAPI): roda um episódio SUMO + Unity + visão e transmite o que acontece.
 
-O episódio roda numa thread própria, pelo mesmo ``Environment.run`` das
+O episódio roda numa thread própria, pelo mesmo ``SpEnvironment.run`` das
 avaliações (mesma camada de segurança, mesma visão e mesmas versões de
-``experiments.version_policies``). A API só escolhe o cenário, a versão e a
+``simulation.version_policies``). A API só escolhe o cenário, a versão e a
 fonte da preempção, despacha viaturas e lê a telemetria; nada do painel entra
 na decisão da política.
 """
@@ -27,12 +27,12 @@ from pydantic import BaseModel
 import yaml
 
 from bridge import UnityBridge
-from controller.preemption import PreemptionSettings
+from controller.keep_switch.preemption import PreemptionSettings
 from dashboard.telemetry import APPROACHES, build_telemetry
-from experiments.episode_runner import EpisodeSettings
-from experiments.sumo_environment import EMERGENCY_DETECTIONS, Environment
-from experiments.version_policies import build_version_policies
-from experiments.visual_observer import build_unity_observer
+from simulation.episode import EpisodeSettings
+from simulation.sp_environment import EMERGENCY_DETECTIONS, SpEnvironment
+from simulation.version_policies import build_version_policies
+from simulation.visual_observer import build_unity_observer
 from sumo.emergency import EmergencySettings
 from vision.visual_debug import VisualDebugger
 
@@ -281,7 +281,7 @@ class EpisodeRunner:
                                          global_checkpoint=self.checkpoints["global"],
                                          generic_config=self.settings.base_dir / "configs" / "generic.yaml",
                                          scenario=request.scenario)[0]
-        environment = Environment(self.config, self.settings.base_dir, request.scenario,
+        environment = SpEnvironment(self.config, self.settings.base_dir, request.scenario,
                                   EpisodeSettings(self.settings.warmup_s, self.settings.control_s, version.decision_interval_s),
                                   state_version=version.state_version)
         if self._observer is None:

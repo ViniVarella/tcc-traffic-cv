@@ -20,14 +20,13 @@ import yaml
 
 from paths import PYTHON_DIR
 from bridge import UnityBridge
-from controller.phase_selection_agent import PhaseSelectionAgent
-from controller.phase_selection_policies import MaxPressurePhasePolicy, PhaseDqnPolicy
-from experiments.episode_runner import EpisodeSettings
-from experiments.evaluate_phase_selection import METRICS, summarize
-from experiments.phase_selection_environment import PhaseSelectionEnvironment
-from experiments.pretrain_phase_selection import fixed_time
-from experiments.sumo_environment import Environment
-from experiments.visual_observer import add_vision_arguments, build_unity_observer
+from controller.phase_selection.agent import PhaseSelectionAgent
+from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy, PhaseDqnPolicy
+from simulation.episode import EpisodeSettings
+from simulation.statistics import METRICS, summarize
+from simulation.phase_selection_environment import PhaseSelectionEnvironment
+from simulation.sp_environment import SpEnvironment
+from simulation.visual_observer import add_vision_arguments, build_unity_observer
 
 # Rótulos das versões do relatório visual (ids do código → rótulo do modelo).
 REFERENCE_VERSIONS = {"baseline": "tempo_fixo_programa", "max_pressure": "max_pressure_ciclico", "v2": "especialista_dqn_estado_v2"}
@@ -74,12 +73,12 @@ def main() -> None:
     sp_config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
     generic = PhaseSelectionEnvironment.from_file(args.generic_config.resolve(), settings)
     scenario = generic.scenario(f"sp/{args.scenario}")
-    # O Environment do SP só monta a percepção visual (câmeras, ROIs, sombra ground truth).
-    sp_environment = Environment(sp_config, base_dir, args.scenario, settings)
+    # O SpEnvironment do SP só monta a percepção visual (câmeras, ROIs, sombra ground truth).
+    sp_environment = SpEnvironment(sp_config, base_dir, args.scenario, settings)
     agent = PhaseSelectionAgent.load(args.dqn_model)
     greedy = PhaseDqnPolicy(agent)
     factories = {"dqn_fase_livre": lambda layout: greedy, "max_pressure": lambda layout: MaxPressurePhasePolicy(),
-                 "fixed_time": fixed_time}
+                 "fixed_time": FixedTimePhasePolicy.from_layout}
     names = [name.strip() for name in args.policies.split(",") if name.strip()]
     unknown = set(names) - set(factories)
     if unknown:

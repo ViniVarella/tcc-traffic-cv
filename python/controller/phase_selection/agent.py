@@ -28,8 +28,8 @@ import torch
 from torch import nn
 from torch.nn import functional as functional
 
-from .dqn_agent import Transition
-from .phase_selection_state import LANE_COUNT_INDEX, ROW_FEATURE_NAMES, ROW_FEATURES_BY_VERSION, STATE_VERSION
+from controller.keep_switch.agent import Transition
+from .state import LANE_COUNT_INDEX, ROW_FEATURE_NAMES, ROW_FEATURES_BY_VERSION, STATE_VERSION
 
 
 MASKED_Q = -1e9

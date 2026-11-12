@@ -7,14 +7,14 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from controller import DqnAgent, DqnTrafficController
-from controller.preemption import EmergencyPreemption, PreemptionSettings
+from controller.keep_switch.preemption import EmergencyPreemption, PreemptionSettings
 from controller.rewards import RewardWeights
-from experiments.episode_runner import EpisodeSettings, Observer, Policy, RewardModel, incoming_lane_capacity, run_episode
+from simulation.episode import EpisodeSettings, Observer, Policy, RewardModel, incoming_lane_capacity, run_episode
 from sumo import SumoClient
 from sumo.emergency import EmergencySettings, EmergencyTraffic
 from sumo.pedestrian_metrics import PedestrianMetricsCollector
 from sumo.lane_feature_source import TraciLaneFeatureSource, noise_from_config
-from vision import build_state_encoder
+from controller.keep_switch.state import build_state_encoder
 from vision.lane_features import KinematicsParameters, load_lane_geometries
 
 
@@ -31,7 +31,7 @@ class EpisodeObserver(Protocol):
     def begin_episode(self, client: SumoClient, seed: int) -> Observer: ...
 
 
-class Environment:
+class SpEnvironment:
     def __init__(self, config: dict[str, Any], base_dir: Path, scenario: str | None, settings: EpisodeSettings,
                  state_version: int = 2) -> None:
         self.config = config

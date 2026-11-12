@@ -5,8 +5,8 @@ from __future__ import annotations
 import unittest
 
 from controller import DqnTrafficController
-from controller.phase_manager import PhaseManager
-from controller.preemption import EmergencyPreemption, EmergencyRequest, PreemptionSettings
+from controller.keep_switch.phase_manager import PhaseManager
+from controller.keep_switch.preemption import EmergencyPreemption, EmergencyRequest, PreemptionSettings
 
 
 CONFIG = {"traffic_light": {"phases": {"primary_green": 0, "primary_yellow": 1, "all_red": 2, "secondary_green": 3, "secondary_yellow": 4}},

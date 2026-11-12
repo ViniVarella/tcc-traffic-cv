@@ -12,52 +12,15 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 from pathlib import Path
-from statistics import fmean, stdev
 from typing import Any
 
 from paths import PYTHON_DIR
-from controller.phase_selection_agent import PhaseSelectionAgent
-from controller.phase_selection_policies import MaxPressurePhasePolicy, PhaseDqnPolicy
-from experiments.episode_runner import EpisodeSettings
-from experiments.phase_selection_environment import PhaseSelectionEnvironment
-from experiments.pretrain_phase_selection import fixed_time
-
-
-METRICS = ("mean_waiting_time_seconds", "mean_waiting_time_stopped_seconds", "mean_pending_vehicles",
-           "unfinished_vehicles", "teleported_vehicles")
-# t de Student bicaudal 95% por graus de liberdade.
-T_95 = {1: 12.706, 2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447, 7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228}
-
-
-def confidence_interval(values: list[float]) -> dict[str, float | None]:
-    """Média e IC de 95% (t de Student) de valores independentes."""
-    mean = fmean(values)
-    if len(values) < 2:
-        return {"mean": mean, "ci95_low": None, "ci95_high": None}
-    half = T_95.get(len(values) - 1, 1.96) * stdev(values) / math.sqrt(len(values))
-    return {"mean": mean, "ci95_low": mean - half, "ci95_high": mean + half}
-
-
-def paired_reduction(policy: list[float], reference: list[float]) -> dict[str, float | None]:
-    """Redução relativa (1 − política/referência), seed a seed, com IC de 95%."""
-    return confidence_interval([1.0 - value / base for value, base in zip(policy, reference) if base > 0])
-
-
-def summarize(runs: list[dict[str, Any]], reference: list[dict[str, Any]] | None) -> dict[str, Any]:
-    summary: dict[str, Any] = {"runs": runs}
-    for metric in METRICS:
-        values = [float(run[metric]) for run in runs if run.get(metric) is not None]
-        if values:
-            summary[metric] = confidence_interval(values)
-    if reference is not None:
-        for metric in METRICS[:2]:
-            pairs = [(run.get(metric), base.get(metric)) for run, base in zip(runs, reference)]
-            if pairs and all(value is not None and base is not None for value, base in pairs):
-                summary[f"reduction_{metric}"] = paired_reduction([float(value) for value, _ in pairs],
-                                                                  [float(base) for _, base in pairs])
-    return summary
+from controller.phase_selection.agent import PhaseSelectionAgent
+from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy, PhaseDqnPolicy
+from simulation.episode import EpisodeSettings
+from simulation.phase_selection_environment import PhaseSelectionEnvironment
+from simulation.statistics import METRICS, summarize
 
 
 def specialist_runs(path: Path, seeds: list[int]) -> list[dict[str, Any]] | None:
@@ -86,7 +49,7 @@ def main() -> None:
     scenarios = environment.scenarios if args.split == "all" else environment.split(args.split)
     agent = PhaseSelectionAgent.load(args.dqn_model)
     greedy = PhaseDqnPolicy(agent)
-    policies = {"fixed_time": fixed_time, "max_pressure": lambda layout: MaxPressurePhasePolicy(), "dqn_fase_livre": lambda layout: greedy}
+    policies = {"fixed_time": FixedTimePhasePolicy.from_layout, "max_pressure": lambda layout: MaxPressurePhasePolicy(), "dqn_fase_livre": lambda layout: greedy}
     results: dict[str, Any] = {"seeds": seeds, "warmup_s": settings.warmup_s, "control_s": settings.control_s,
                                "perception": "ground_truth", "dqn_model": str(args.dqn_model),
                                "dqn_metadata": agent.metadata, "scenarios": {}}

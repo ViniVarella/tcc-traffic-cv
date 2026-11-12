@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from experiments.episode_runner import RewardModel
+from simulation.episode import RewardModel
 from sumo.pedestrian_metrics import PedestrianMetricsCollector
 
 

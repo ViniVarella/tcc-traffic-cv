@@ -18,12 +18,12 @@ import yaml
 from paths import PYTHON_DIR
 from bridge import UnityBridge
 from controller import DqnAgent
-from controller.policies import FixedCyclePolicy, MaxPressurePolicy
-from experiments.episode_runner import DqnPolicy, EpisodeSettings, Policy
-from experiments.evaluate_policies_sumo import evaluate
-from experiments.scenario_config import add_scenario_argument
-from experiments.sumo_environment import Environment
-from experiments.visual_observer import StepLogger, add_vision_arguments, build_unity_observer
+from controller.keep_switch.policies import FixedCyclePolicy, MaxPressurePolicy
+from simulation.episode import DqnPolicy, EpisodeSettings, Policy
+from simulation.policy_evaluation import evaluate
+from simulation.scenario_config import add_scenario_argument
+from simulation.sp_environment import SpEnvironment
+from simulation.visual_observer import StepLogger, add_vision_arguments, build_unity_observer
 
 
 def parse_args(base_dir: Path) -> argparse.Namespace:
@@ -58,7 +58,7 @@ def main() -> None:
     args = parse_args(base_dir)
     seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
     config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
-    environment = Environment(config, base_dir, args.scenario, EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval))
+    environment = SpEnvironment(config, base_dir, args.scenario, EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval))
     policy_name, policy = build_policy(args)
     bridge = UnityBridge.from_config(config)
     args.step_log_output.parent.mkdir(parents=True, exist_ok=True)

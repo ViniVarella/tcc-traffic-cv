@@ -10,7 +10,7 @@ import numpy as np
 import yaml
 
 from paths import PYTHON_DIR
-from experiments.version_policies import DqnV1Policy, HeuristicV1Policy, build_version_policies, lane_counts
+from simulation.version_policies import DqnV1Policy, HeuristicV1Policy, build_version_policies, lane_counts
 from vision.lane_features import LaneFeatures
 
 

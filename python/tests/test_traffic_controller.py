@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from controller.phase_manager import SUMO_PHASE_HOLD_SECONDS
+from controller.keep_switch.phase_manager import SUMO_PHASE_HOLD_SECONDS
 from legacy.traffic_controller import TrafficController
 
 

@@ -82,7 +82,7 @@ class TrafficBookkeepingTests(unittest.TestCase):
         settings = EmergencySettings(interval_s=500, jitter_s=0, first_after_s=0, routes={"east": (("E2", "E0"),)})
         traffic = EmergencyTraffic(settings, {"east": "E2"}, seed=1, start_s=0, end_s=100)
         client = FakeClient()
-        from controller.preemption import EmergencyRequest
+        from controller.keep_switch.preemption import EmergencyRequest
 
         traffic.step(client, 0.0)
         traffic.note_visual([EmergencyRequest("vision_east_0", "east", 3.0)], 0.0)

@@ -38,10 +38,10 @@ from typing import Any
 import numpy as np
 
 from controller import DqnAgent
-from controller.policies import FixedCyclePolicy, MaxPressurePolicy, QueueBasedPolicy
-from controller.phase_selection_agent import PhaseSelectionAgent
-from experiments.episode_runner import DqnPolicy, EpisodeSettings, Policy
-from vision import build_state_encoder
+from controller.keep_switch.policies import FixedCyclePolicy, MaxPressurePolicy, QueueBasedPolicy
+from controller.phase_selection.agent import PhaseSelectionAgent
+from simulation.episode import DqnPolicy, EpisodeSettings, Policy
+from controller.keep_switch.state import build_state_encoder
 
 
 VERSION_ORDER = ("baseline", "v1", "v1.1", "v2", "max_pressure")
@@ -104,7 +104,7 @@ class GlobalPhasePolicy:
 
     def __init__(self, agent: PhaseSelectionAgent, generic_config: Path, sp_config: Mapping[str, Any],
                  pedestrian_phase: bool = False, net_scenario: str = "sp/calibrated") -> None:
-        from experiments.phase_selection_environment import PhaseSelectionEnvironment
+        from simulation.phase_selection_environment import PhaseSelectionEnvironment
         from sumo.intersection import program_green_indices
 
         environment = PhaseSelectionEnvironment.from_file(generic_config, EpisodeSettings())
@@ -142,7 +142,7 @@ class GlobalPhasePolicy:
         return self.transition_s + (self.pedestrian_s if phase == self.pedestrian_after else 0.0)
 
     def observation(self, state: np.ndarray, lane_features: Mapping[tuple[str, str], Any], phase: Any) -> Any:
-        from experiments.phase_selection_environment import remap_features
+        from simulation.phase_selection_environment import remap_features
 
         current = self.green_index[int(phase.phase_index)]
         elapsed = float(state[-1]) * self.max_green_s

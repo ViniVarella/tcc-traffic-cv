@@ -15,9 +15,10 @@ import yaml
 from paths import PYTHON_DIR
 from bridge import FrameBundleCollector, UnityBridge
 from controller import DqnAgent, DqnConfig, DqnTrafficController
-from experiments.scenario_config import add_scenario_argument
+from simulation.scenario_config import add_scenario_argument
 from sumo import SumoClient, SumoStateExtractor
-from vision import ByteTrackVehicleTracker, VisualStateEncoder, YoloVehicleDetector, build_state_encoder
+from vision import ByteTrackVehicleTracker, YoloVehicleDetector
+from controller.keep_switch.state import VisualStateEncoder, build_state_encoder
 from vision.visual_pipeline import VisualPipeline, load_calibrations, parse_class_ids, queue_counts_by_camera
 
 

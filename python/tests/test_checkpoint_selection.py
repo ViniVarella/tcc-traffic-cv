@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from experiments.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
+from simulation.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
 
 
 def _record(episode: int, score: float | None, steps: int = 10_000, epsilon: float = 0.1, switch_rate: float | None = 0.5) -> ValidationRecord:

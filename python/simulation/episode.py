@@ -16,7 +16,8 @@ from typing import Any, Protocol
 import numpy as np
 
 from controller import DqnAgent, DqnTrafficController
-from controller.decision_scheduler import DecisionScheduler, SmdpAccumulator
+from controller.keep_switch.decision_scheduler import DecisionScheduler
+from controller.smdp import SmdpAccumulator
 from controller.rewards import RewardWeights, TrafficSnapshot, level_reward
 from sumo import ExperimentMetricsCollector
 

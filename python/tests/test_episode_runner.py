@@ -8,8 +8,8 @@ import unittest
 import numpy as np
 
 from controller import DqnAgent, DqnConfig, DqnTrafficController
-from controller.policies import FixedCyclePolicy, MaxPressurePolicy
-from experiments.episode_runner import DqnPolicy, EpisodeSettings, EpsilonSchedule, RewardModel, incoming_lane_capacity, run_episode
+from controller.keep_switch.policies import FixedCyclePolicy, MaxPressurePolicy
+from simulation.episode import DqnPolicy, EpisodeSettings, EpsilonSchedule, RewardModel, incoming_lane_capacity, run_episode
 from vision.lane_features import LaneFeatures
 
 

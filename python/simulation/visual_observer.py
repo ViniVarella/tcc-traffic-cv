@@ -18,7 +18,7 @@ from typing import Any
 
 from paths import DEFAULT_YOLO_MODEL
 from bridge import FrameBundleCollector
-from controller.preemption import EmergencyRequest
+from controller.keep_switch.preemption import EmergencyRequest
 from sumo import SumoStateExtractor
 from sumo.lane_feature_source import TraciLaneFeatureSource
 from vision.lane_features import LaneFeatures, LaneObservation

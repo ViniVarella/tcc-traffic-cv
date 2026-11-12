@@ -9,9 +9,9 @@ import yaml
 
 from paths import PYTHON_DIR
 from controller import DqnTrafficController
-from controller.phase_manager import PhaseManager, PhaseState
-from experiments.episode_runner import encode_state
-from vision import build_state_encoder
+from controller.keep_switch.phase_manager import PhaseManager, PhaseState
+from simulation.episode import encode_state
+from controller.keep_switch.state import build_state_encoder
 
 
 SP_CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))

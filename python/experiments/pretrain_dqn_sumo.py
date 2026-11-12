@@ -19,12 +19,12 @@ import yaml
 
 from paths import PYTHON_DIR
 from controller import DqnAgent, DqnConfig
-from controller.policies import FixedCyclePolicy, MaxPressurePolicy
-from experiments.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
-from experiments.episode_runner import DqnPolicy, EpisodeSettings, EpsilonSchedule, Policy
-from experiments.scenario_config import add_scenario_argument
-from experiments.sumo_environment import Environment
-from vision import SP_LANE_ORDER
+from controller.keep_switch.policies import FixedCyclePolicy, MaxPressurePolicy
+from simulation.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
+from simulation.episode import DqnPolicy, EpisodeSettings, EpsilonSchedule, Policy
+from simulation.scenario_config import add_scenario_argument
+from simulation.sp_environment import SpEnvironment
+from controller.keep_switch.state import SP_LANE_ORDER
 
 
 def parse_args(base_dir: Path) -> argparse.Namespace:
@@ -74,7 +74,7 @@ def main() -> None:
         config.setdefault("pedestrians", {})["reward_weight"] = float(args.pedestrian_reward_weight)
     settings = EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval, args.gamma)
     scenarios = [item.strip() for item in args.scenarios.split(",") if item.strip()] if args.scenarios else [args.scenario]
-    environments = [Environment(config, base_dir, scenario, settings, state_version=args.state_version) for scenario in scenarios]
+    environments = [SpEnvironment(config, base_dir, scenario, settings, state_version=args.state_version) for scenario in scenarios]
     environment = environments[0]
     dqn = config["dqn"]
     agent = DqnAgent(DqnConfig(

@@ -10,27 +10,17 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from statistics import fmean
 from typing import Any
 
 import yaml
 
 from paths import PYTHON_DIR
 from controller import DqnAgent
-from controller.policies import FixedCyclePolicy, MaxPressurePolicy
-from experiments.episode_runner import DqnPolicy, EpisodeSettings, Policy
-from experiments.sumo_environment import Environment
-from experiments.scenario_config import add_scenario_argument
-
-
-SUMMARY_KEYS = (
-    "mean_waiting_time_seconds", "mean_waiting_time_stopped_seconds", "stopped_vehicle_share",
-    "mean_travel_time_seconds", "arrived_vehicles", "throughput_vehicles_per_hour",
-    "mean_queue_length", "mean_pending_vehicles", "final_pending_vehicles", "teleported_vehicles",
-    # Só nos cenários com pedestres (None nos demais).
-    "pedestrians_arrived", "pedestrian_mean_waiting_s", "pedestrian_median_waiting_s",
-    "pedestrian_p90_waiting_s", "pedestrian_p95_waiting_s", "pedestrian_max_waiting_s",
-)
+from controller.keep_switch.policies import FixedCyclePolicy, MaxPressurePolicy
+from simulation.episode import DqnPolicy, EpisodeSettings, Policy
+from simulation.policy_evaluation import evaluate
+from simulation.sp_environment import SpEnvironment
+from simulation.scenario_config import add_scenario_argument
 
 
 def parse_args(base_dir: Path) -> argparse.Namespace:
@@ -46,26 +36,12 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     return parser.parse_args()
 
 
-def evaluate(environment: Environment, policy: Policy, seeds: list[int], **run_options: Any) -> dict[str, Any]:
-    """Roda a política em cada seed; ``run_options`` vai para ``Environment.run`` (ex.: observer)."""
-    runs = []
-    for seed in seeds:
-        outcome, scenario = environment.run(seed, policy, **run_options)
-        green = {name: outcome.phase_seconds.get(name, 0) for name in ("EAST_WEST_GREEN", "SOUTH_GREEN")}
-        runs.append({"seed": seed, "scenario": scenario, "mean_reward": outcome.mean_reward, "switches": outcome.switches,
-                     "switch_rate": outcome.switch_rate, "missing_observations": outcome.missing_observations,
-                     "east_west_green_share": green["EAST_WEST_GREEN"] / max(1, sum(green.values())),
-                     **{key: outcome.metrics.get(key) for key in SUMMARY_KEYS}})
-    numeric = ("mean_reward", "switches", "east_west_green_share", *SUMMARY_KEYS)
-    return {"runs": runs, "mean": {key: fmean(float(run[key]) for run in runs) for key in numeric if all(run[key] is not None for run in runs)}}
-
-
 def main() -> None:
     base_dir = PYTHON_DIR
     args = parse_args(base_dir)
     seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
     config = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
-    environment = Environment(config, base_dir, args.scenario, EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval))
+    environment = SpEnvironment(config, base_dir, args.scenario, EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval))
     policies: dict[str, Policy] = {"fixed_cycle": FixedCyclePolicy(), "max_pressure": MaxPressurePolicy()}
     for path in args.dqn_model:
         agent = DqnAgent.load(path, device="cpu")

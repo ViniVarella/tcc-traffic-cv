@@ -13,6 +13,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import xml.etree.ElementTree as ElementTree
 
 from vision.lane_features import LaneGeometry
 
@@ -110,3 +111,12 @@ def load_intersection(net_path: str | Path, tls_id: str | None = None, roi_lengt
         geometry = roi_geometry(lane, length, roi_length_m)
         geometries[(geometry.camera_id, geometry.lane_id)] = geometry
     return IntersectionLayout(tls.getID(), greens, geometries)
+
+
+def lane_shapes(net_path: Path) -> dict[str, tuple[list[tuple[float, float]], float]]:
+    """Forma (pontos x, y) e largura de cada faixa do ``.net.xml``, pelo id da faixa."""
+    shapes = {}
+    for lane in ElementTree.parse(net_path).getroot().iter("lane"):
+        points = [tuple(float(value) for value in pair.split(",")) for pair in lane.attrib["shape"].split()]
+        shapes[lane.attrib["id"]] = (points, float(lane.attrib.get("width", 3.2)))
+    return shapes

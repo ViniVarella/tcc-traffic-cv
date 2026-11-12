@@ -9,7 +9,7 @@ import unittest
 import yaml
 
 from paths import PYTHON_DIR
-from experiments.scenario_config import add_scenario_argument
+from simulation.scenario_config import add_scenario_argument
 from sumo import SumoClient
 from sumo.scenarios import resolve_sumo_scenario
 

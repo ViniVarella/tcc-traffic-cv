@@ -21,12 +21,12 @@ import yaml
 
 from paths import PYTHON_DIR
 from bridge import UnityBridge
-from experiments.episode_runner import EpisodeSettings
-from experiments.evaluate_policies_sumo import evaluate
-from experiments.scenario_config import add_scenario_argument
-from experiments.sumo_environment import Environment
-from experiments.version_policies import VERSION_ORDER, build_version_policies
-from experiments.visual_observer import StepLogger, add_vision_arguments, build_unity_observer
+from simulation.episode import EpisodeSettings
+from simulation.policy_evaluation import evaluate
+from simulation.scenario_config import add_scenario_argument
+from simulation.sp_environment import SpEnvironment
+from simulation.version_policies import VERSION_ORDER, build_version_policies
+from simulation.visual_observer import StepLogger, add_vision_arguments, build_unity_observer
 
 
 def parse_args(base_dir: Path) -> argparse.Namespace:
@@ -75,11 +75,11 @@ def main() -> None:
         observer = None
         if bridge is not None:
             bridge.start_frame_server()
-            reference = Environment(config, base_dir, args.scenario, EpisodeSettings(args.warmup_seconds, args.control_seconds))
+            reference = SpEnvironment(config, base_dir, args.scenario, EpisodeSettings(args.warmup_seconds, args.control_seconds))
             observer = build_unity_observer(config, base_dir, args, reference, bridge)
             args.step_log_dir.mkdir(parents=True, exist_ok=True)
         for version in versions:
-            environment = Environment(config, base_dir, args.scenario,
+            environment = SpEnvironment(config, base_dir, args.scenario,
                                       EpisodeSettings(args.warmup_seconds, args.control_seconds, version.decision_interval_s),
                                       state_version=version.state_version)
             if observer is None:

@@ -18,7 +18,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from controller.preemption import EmergencyRequest
+from controller.keep_switch.preemption import EmergencyRequest
 
 from .lane_features import LaneGeometry
 from .visual_lane_features import VisualLaneFeatureSource

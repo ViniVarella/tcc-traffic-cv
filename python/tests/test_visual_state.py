@@ -11,7 +11,7 @@ import yaml
 
 from paths import PYTHON_DIR
 from vision.lane_features import LaneFeatures
-from vision.visual_state import SP_LANE_ORDER, LaneFeatureStateEncoder, VisualStateEncoder, build_state_encoder
+from controller.keep_switch.state import SP_LANE_ORDER, LaneFeatureStateEncoder, VisualStateEncoder, build_state_encoder
 
 
 SP_CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))

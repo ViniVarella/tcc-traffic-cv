@@ -13,7 +13,7 @@ import yaml
 
 from paths import PYTHON_DIR
 from bridge import FramePacket
-from experiments.visual_observer import StepLogger, UnityVisualObserver
+from simulation.visual_observer import StepLogger, UnityVisualObserver
 from sumo.lane_feature_source import TraciLaneFeatureSource
 from vision.lane_feature_evaluation import action_agreement, feature_gap, ground_offset_estimate
 from vision.lane_features import load_lane_geometries

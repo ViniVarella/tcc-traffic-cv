@@ -8,7 +8,8 @@ import numpy as np
 import torch
 
 from controller import DqnAgent, DqnConfig, DqnTrafficController
-from controller.decision_scheduler import DecisionScheduler, SmdpAccumulator
+from controller.keep_switch.decision_scheduler import DecisionScheduler
+from controller.smdp import SmdpAccumulator
 from controller.rewards import RewardWeights, TrafficSnapshot, level_reward
 
 

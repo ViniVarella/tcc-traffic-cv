@@ -24,12 +24,12 @@ import yaml
 
 from paths import PYTHON_DIR
 from bridge import UnityBridge
-from controller.preemption import PreemptionSettings
-from experiments.episode_runner import EpisodeSettings
-from experiments.scenario_config import add_scenario_argument
-from experiments.sumo_environment import EMERGENCY_DETECTIONS, Environment
-from experiments.version_policies import build_version_policies
-from experiments.visual_observer import StepLogger, add_vision_arguments, build_unity_observer
+from controller.keep_switch.preemption import PreemptionSettings
+from simulation.episode import EpisodeSettings
+from simulation.scenario_config import add_scenario_argument
+from simulation.sp_environment import EMERGENCY_DETECTIONS, SpEnvironment
+from simulation.version_policies import build_version_policies
+from simulation.visual_observer import StepLogger, add_vision_arguments, build_unity_observer
 from sumo.emergency import EmergencySettings
 
 
@@ -98,11 +98,11 @@ def main() -> None:
     try:
         if bridge is not None:
             bridge.start_frame_server()
-            reference = Environment(config, base_dir, args.scenario, EpisodeSettings(args.warmup_seconds, args.control_seconds))
+            reference = SpEnvironment(config, base_dir, args.scenario, EpisodeSettings(args.warmup_seconds, args.control_seconds))
             observer = build_unity_observer(config, base_dir, args, reference, bridge)
             args.step_log_dir.mkdir(parents=True, exist_ok=True)
         for version in versions:
-            environment = Environment(config, base_dir, args.scenario,
+            environment = SpEnvironment(config, base_dir, args.scenario,
                                       EpisodeSettings(args.warmup_seconds, args.control_seconds, version.decision_interval_s),
                                       state_version=version.state_version)
             for label, settings, detection in modes:

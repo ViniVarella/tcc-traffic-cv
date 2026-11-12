@@ -8,7 +8,8 @@ import numpy as np
 import yaml
 
 from paths import REPO_DIR
-from experiments.check_lane_geometry import ground_to_image_point, image_point_to_ground, measure_lane_rois
+from experiments.check_lane_geometry import measure_lane_rois
+from vision.camera_projection import ground_to_image_point, image_point_to_ground
 from vision.camera_calibration import load_camera_calibration
 from vision.lane_geometry import LaneHomography, bbox_ground_point, order_lane_quad
 

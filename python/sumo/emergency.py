@@ -15,7 +15,7 @@ import random
 from statistics import fmean
 from typing import Any, Protocol
 
-from controller.preemption import EmergencyRequest
+from controller.keep_switch.preemption import EmergencyRequest
 
 
 EMERGENCY_TYPE = "emergency"

@@ -14,7 +14,7 @@ import yaml
 
 from paths import PYTHON_DIR
 from bridge import FrameBundleCollector, UnityBridge
-from experiments.scenario_config import add_scenario_argument
+from simulation.scenario_config import add_scenario_argument
 from sumo import GroundTruthCollector, SumoClient, SumoStateExtractor
 from sumo.emergency import EmergencySettings, EmergencyTraffic
 from vision.lane_features import load_lane_geometries

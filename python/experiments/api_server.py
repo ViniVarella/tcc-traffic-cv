@@ -20,7 +20,7 @@ import uvicorn
 
 from paths import PYTHON_DIR
 from dashboard.app import PanelSettings, create_app
-from experiments.visual_observer import add_vision_arguments
+from simulation.visual_observer import add_vision_arguments
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:

@@ -11,7 +11,7 @@ import yaml
 
 from paths import PYTHON_DIR
 from controller import DqnAgent
-from vision import build_state_encoder
+from controller.keep_switch.state import build_state_encoder
 from vision.lane_feature_evaluation import action_agreement, feature_gap, ground_offset_estimate
 
 

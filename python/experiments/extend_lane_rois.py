@@ -22,7 +22,8 @@ import yaml
 from sumolib.geomhelper import polygonOffsetWithMinimumDistanceToPoint, positionAtShapeOffset
 
 from paths import PYTHON_DIR
-from experiments.check_lane_geometry import ground_to_image_point, image_point_to_ground, lane_shapes
+from sumo.intersection import lane_shapes
+from vision.camera_projection import ground_to_image_point, image_point_to_ground
 from vision.lane_geometry import order_lane_quad
 
 
