@@ -171,8 +171,7 @@ class PhaseSelectionEnvironment:
             layout = load_intersection(scenario.net, raw.get("tls_id"), self.roi_length_m)
             if "roi_profile" in raw:
                 # ROIs reais das câmeras (ex.: sp.yaml), para comparar no mesmo ambiente das avaliações.
-                profile = yaml.safe_load((self.base_dir / raw["roi_profile"]).read_text(encoding="utf-8"))
-                layout = replace(layout, geometries=profile_geometries(profile))
+                layout = replace(layout, geometries=profile_geometries(self._roi_profile(raw)))
             self._layouts[scenario.net] = layout
         return self._layouts[scenario.net]
 
@@ -192,7 +191,11 @@ class PhaseSelectionEnvironment:
         raw = self.config["intersections"][scenario.intersection]
         if "roi_profile" not in raw:
             raise ValueError(f"{scenario.intersection} não tem câmeras (roi_profile): a percepção visual não se aplica.")
-        return camera_key_map(yaml.safe_load((self.base_dir / raw["roi_profile"]).read_text(encoding="utf-8")))
+        return camera_key_map(self._roi_profile(raw))
+
+    def _roi_profile(self, raw: Mapping[str, Any]) -> dict[str, Any]:
+        """Perfil de câmeras (ex.: ``sp.yaml``) com as ROIs reais de um cruzamento."""
+        return yaml.safe_load((self.base_dir / raw["roi_profile"]).read_text(encoding="utf-8"))
 
     def run(self, scenario: GenericScenario, seed: int, make_policy: PolicyFactory, learner: Any | None = None,
             on_step: Callable[[dict[str, Any]], None] | None = None, observer: Any | None = None,
@@ -259,8 +262,8 @@ def run_phase_episode(
     ``warmup_switch_after_s``); no controle, a política escolhe o estágio em
     cada ponto de decisão, dentro da máscara da camada de segurança.
     """
-    groups = [layout.lane_keys(phase) for phase in range(len(layout.greens))]
-    capacities = {key: geometry.capacity for key, geometry in layout.geometries.items()}
+    groups = layout.lane_groups()
+    capacities = layout.lane_capacities()
     accumulator = SmdpAccumulator(settings.gamma)
     metrics = ExperimentMetricsCollector(warmup_until_s=settings.warmup_s)
     outcome = EpisodeOutcome()
@@ -284,7 +287,7 @@ def run_phase_episode(
                 # Sem frames: nenhuma decisão (mantém o verde até o máximo, como o TraffIQ).
                 outcome.missing_observations += 1
             elif _is_decision_point(controller, sim_time, settings.decision_interval_s, last_decision):
-                observation = encode_observation(encoder, controller, sim_time, lane_features, groups, capacities)
+                observation = _encode_observation(encoder, controller, sim_time, elapsed, lane_features, groups, capacities)
                 last_state = observation.state
                 learn_transition(learner, accumulator.close(last_state), outcome)
                 choice = int(policy(observation))
@@ -304,13 +307,13 @@ def run_phase_episode(
     return outcome
 
 
-def encode_observation(encoder: PhaseStateEncoder, controller: PhaseSelectionController, sim_time: float,
-                       lane_features: Mapping[Any, Any], groups: Sequence[Sequence[Any]],
-                       capacities: Mapping[Any, float]) -> PhaseObservation:
+def _encode_observation(encoder: PhaseStateEncoder, controller: PhaseSelectionController, sim_time: float, elapsed: float,
+                        lane_features: Mapping[Any, Any], groups: Sequence[Sequence[Any]],
+                        capacities: Mapping[Any, float]) -> PhaseObservation:
     """Estado por estágio do step: demanda das faixas, tempos do semáforo e máscara de escolhas."""
     phases = range(controller.phase_count)
     return encoder.encode(
-        lane_features, groups, capacities, controller.current, controller.elapsed(sim_time),
+        lane_features, groups, capacities, controller.current, elapsed,
         [controller.red_time(phase, sim_time) for phase in phases],
         decision_mask(controller, sim_time, lane_features, groups, encoder.max_red_s),
         [controller.switch_seconds(controller.current, phase, sim_time) for phase in phases],

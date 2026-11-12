@@ -14,7 +14,7 @@ import yaml
 
 from bridge import FrameBundleCollector, UnityBridge
 from paths import PYTHON_DIR
-from simulation.scenario_config import add_scenario_argument
+from simulation.scenario_config import add_scenario_argument, parse_csv
 from sumo import GroundTruthCollector, SumoClient, SumoStateExtractor
 from sumo.emergency import EmergencySettings, EmergencyTraffic
 from vision.lane_features import load_lane_geometries
@@ -120,7 +120,7 @@ def main() -> None:
         raise ValueError("--steps deve ser maior que zero.")
     if args.send_interval < 0:
         raise ValueError("--send-interval não pode ser negativo.")
-    expected_cameras = {camera_id.strip() for camera_id in args.expected_cameras.split(",") if camera_id.strip()}
+    expected_cameras = set(parse_csv(args.expected_cameras))
     if args.receive_frames and not expected_cameras:
         raise ValueError("--expected-cameras precisa conter ao menos uma câmera quando --receive-frames está ativo.")
     if args.vehicle_labels_output_dir is not None and not args.receive_frames:

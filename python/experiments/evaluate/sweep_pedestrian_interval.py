@@ -20,7 +20,7 @@ from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressur
 from paths import PYTHON_DIR
 from simulation.episode import EpisodeSettings
 from simulation.phase_selection_environment import PhaseSelectionEnvironment, pedestrian_hcm_delay
-from simulation.scenario_config import parse_seeds
+from simulation.scenario_config import parse_csv, parse_seeds
 
 POLICIES = {"fixed_time": FixedTimePhasePolicy.from_layout, "max_pressure": lambda layout: MaxPressurePhasePolicy()}
 
@@ -35,8 +35,8 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=base_dir.parent / "results" / "evaluation" / "intervalo-pedestres.json")
     args = parser.parse_args()
     seeds = parse_seeds(args.seeds)
-    intervals = [float(item) for item in args.intervals.split(",") if item.strip()]
-    intersections = {item.strip() for item in args.intersections.split(",") if item.strip()}
+    intervals = [float(item) for item in parse_csv(args.intervals)]
+    intersections = set(parse_csv(args.intersections))
     environment = PhaseSelectionEnvironment.from_file(args.config.resolve(), EpisodeSettings())
     green_s = float(environment.config["pedestrian_phase"]["green_seconds"])
     scenarios = [s for s in environment.scenarios if s.intersection in intersections and s.pedestrian_s > 0]

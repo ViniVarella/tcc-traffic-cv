@@ -83,7 +83,8 @@ class SpEnvironment:
         escolhe a fonte do pedido: aviso V2I, visão (classe ``emergency`` nas ROIs)
         ou a união das duas.
         """
-        visual_requests = self._check_emergency_options(observer, emergency, preemption, emergency_detection)
+        visual_requests = getattr(observer, "emergency_requests", None)
+        self._check_emergency_options(visual_requests, emergency, preemption, emergency_detection)
         client = SumoClient.from_config(self.config, self.base_dir, seed_override=seed, scenario_override=self.scenario)
         client.start()
         try:
@@ -133,14 +134,12 @@ class SpEnvironment:
                            float(pedestrian_reward.get("reward_waiting_reference_s", 600.0)))
 
     @staticmethod
-    def _check_emergency_options(observer: EpisodeObserver | None, emergency: EmergencySettings | None,
-                                 preemption: PreemptionSettings | None, emergency_detection: str) -> Any:
-        """Valida as opções de viaturas e devolve os pedidos visuais do observador (ou ``None``)."""
+    def _check_emergency_options(visual_requests: Any, emergency: EmergencySettings | None,
+                                 preemption: PreemptionSettings | None, emergency_detection: str) -> None:
+        """Recusa combinações inválidas de agenda, prioridade e fonte de detecção das viaturas."""
         if preemption is not None and emergency is None:
             raise ValueError("Preempção exige a agenda de viaturas de emergência.")
         if emergency_detection not in EMERGENCY_DETECTIONS:
             raise ValueError(f"emergency_detection deve ser um de {EMERGENCY_DETECTIONS}.")
-        visual_requests = getattr(observer, "emergency_requests", None)
         if emergency_detection != "v2i" and visual_requests is None:
             raise ValueError("A detecção visual de viaturas exige um observador visual com emergency_requests.")
-        return visual_requests

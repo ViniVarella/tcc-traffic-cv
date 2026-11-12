@@ -19,7 +19,7 @@ from typing import Any, Protocol
 import numpy as np
 
 from controller import DqnAgent, DqnTrafficController
-from controller.dqn_base import EpsilonGreedyPolicy
+from controller.dqn_base import EpsilonGreedyPolicy, EpsilonSchedule  # noqa: F401 (reexportado aos scripts de treino)
 from controller.keep_switch.decision_scheduler import DecisionScheduler
 from controller.rewards import RewardWeights, TrafficSnapshot, level_reward
 from controller.smdp import SmdpAccumulator
@@ -56,25 +56,8 @@ class EpisodeSettings:
         return int(round(self.warmup_s + self.control_s))
 
 
-@dataclass(frozen=True, slots=True)
-class EpsilonSchedule:
-    """ε linear por decisão, de ``start`` a ``end`` em ``decay_decisions``."""
-
-    start: float = 1.0
-    end: float = 0.05
-    decay_decisions: int = 10_000
-
-    def value(self, decision_index: int) -> float:
-        if self.decay_decisions <= 0:
-            return self.end
-        fraction = min(1.0, max(0, decision_index) / self.decay_decisions)
-        return self.start + (self.end - self.start) * fraction
-
-
 class DqnPolicy(EpsilonGreedyPolicy):
     """Política ε-gulosa sobre um ``DqnAgent``; conta decisões entre episódios."""
-
-    agent: DqnAgent
 
     def __call__(self, state: np.ndarray, lane_features: Mapping[LaneKey, Any], phase: Any) -> int:
         return self._choose(state)

@@ -10,8 +10,6 @@
 """
 
 from .keep_switch.agent import DqnAgent, DqnConfig
-from .keep_switch.phase_manager import PhaseManager
-from .keep_switch.policies import QueueBasedPolicy
 from .keep_switch.traffic_controller import DqnTrafficController
 
-__all__ = ["DqnAgent", "DqnConfig", "DqnTrafficController", "PhaseManager", "QueueBasedPolicy"]
+__all__ = ["DqnAgent", "DqnConfig", "DqnTrafficController"]

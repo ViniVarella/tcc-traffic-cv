@@ -16,8 +16,6 @@ from torch.nn import functional as functional
 
 from controller.dqn_base import DqnAgentBase, Transition
 
-__all__ = ["DqnAgent", "DqnConfig", "QNetwork", "Transition"]
-
 
 @dataclass(frozen=True)
 class DqnConfig:
@@ -62,8 +60,7 @@ class DqnAgent(DqnAgentBase):
     def __init__(self, config: DqnConfig, device: str | None = None, seed: int = 42) -> None:
         if config.state_size <= 0 or config.action_size <= 1:
             raise ValueError("DQN requer estado positivo e pelo menos duas ações.")
-        default_device = "mps" if torch.backends.mps.is_available() else "cpu"
-        super().__init__(config, torch.device(device or default_device), seed)
+        super().__init__(config, torch.device(device or ("mps" if torch.backends.mps.is_available() else "cpu")), seed)
 
     def _build_network(self) -> nn.Module:
         return QNetwork(self.config.state_size, self.config.action_size, self.config.hidden_size)
@@ -99,12 +96,7 @@ class DqnAgent(DqnAgentBase):
         if len(self.replay) < max(self.config.min_replay_size, self.config.batch_size):
             return None
         batch = self._random.sample(self.replay, self.config.batch_size)
-        states = torch.as_tensor(np.stack([item.state for item in batch]), dtype=torch.float32, device=self.device)
-        actions = torch.as_tensor([item.action for item in batch], dtype=torch.int64, device=self.device).unsqueeze(1)
-        rewards = torch.as_tensor([item.reward for item in batch], dtype=torch.float32, device=self.device)
-        next_states = torch.as_tensor(np.stack([item.next_state for item in batch]), dtype=torch.float32, device=self.device)
-        dones = torch.as_tensor([item.done for item in batch], dtype=torch.float32, device=self.device)
-        discounts = torch.as_tensor([item.discount for item in batch], dtype=torch.float32, device=self.device)
+        states, actions, rewards, next_states, dones, discounts = self._batch_tensors(batch)
         q_values = self.online(states).gather(1, actions).squeeze(1)
         with torch.no_grad():
             if self.config.double_dqn:

@@ -10,6 +10,7 @@ from time import perf_counter
 import cv2
 
 from paths import PYTHON_DIR
+from simulation.scenario_config import parse_csv
 from vision import ByteTrackVehicleTracker, QueueEstimator, ROICounter, VisualDebugger, YoloVehicleDetector, load_camera_calibration
 from vision.roi_counter import filter_detections_to_roi, select_counting_objects
 
@@ -85,7 +86,7 @@ def main() -> None:
     """Processa apenas steps presentes em todas as câmeras esperadas."""
     base_dir = PYTHON_DIR
     args = parse_args(base_dir)
-    camera_ids = tuple(camera_id.strip() for camera_id in args.camera_ids.split(",") if camera_id.strip())
+    camera_ids = tuple(parse_csv(args.camera_ids))
     if not camera_ids:
         raise ValueError("--camera-ids precisa conter ao menos uma câmera.")
     if args.max_steps <= 0 or args.frame_step <= 0 or args.frame_rate <= 0 or args.image_size <= 0:

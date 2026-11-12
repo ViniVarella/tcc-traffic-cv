@@ -6,6 +6,8 @@ from typing import Any, Mapping
 
 import numpy as np
 
+from vision.lane_features import load_lane_geometries
+
 SP_LANE_ORDER = (
     ("south", "lane_0"),
     ("south", "lane_1"),
@@ -144,7 +146,6 @@ def build_state_encoder(config: Mapping[str, Any], version: int) -> VisualStateE
     if version == 1:
         return VisualStateEncoder(float(dqn.get("max_lane_count", 10.0)), phase_count, max_green)
     if version in (2, 3):
-        from vision.lane_features import load_lane_geometries
 
         capacities = {key: geometry.capacity for key, geometry in load_lane_geometries(config).items()}
         cycle_greens = None

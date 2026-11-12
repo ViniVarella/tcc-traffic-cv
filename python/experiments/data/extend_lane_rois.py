@@ -22,6 +22,7 @@ import yaml
 from sumolib.geomhelper import polygonOffsetWithMinimumDistanceToPoint, positionAtShapeOffset
 
 from paths import PYTHON_DIR
+from simulation.scenario_config import parse_csv
 from sumo.intersection import lane_shapes
 from vision.camera_projection import ground_to_image_point, image_point_to_ground
 from vision.lane_geometry import order_lane_quad
@@ -125,7 +126,7 @@ def main() -> None:
     args = parse_args(base_dir)
     config = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
     shapes = lane_shapes(args.net)
-    for camera_id in (item.strip() for item in args.cameras.split(",") if item.strip()):
+    for camera_id in parse_csv(args.cameras):
         path = args.calibration_dir / f"{camera_id}-calibration.json"
         calibration = json.loads(path.read_text(encoding="utf-8"))
         lanes = {lane_id: str(raw["sumo_lane"]) for lane_id, raw in config["lane_geometry"][camera_id].items()}

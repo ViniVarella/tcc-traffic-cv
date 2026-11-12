@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import random
 from collections import deque
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Deque, Mapping, NamedTuple
 
@@ -78,6 +78,16 @@ class DqnAgentBase:
             self.target.load_state_dict(self.online.state_dict())
         return float(loss.item())
 
+    def _batch_tensors(self, batch: list[Transition]) -> tuple[torch.Tensor, ...]:
+        """Lote do replay em tensores: estados, ações (B, 1), recompensas, próximos estados, fins e descontos."""
+        states = torch.as_tensor(np.stack([item.state for item in batch]), dtype=torch.float32, device=self.device)
+        actions = torch.as_tensor([item.action for item in batch], dtype=torch.int64, device=self.device).unsqueeze(1)
+        rewards = torch.as_tensor([item.reward for item in batch], dtype=torch.float32, device=self.device)
+        next_states = torch.as_tensor(np.stack([item.next_state for item in batch]), dtype=torch.float32, device=self.device)
+        dones = torch.as_tensor([item.done for item in batch], dtype=torch.float32, device=self.device)
+        discounts = torch.as_tensor([item.discount for item in batch], dtype=torch.float32, device=self.device)
+        return states, actions, rewards, next_states, dones, discounts
+
     def save(self, path: str | Path, metadata: Mapping[str, Any] | None = None) -> None:
         """Salva pesos e estado de treinamento; ``metadata`` documenta a seleção do modelo."""
         checkpoint = {
@@ -118,16 +128,30 @@ class DqnAgentBase:
         return result.copy()
 
 
+@dataclass(frozen=True, slots=True)
+class EpsilonSchedule:
+    """ε linear por decisão, de ``start`` a ``end`` em ``decay_decisions``."""
+
+    start: float = 1.0
+    end: float = 0.05
+    decay_decisions: int = 10_000
+
+    def value(self, decision_index: int) -> float:
+        if self.decay_decisions <= 0:
+            return self.end
+        fraction = min(1.0, max(0, decision_index) / self.decay_decisions)
+        return self.start + (self.end - self.start) * fraction
+
+
 class EpsilonGreedyPolicy:
     """Política ε-gulosa sobre um agente; conta as decisões para o decaimento de ε.
 
-    ``epsilon`` é um ``EpsilonSchedule`` (``simulation.episode``) ou ``None``
-    (sempre guloso, como na avaliação).
+    ``epsilon`` é um ``EpsilonSchedule`` ou ``None`` (sempre guloso, como na avaliação).
     """
 
     name = "dqn"
 
-    def __init__(self, agent: Any, epsilon: Any | None = None) -> None:
+    def __init__(self, agent: Any, epsilon: EpsilonSchedule | None = None) -> None:
         self.agent = agent
         self.epsilon = epsilon
         self.decisions = 0

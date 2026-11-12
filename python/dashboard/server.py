@@ -86,9 +86,8 @@ def main() -> None:
 
     argv = sys.argv[1:]
     args = parse_args(argv)
-    base_dir = PYTHON_DIR
-    generic = choose_detector(args, argv, base_dir / "yolov8n.pt")
-    app = create_app(PanelSettings(base_dir, args, args.warmup_seconds, args.control_seconds, generic_detector=generic))
+    generic = choose_detector(args, argv, PYTHON_DIR / "yolov8n.pt")
+    app = create_app(PanelSettings(PYTHON_DIR, args, args.warmup_seconds, args.control_seconds, generic_detector=generic))
     PanelServer(uvicorn.Config(app, host=args.host, port=args.port, timeout_graceful_shutdown=2)).run()
 
 

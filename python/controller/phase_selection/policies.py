@@ -13,7 +13,6 @@ from typing import Any
 
 from controller.dqn_base import EpsilonGreedyPolicy
 
-from .agent import PhaseSelectionAgent
 from .state import PhaseObservation
 
 
@@ -78,8 +77,6 @@ class MaxPressurePhasePolicy:
 
 class PhaseDqnPolicy(EpsilonGreedyPolicy):
     """Política ε-gulosa sobre um ``PhaseSelectionAgent`` (o modelo global)."""
-
-    agent: PhaseSelectionAgent
 
     def __call__(self, observation: PhaseObservation) -> int:
         return self._choose(observation.state)

@@ -19,6 +19,7 @@ from typing import Any
 from bridge import FrameBundleCollector
 from controller.keep_switch.preemption import EmergencyRequest
 from paths import DEFAULT_YOLO_MODEL
+from simulation.scenario_config import parse_csv
 from sumo import SumoStateExtractor
 from sumo.lane_feature_source import TraciLaneFeatureSource
 from vision.lane_features import LaneFeatures, LaneObservation
@@ -164,7 +165,7 @@ def build_unity_observer(config: dict[str, Any], base_dir: Any, args: Any, envir
     from vision import ByteTrackVehicleTracker, YoloVehicleDetector
     from vision.visual_pipeline import load_calibrations, parse_class_ids
 
-    camera_ids = tuple(item.strip() for item in args.camera_ids.split(",") if item.strip())
+    camera_ids = tuple(parse_csv(args.camera_ids))
     calibrations = load_calibrations(base_dir, camera_ids)
     detector = YoloVehicleDetector(args.model, args.confidence, parse_class_ids(args.classes), args.image_size)
     pipeline = VisualPipeline(calibrations, detector,

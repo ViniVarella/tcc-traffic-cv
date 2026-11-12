@@ -14,6 +14,7 @@ import json
 import queue
 import threading
 import traceback
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -402,7 +403,7 @@ def _info_routes(runner: EpisodeRunner, settings: PanelSettings) -> APIRouter:
     return router
 
 
-def _run_or_400(action: Any, *args: Any) -> dict[str, Any]:
+def _run_or_400(action: Callable[..., Any], *args: Any) -> dict[str, Any]:
     """Executa um comando do episódio; um ``ValueError`` (comando fora de hora) vira HTTP 400."""
     try:
         action(*args)
@@ -413,26 +414,26 @@ def _run_or_400(action: Any, *args: Any) -> dict[str, Any]:
 
 def _control_routes(runner: EpisodeRunner) -> APIRouter:
     """Iniciar, parar, pausar e retomar o episódio e despachar viaturas."""
-    router = APIRouter(prefix="/api")
+    router = APIRouter()
 
-    @router.post("/start")
+    @router.post("/api/start")
     async def start(request: StartRequest) -> dict[str, Any]:
         return _run_or_400(runner.start, request)
 
-    @router.post("/stop")
+    @router.post("/api/stop")
     async def stop() -> dict[str, Any]:
         runner.stop()
         return {"status": "ok"}
 
-    @router.post("/pause")
+    @router.post("/api/pause")
     async def pause() -> dict[str, Any]:
         return _run_or_400(runner.pause)
 
-    @router.post("/resume")
+    @router.post("/api/resume")
     async def resume() -> dict[str, Any]:
         return _run_or_400(runner.resume)
 
-    @router.post("/emergency")
+    @router.post("/api/emergency")
     async def emergency(body: EmergencyRequestBody) -> dict[str, Any]:
         return _run_or_400(runner.dispatch_emergency, body.approach, body.exit)
 

@@ -125,8 +125,8 @@ class GlobalPhasePolicy:
         if self.encoder.max_phases != agent.config.max_phases:
             raise ValueError("max_phases do generic.yaml difere do checkpoint.")
         self.key_map = environment.camera_key_map(scenario)
-        self.groups = [self.layout.lane_keys(phase) for phase in range(len(self.layout.greens))]
-        self.capacities = {key: geometry.capacity for key, geometry in self.layout.geometries.items()}
+        self.groups = self.layout.lane_groups()
+        self.capacities = self.layout.lane_capacities()
         self.max_green_s = environment.max_green_s
         self.transition_s = environment.yellow_s + environment.all_red_s
 

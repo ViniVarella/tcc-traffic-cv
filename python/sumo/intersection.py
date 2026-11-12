@@ -47,6 +47,14 @@ class IntersectionLayout:
         lanes = set(self.greens[phase].lanes)
         return tuple(key for key, geometry in self.geometries.items() if geometry.sumo_lane in lanes)
 
+    def lane_groups(self) -> list[tuple[LaneKey, ...]]:
+        """ROIs de cada estágio verde, na ordem do programa (entrada do encoder por estágio)."""
+        return [self.lane_keys(phase) for phase in range(len(self.greens))]
+
+    def lane_capacities(self) -> dict[LaneKey, float]:
+        """Capacidade (veículos que cabem) de cada ROI."""
+        return {key: geometry.capacity for key, geometry in self.geometries.items()}
+
 
 def green_phases(states: Sequence[tuple[str, float]], link_lanes: Mapping[int, str]) -> tuple[GreenPhase, ...]:
     """Extrai as fases verdes de um programa: estados com verde e sem amarelo, sem repetir.
