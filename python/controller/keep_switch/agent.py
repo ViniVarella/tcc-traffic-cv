@@ -1,28 +1,22 @@
-"""DQN vetorial em PyTorch para decisão semafórica baseada em visão."""
+"""DQN da linha manter/trocar: duas ações (manter ou trocar o verde) sobre um vetor de estado.
+
+É o agente dos DQN estado v1, v2 e v3 do cruzamento de SP (o especialista do
+produto v3.0–v5.0 é o estado v2). A montagem das redes, o replay, a otimização
+e o checkpoint vêm de ``controller.dqn_base``.
+"""
 
 from __future__ import annotations
 
-from collections import deque
-from dataclasses import asdict, dataclass
-from pathlib import Path
-import random
-from typing import Any, Deque, Mapping, NamedTuple
+from dataclasses import dataclass
 
 import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as functional
 
+from controller.dqn_base import DqnAgentBase, Transition
 
-class Transition(NamedTuple):
-    state: np.ndarray
-    action: int
-    reward: float
-    next_state: np.ndarray
-    done: bool
-    # Desconto aplicado ao valor do próximo estado: gamma para transições de um
-    # step ou gamma ** k para transições SMDP que duram k steps.
-    discount: float
+__all__ = ["DqnAgent", "DqnConfig", "QNetwork", "Transition"]
 
 
 @dataclass(frozen=True)
@@ -56,24 +50,19 @@ class QNetwork(nn.Module):
         return self.layers(state)
 
 
-class DqnAgent:
+class DqnAgent(DqnAgentBase):
     """Agente DQN com replay buffer, Huber loss e rede-alvo periódica."""
+
+    CONFIG_CLASS = DqnConfig
 
     def __init__(self, config: DqnConfig, device: str | None = None, seed: int = 42) -> None:
         if config.state_size <= 0 or config.action_size <= 1:
             raise ValueError("DQN requer estado positivo e pelo menos duas ações.")
-        self.config = config
-        self.device = torch.device(device or ("mps" if torch.backends.mps.is_available() else "cpu"))
-        self._random = random.Random(seed)
-        torch.manual_seed(seed)
-        self.online = QNetwork(config.state_size, config.action_size, config.hidden_size).to(self.device)
-        self.target = QNetwork(config.state_size, config.action_size, config.hidden_size).to(self.device)
-        self.target.load_state_dict(self.online.state_dict())
-        self.target.eval()
-        self.optimizer = torch.optim.Adam(self.online.parameters(), lr=config.learning_rate)
-        self.replay: Deque[Transition] = deque(maxlen=config.replay_capacity)
-        self.training_steps = 0
-        self.metadata: dict[str, Any] = {}
+        default_device = "mps" if torch.backends.mps.is_available() else "cpu"
+        super().__init__(config, torch.device(device or default_device), seed)
+
+    def _build_network(self) -> nn.Module:
+        return QNetwork(self.config.state_size, self.config.action_size, self.config.hidden_size)
 
     def q_values(self, state: np.ndarray) -> np.ndarray:
         """Valores Q da rede online para um estado (diagnóstico e política gulosa)."""
@@ -82,6 +71,7 @@ class DqnAgent:
         return values.squeeze(0).cpu().numpy()
 
     def select_action(self, state: np.ndarray, epsilon: float, explore: bool = True) -> int:
+        """Ação ε-gulosa: aleatória com probabilidade ``epsilon`` (se ``explore``), senão a de maior Q."""
         if not 0.0 <= epsilon <= 1.0:
             raise ValueError("epsilon deve estar entre 0 e 1.")
         state = self._validate_state(state)
@@ -93,15 +83,15 @@ class DqnAgent:
 
     def remember(self, state: np.ndarray, action: int, reward: float, next_state: np.ndarray, done: bool,
                  discount: float | None = None) -> None:
+        """Guarda uma transição no replay; ``discount`` é ``gamma ** k`` nas transições SMDP."""
         if not 0 <= action < self.config.action_size:
             raise ValueError(f"Ação inválida: {action}.")
-        discount = self.config.gamma if discount is None else float(discount)
-        if not 0.0 <= discount <= 1.0:
-            raise ValueError("discount deve estar entre 0 e 1.")
+        discount = self._discount(discount)
         self.replay.append(Transition(self._validate_state(state), action, float(reward), self._validate_state(next_state),
                                       bool(done), discount))
 
     def train_step(self) -> float | None:
+        """Um passo de TD num lote do replay; ``None`` enquanto o replay não tem o mínimo."""
         if len(self.replay) < max(self.config.min_replay_size, self.config.batch_size):
             return None
         batch = self._random.sample(self.replay, self.config.batch_size)
@@ -119,44 +109,4 @@ class DqnAgent:
             else:
                 next_values = self.target(next_states).max(dim=1).values
             targets = rewards + discounts * (1.0 - dones) * next_values
-        loss = functional.smooth_l1_loss(q_values, targets)
-        self.optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.online.parameters(), max_norm=1.0)
-        self.optimizer.step()
-        self.training_steps += 1
-        if self.training_steps % self.config.target_update_interval == 0:
-            self.target.load_state_dict(self.online.state_dict())
-        return float(loss.item())
-
-    def save(self, path: str | Path, metadata: Mapping[str, Any] | None = None) -> None:
-        """Salva pesos e estado de treinamento; ``metadata`` documenta a seleção do modelo."""
-        checkpoint = {
-            "config": asdict(self.config),
-            "model_state": self.online.state_dict(),
-            "target_model_state": self.target.state_dict(),
-            "optimizer_state": self.optimizer.state_dict(),
-            "training_steps": self.training_steps,
-            "metadata": dict(metadata or {}),
-        }
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        torch.save(checkpoint, Path(path))
-
-    @classmethod
-    def load(cls, path: str | Path, device: str | None = None) -> "DqnAgent":
-        checkpoint = torch.load(Path(path), map_location=device or "cpu", weights_only=True)
-        agent = cls(DqnConfig(**checkpoint["config"]), device=device)
-        agent.online.load_state_dict(checkpoint["model_state"])
-        agent.target.load_state_dict(checkpoint.get("target_model_state", checkpoint["model_state"]))
-        if "optimizer_state" in checkpoint:
-            agent.optimizer.load_state_dict(checkpoint["optimizer_state"])
-        agent.training_steps = int(checkpoint.get("training_steps", 0))
-        agent.metadata = dict(checkpoint.get("metadata", {}))
-        agent.online.eval()
-        return agent
-
-    def _validate_state(self, state: np.ndarray) -> np.ndarray:
-        result = np.asarray(state, dtype=np.float32).reshape(-1)
-        if result.shape != (self.config.state_size,):
-            raise ValueError(f"Estado deve ter {self.config.state_size} entradas; recebeu {result.shape}.")
-        return result.copy()
+        return self._optimize(functional.smooth_l1_loss(q_values, targets))

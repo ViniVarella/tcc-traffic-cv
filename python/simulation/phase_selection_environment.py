@@ -1,6 +1,7 @@
-"""Episódios da seleção livre de fase em qualquer cruzamento (só SUMO, percepção ground truth).
+"""Episódios da escolha livre de estágio em qualquer cruzamento (modelo global, produto v6.0).
 
-Mesmo protocolo do ``episode_runner`` do DQN v2 (aquecimento com regra fixa,
+Sem ``observer`` a percepção é *ground truth* (TraCI); com ele, vem da Unity.
+Mesmo protocolo do laço manter/trocar (``simulation.episode``: aquecimento com regra fixa,
 decisões a cada ``decision_interval_s`` entre o verde mínimo e o máximo,
 transições SMDP, recompensa de nível nas faixas de entrada), com três
 diferenças: a ação é a fase verde escolhida; no verde máximo a política escolhe
@@ -23,7 +24,8 @@ from controller.phase_selection.controller import PhaseSelectionController
 from controller.phase_selection.state import STATE_VERSION, PhaseObservation, PhaseStateEncoder
 from controller.smdp import SmdpAccumulator
 from controller.rewards import RewardWeights
-from simulation.episode import EpisodeOutcome, EpisodeSettings, RewardModel, incoming_lane_capacity
+from simulation.episode import (EpisodeOutcome, EpisodeSettings, RewardModel, incoming_lane_capacity, learn_transition,
+                                observe_traffic)
 from sumo import ExperimentMetricsCollector, SumoClient
 from sumo.intersection import IntersectionLayout, load_intersection
 from sumo.lane_feature_source import TraciLaneFeatureSource
@@ -31,6 +33,8 @@ from vision.lane_features import KinematicsParameters, LaneGeometry, load_lane_g
 
 
 class PhasePolicy(Protocol):
+    """Escolhe o estágio verde a partir da observação (um índice dentro da máscara)."""
+
     def __call__(self, observation: PhaseObservation) -> int: ...
 
 
@@ -39,6 +43,8 @@ PolicyFactory = Callable[[IntersectionLayout], PhasePolicy]
 
 @dataclass(frozen=True, slots=True)
 class GenericScenario:
+    """Um cruzamento de ``configs/generic.yaml`` com uma das suas demandas."""
+
     intersection: str
     demand: str
     split: str
@@ -52,10 +58,13 @@ class GenericScenario:
         return f"{self.intersection}/{self.demand}"
 
 
-def pedestrian_seconds(config: Mapping[str, Any]) -> float:
-    """Duração da fase exclusiva de pedestres (verde + liberação) do bloco ``pedestrian_phase``."""
-    raw = config.get("pedestrian_phase") or {}
-    return float(raw.get("green_seconds", 0.0)) + float(raw.get("clearance_seconds", 0.0))
+def pedestrian_seconds(block: Mapping[str, Any] | None) -> float:
+    """Duração da fase exclusiva de pedestres (verde + liberação) de um bloco de configuração.
+
+    O bloco é ``pedestrian_phase`` em ``generic.yaml`` ou ``pedestrians`` em ``sp.yaml``.
+    """
+    block = block or {}
+    return float(block.get("green_seconds", 0.0)) + float(block.get("clearance_seconds", 0.0))
 
 
 def pedestrian_hcm_delay(starts: Sequence[float], green_s: float) -> dict[str, float] | None:
@@ -77,7 +86,7 @@ def pedestrian_hcm_delay(starts: Sequence[float], green_s: float) -> dict[str, f
 def load_scenarios(config: Mapping[str, Any], base_dir: Path) -> list[GenericScenario]:
     """Cruzamento × demanda; com ``pedestrian_variants``, cada demanda ganha a variante ``<demanda>+ped``."""
     scenarios = []
-    pedestrians = pedestrian_seconds(config)
+    pedestrians = pedestrian_seconds(config.get("pedestrian_phase"))
     for name, raw in config["intersections"].items():
         variants = [0.0, pedestrians] if raw.get("pedestrian_variants") and pedestrians > 0 else [0.0]
         for demand, sumocfg in raw["scenarios"].items():
@@ -113,10 +122,17 @@ def remap_features(features: Mapping[Any, Any] | None, key_map: Mapping[Any, Any
 
 
 def max_red_seconds(phase_count: int, max_green_s: float, yellow_s: float, all_red_s: float) -> float:
+    """Pior vermelho no tempo fixo com todos os verdes no máximo: o limite da regra de justiça."""
     return (phase_count - 1) * (max_green_s + yellow_s + all_red_s)
 
 
 class PhaseSelectionEnvironment:
+    """Cruzamentos de ``configs/generic.yaml`` (sintéticos e o SP) para a escolha livre de estágio.
+
+    Guarda a configuração comum (verdes, amarelo, ROIs, recompensa) e roda
+    episódios em qualquer cenário com uma política escolhida por fábrica.
+    """
+
     def __init__(self, config: dict[str, Any], base_dir: Path, settings: EpisodeSettings) -> None:
         self.config = config
         self.base_dir = base_dir
@@ -150,6 +166,7 @@ class PhaseSelectionEnvironment:
         return [scenario for scenario in self.scenarios if scenario.split == split]
 
     def layout(self, scenario: GenericScenario) -> IntersectionLayout:
+        """Estágios, faixas e ROIs do cruzamento (lidos uma vez por rede)."""
         if scenario.net not in self._layouts:
             raw = self.config["intersections"][scenario.intersection]
             layout = load_intersection(scenario.net, raw.get("tls_id"), self.roi_length_m)
@@ -195,14 +212,7 @@ class PhaseSelectionEnvironment:
         try:
             lanes = layout.incoming_lanes
             reward = RewardModel(lanes, incoming_lane_capacity([client.get_lane_length(lane) for lane in lanes]), self.reward_weights)
-            controller = PhaseSelectionController(
-                layout.tls_id, [green.state for green in layout.greens], self.min_green_s, self.max_green_s,
-                self.yellow_s, self.all_red_s,
-                pedestrian_after=(len(layout.greens) - 1 if scenario.pedestrian_s > 0 and self.pedestrian_interval_s is None
-                                  else None),
-                pedestrian_s=scenario.pedestrian_s,
-                pedestrian_interval_s=self.pedestrian_interval_s if scenario.pedestrian_s > 0 else None,
-            )
+            controller = self._controller(layout, scenario)
             if observer is None:
                 source = TraciLaneFeatureSource(layout.geometries, self.parameters, seed=seed)
                 observe: Callable[[float], Mapping[Any, Any] | None] = lambda sim_time: source.observe(client, sim_time)
@@ -218,6 +228,18 @@ class PhaseSelectionEnvironment:
         finally:
             client.close()
 
+    def _controller(self, layout: IntersectionLayout, scenario: GenericScenario) -> PhaseSelectionController:
+        """Camada de segurança do cruzamento; com pedestres, a fase deles vem por tempo ou depois do último verde."""
+        has_pedestrians = scenario.pedestrian_s > 0
+        by_time = has_pedestrians and self.pedestrian_interval_s is not None
+        return PhaseSelectionController(
+            layout.tls_id, [green.state for green in layout.greens], self.min_green_s, self.max_green_s,
+            self.yellow_s, self.all_red_s,
+            pedestrian_after=len(layout.greens) - 1 if has_pedestrians and not by_time else None,
+            pedestrian_s=scenario.pedestrian_s,
+            pedestrian_interval_s=self.pedestrian_interval_s if has_pedestrians else None,
+        )
+
 
 def run_phase_episode(
     *,
@@ -232,6 +254,12 @@ def run_phase_episode(
     learner: Any | None = None,
     on_step: Callable[[dict[str, Any]], None] | None = None,
 ) -> EpisodeOutcome:
+    """Executa um episódio já iniciado em ``client``; ``learner`` ativa o aprendizado.
+
+    No aquecimento o ciclo segue a ordem do programa (troca após
+    ``warmup_switch_after_s``); no controle, a política escolhe o estágio em
+    cada ponto de decisão, dentro da máscara da camada de segurança.
+    """
     groups = [layout.lane_keys(phase) for phase in range(len(layout.greens))]
     capacities = {key: geometry.capacity for key, geometry in layout.geometries.items()}
     accumulator = SmdpAccumulator(settings.gamma)
@@ -239,12 +267,9 @@ def run_phase_episode(
     outcome = EpisodeOutcome()
     last_state = None
     last_decision: tuple[float, float] | None = None  # (início do verde, instante da decisão)
-    for _ in range(int(round(settings.warmup_s + settings.control_s))):
+    for _ in range(settings.total_steps):
         sim_time = client.step()
-        lane_metrics = client.get_incoming_lane_metrics(reward.lanes)
-        metrics.observe(sim_time, client.get_simulation_events(), client.get_active_vehicle_metrics(),
-                        pending_vehicles=int(lane_metrics["pending_vehicles"]), teleports=client.get_teleport_count())
-        step_reward = reward(lane_metrics)
+        _, step_reward = observe_traffic(client, sim_time, reward, metrics)
         lane_features = observe(sim_time)
         elapsed = controller.elapsed(sim_time)
         phase_name = controller.phase_name
@@ -254,39 +279,44 @@ def run_phase_episode(
                 choice = controller.next_cyclic()
             decision = controller.update(sim_time, choice)
         else:
-            outcome.controlled_steps += 1
-            outcome.total_reward += step_reward
-            outcome.phase_seconds[phase_name] += 1
+            outcome.record_controlled_step(phase_name, step_reward)
             accumulator.add(step_reward)
             if lane_features is None:
                 # Sem frames: nenhuma decisão (mantém o verde até o máximo, como o TraffIQ).
                 outcome.missing_observations += 1
             elif _is_decision_point(controller, sim_time, settings.decision_interval_s, last_decision):
-                observation = encoder.encode(
-                    lane_features, groups, capacities, controller.current, elapsed,
-                    [controller.red_time(phase, sim_time) for phase in range(controller.phase_count)],
-                    decision_mask(controller, sim_time, lane_features, groups, encoder.max_red_s),
-                        [controller.switch_seconds(controller.current, phase, sim_time) for phase in range(controller.phase_count)],
-                    [controller.leave_seconds(phase, sim_time) for phase in range(controller.phase_count)],
-                )
+                observation = encode_observation(encoder, controller, sim_time, lane_features, groups, capacities)
                 last_state = observation.state
-                _learn(learner, accumulator.close(last_state), outcome)
+                learn_transition(learner, accumulator.close(last_state), outcome)
                 choice = int(policy(observation))
                 if not observation.mask[choice]:
                     raise ValueError(f"A política escolheu a fase {choice}, fora da máscara {observation.mask}.")
                 accumulator.open(last_state, choice)
                 last_decision = (controller.started_at, sim_time)
-                outcome.decisions += 1
-                outcome.switches += choice != controller.current
+                outcome.record_decision(choice != controller.current)
             decision = controller.update(sim_time, choice)
         controller.apply(client, decision)
         if on_step is not None:
             on_step({"sim_time": sim_time, "reward": step_reward, "phase": phase_name, "decision": decision,
                      "requested_phase": choice})
     if last_state is not None:
-        _learn(learner, accumulator.close(last_state), outcome)
+        learn_transition(learner, accumulator.close(last_state), outcome)
     outcome.metrics = metrics.summary()
     return outcome
+
+
+def encode_observation(encoder: PhaseStateEncoder, controller: PhaseSelectionController, sim_time: float,
+                       lane_features: Mapping[Any, Any], groups: Sequence[Sequence[Any]],
+                       capacities: Mapping[Any, float]) -> PhaseObservation:
+    """Estado por estágio do step: demanda das faixas, tempos do semáforo e máscara de escolhas."""
+    phases = range(controller.phase_count)
+    return encoder.encode(
+        lane_features, groups, capacities, controller.current, controller.elapsed(sim_time),
+        [controller.red_time(phase, sim_time) for phase in phases],
+        decision_mask(controller, sim_time, lane_features, groups, encoder.max_red_s),
+        [controller.switch_seconds(controller.current, phase, sim_time) for phase in phases],
+        [controller.leave_seconds(phase, sim_time) for phase in phases],
+    )
 
 
 def decision_mask(controller: PhaseSelectionController, sim_time: float, lane_features: Mapping[Any, Any],
@@ -310,6 +340,11 @@ def decision_mask(controller: PhaseSelectionController, sim_time: float, lane_fe
 
 def _is_decision_point(controller: PhaseSelectionController, sim_time: float, interval_s: float,
                        last_decision: tuple[float, float] | None) -> bool:
+    """Em verde, depois do verde mínimo: a cada ``interval_s`` e sempre no verde máximo.
+
+    Mesma regra do ``DecisionScheduler`` da linha manter/trocar, exceto no verde
+    máximo: lá a troca é forçada; aqui a política escolhe para qual estágio.
+    """
     if not controller.is_green:
         return False
     elapsed = controller.elapsed(sim_time)
@@ -319,14 +354,3 @@ def _is_decision_point(controller: PhaseSelectionController, sim_time: float, in
         return True
     # Tolerância para tempos de ponto flutuante do SUMO.
     return sim_time - last_decision[1] >= interval_s - 1e-6
-
-
-def _learn(learner: Any | None, transition: Any, outcome: EpisodeOutcome) -> None:
-    if learner is None or transition is None:
-        return
-    learner.remember(transition.state, transition.action, transition.reward, transition.next_state, False,
-                     discount=transition.discount)
-    outcome.transitions += 1
-    loss = learner.train_step()
-    if loss is not None:
-        outcome.losses.append(loss)

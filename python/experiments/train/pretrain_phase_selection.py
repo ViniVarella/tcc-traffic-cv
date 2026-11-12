@@ -24,6 +24,7 @@ from paths import PYTHON_DIR
 from controller.phase_selection.agent import PhaseAgentConfig, PhaseSelectionAgent
 from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy, PhaseDqnPolicy
 from controller.phase_selection.state import ROW_FEATURES_BY_VERSION
+from simulation.scenario_config import parse_seeds
 from simulation.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
 from simulation.episode import EpisodeSettings, EpsilonSchedule
 from simulation.phase_selection_environment import PhaseSelectionEnvironment, PolicyFactory
@@ -83,7 +84,7 @@ def main() -> None:
     settings = EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval, args.gamma)
     environment = PhaseSelectionEnvironment.from_file(args.config.resolve(), settings)
     scenarios = environment.split("train")
-    validation_seeds = [int(item) for item in args.validation_seeds.split(",") if item.strip()]
+    validation_seeds = parse_seeds(args.validation_seeds)
     last_seed = args.seed_start + (args.episodes - 1) // len(scenarios)
     train_seeds = set(range(args.seed_start, last_seed + 1))
     demo_seeds = set(range(args.demo_seed_start, args.demo_seed_start + (args.demo_episodes + len(scenarios) - 1) // max(1, len(scenarios))))

@@ -1,9 +1,12 @@
-"""Laço de episódio único do DQN v2: pré-treino (TraCI), ajuste fino e avaliação (visão).
+"""Laço de episódio da linha manter/trocar no cruzamento de SP, e peças comuns aos episódios.
 
-A diferença entre os modos é só a função ``observe``, que devolve as features
-por faixa do step (ou ``None`` quando não há visão). A segurança do semáforo
-roda em todo step; a política só é consultada em pontos de decisão, e o
-aprendizado usa transições SMDP entre eles.
+Um só laço para pré-treino (TraCI), ajuste fino e avaliação (visão): muda só a
+função ``observe``, que devolve as features por faixa do step (ou ``None``
+quando não há visão). A segurança do semáforo roda em todo step; a política só
+é consultada em pontos de decisão, e o aprendizado usa transições SMDP entre
+eles. ``EpisodeSettings``, ``RewardModel``, ``EpisodeOutcome``,
+``observe_traffic`` e ``learn_transition`` também servem ao laço do modelo
+global (``simulation.phase_selection_environment``).
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ from typing import Any, Protocol
 import numpy as np
 
 from controller import DqnAgent, DqnTrafficController
+from controller.dqn_base import EpsilonGreedyPolicy
 from controller.keep_switch.decision_scheduler import DecisionScheduler
 from controller.smdp import SmdpAccumulator
 from controller.rewards import RewardWeights, TrafficSnapshot, level_reward
@@ -32,6 +36,8 @@ class Policy(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class EpisodeSettings:
+    """Protocolo comum a todas as avaliações: aquecimento, controle, intervalo de decisão e γ por step."""
+
     warmup_s: float = 300.0
     control_s: float = 1800.0
     decision_interval_s: float = 5.0
@@ -42,6 +48,11 @@ class EpisodeSettings:
     def __post_init__(self) -> None:
         if self.warmup_s < 0 or self.control_s <= 0 or self.warmup_switch_after_s <= 0:
             raise ValueError("Durações do episódio inválidas.")
+
+    @property
+    def total_steps(self) -> int:
+        """Steps de 1 s do episódio inteiro (aquecimento + controle)."""
+        return int(round(self.warmup_s + self.control_s))
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,23 +70,13 @@ class EpsilonSchedule:
         return self.start + (self.end - self.start) * fraction
 
 
-class DqnPolicy:
+class DqnPolicy(EpsilonGreedyPolicy):
     """Política ε-gulosa sobre um ``DqnAgent``; conta decisões entre episódios."""
 
-    name = "dqn"
-
-    def __init__(self, agent: DqnAgent, epsilon: EpsilonSchedule | None = None) -> None:
-        self.agent = agent
-        self.epsilon = epsilon
-        self.decisions = 0
-
-    def current_epsilon(self) -> float:
-        return 0.0 if self.epsilon is None else self.epsilon.value(self.decisions)
+    agent: DqnAgent
 
     def __call__(self, state: np.ndarray, lane_features: Mapping[LaneKey, Any], phase: Any) -> int:
-        epsilon = self.current_epsilon()
-        self.decisions += 1
-        return self.agent.select_action(state, epsilon=epsilon, explore=epsilon > 0)
+        return self._choose(state)
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,6 +109,8 @@ class RewardModel:
 
 @dataclass(slots=True)
 class EpisodeOutcome:
+    """Contadores e métricas de um episódio (só os steps depois do aquecimento contam)."""
+
     total_reward: float = 0.0
     controlled_steps: int = 0
     decisions: int = 0
@@ -129,7 +132,18 @@ class EpisodeOutcome:
     def switch_rate(self) -> float | None:
         return None if self.decisions == 0 else self.switches / self.decisions
 
+    def record_controlled_step(self, phase_name: str, step_reward: float) -> None:
+        """Conta um step de controle (depois do aquecimento) com a recompensa e a fase do step."""
+        self.controlled_steps += 1
+        self.total_reward += step_reward
+        self.phase_seconds[phase_name] += 1
+
+    def record_decision(self, switched: bool) -> None:
+        self.decisions += 1
+        self.switches += switched
+
     def summary(self) -> dict[str, Any]:
+        """Resumo serializável em JSON."""
         return {
             "total_reward": self.total_reward,
             "mean_reward": self.mean_reward,
@@ -175,17 +189,9 @@ def run_episode(
     bind_controller = getattr(policy, "bind_controller", None)
     if bind_controller is not None:
         bind_controller(controller)
-    total_steps = int(round(settings.warmup_s + settings.control_s))
-    for _ in range(total_steps):
+    for _ in range(settings.total_steps):
         sim_time = client.step()
-        lane_metrics = client.get_incoming_lane_metrics(reward.lanes)
-        metrics.observe(sim_time, client.get_simulation_events(), client.get_active_vehicle_metrics(),
-                        pending_vehicles=int(lane_metrics["pending_vehicles"]), teleports=client.get_teleport_count())
-        if pedestrians is not None:
-            pedestrians.observe(sim_time, client.get_pedestrian_speeds())
-        if reward.pedestrian_weight > 0:
-            lane_metrics = {**lane_metrics, "pedestrian_waiting_s": client.get_pedestrian_waiting_s()}
-        step_reward = reward(lane_metrics)
+        lane_metrics, step_reward = observe_traffic(client, sim_time, reward, metrics, pedestrians)
         lane_features = observe(sim_time)
         preempt_target = None if emergency is None else emergency(sim_time)
         phase = controller.phase_manager.get_current_phase()
@@ -194,9 +200,7 @@ def run_episode(
         if sim_time <= settings.warmup_s:
             decision = controller.update(sim_time, controller.SWITCH if elapsed >= settings.warmup_switch_after_s else controller.KEEP)
         else:
-            outcome.controlled_steps += 1
-            outcome.total_reward += step_reward
-            outcome.phase_seconds[phase.name] += 1
+            outcome.record_controlled_step(phase.name, step_reward)
             accumulator.add(step_reward)
             if preempt_target is not None:
                 # A decisão aberta não controlou este trecho: não vira transição.
@@ -209,12 +213,11 @@ def run_episode(
             else:
                 last_state = encode_state(encoder, controller, lane_features, phase, elapsed)
                 if scheduler.is_decision_point(phase, sim_time):
-                    _learn(learner, accumulator.close(last_state), outcome)
+                    learn_transition(learner, accumulator.close(last_state), outcome)
                     requested = int(policy(last_state, lane_features, phase))
                     accumulator.open(last_state, requested)
                     scheduler.mark_decision(sim_time)
-                    outcome.decisions += 1
-                    outcome.switches += requested == controller.SWITCH
+                    outcome.record_decision(requested == controller.SWITCH)
                     decision = controller.update(sim_time, requested)
                 else:
                     decision = controller.update(sim_time, controller.KEEP)
@@ -228,7 +231,7 @@ def run_episode(
                      "trip_metrics": metrics.progress(sim_time, exclude_emergencies=True)})
     # Episódio truncado pelo tempo: a última transição faz bootstrap (done=False).
     if last_state is not None:
-        _learn(learner, accumulator.close(last_state), outcome)
+        learn_transition(learner, accumulator.close(last_state), outcome)
     outcome.metrics = metrics.summary()
     if pedestrians is not None:
         outcome.metrics.update(pedestrians.summary())
@@ -251,10 +254,29 @@ def encode_state(encoder: Any, controller: DqnTrafficController, lane_features: 
     return encoder.encode(lane_features, phase_index, elapsed)
 
 
-def _learn(learner: DqnAgent | None, transition: Any, outcome: EpisodeOutcome) -> None:
+def observe_traffic(client: Any, sim_time: float, reward: RewardModel, metrics: ExperimentMetricsCollector,
+                    pedestrians: Any | None = None) -> tuple[Mapping[str, Any], float]:
+    """Registra as métricas do step e devolve as métricas das faixas de entrada e a recompensa.
+
+    Com ``pedestrians``, também registra os pedestres; com peso de pedestres na
+    recompensa, a espera deles entra nas métricas das faixas.
+    """
+    lane_metrics = client.get_incoming_lane_metrics(reward.lanes)
+    metrics.observe(sim_time, client.get_simulation_events(), client.get_active_vehicle_metrics(),
+                    pending_vehicles=int(lane_metrics["pending_vehicles"]), teleports=client.get_teleport_count())
+    if pedestrians is not None:
+        pedestrians.observe(sim_time, client.get_pedestrian_speeds())
+    if reward.pedestrian_weight > 0:
+        lane_metrics = {**lane_metrics, "pedestrian_waiting_s": client.get_pedestrian_waiting_s()}
+    return lane_metrics, reward(lane_metrics)
+
+
+def learn_transition(learner: Any | None, transition: Any, outcome: EpisodeOutcome) -> None:
+    """Passa a transição SMDP fechada ao agente e treina um passo (sem ``learner``, nada)."""
     if learner is None or transition is None:
         return
-    learner.remember(transition.state, transition.action, transition.reward, transition.next_state, False, discount=transition.discount)
+    learner.remember(transition.state, transition.action, transition.reward, transition.next_state, False,
+                     discount=transition.discount)
     outcome.transitions += 1
     loss = learner.train_step()
     if loss is not None:

@@ -22,7 +22,7 @@ from controller import DqnAgent, DqnConfig
 from controller.keep_switch.policies import FixedCyclePolicy, MaxPressurePolicy
 from simulation.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
 from simulation.episode import DqnPolicy, EpisodeSettings, EpsilonSchedule, Policy
-from simulation.scenario_config import add_scenario_argument
+from simulation.scenario_config import add_scenario_argument, parse_csv
 from simulation.sp_environment import SpEnvironment
 from controller.keep_switch.state import SP_LANE_ORDER
 
@@ -73,7 +73,7 @@ def main() -> None:
     if args.pedestrian_reward_weight is not None:
         config.setdefault("pedestrians", {})["reward_weight"] = float(args.pedestrian_reward_weight)
     settings = EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval, args.gamma)
-    scenarios = [item.strip() for item in args.scenarios.split(",") if item.strip()] if args.scenarios else [args.scenario]
+    scenarios = parse_csv(args.scenarios) if args.scenarios else [args.scenario]
     environments = [SpEnvironment(config, base_dir, scenario, settings, state_version=args.state_version) for scenario in scenarios]
     environment = environments[0]
     dqn = config["dqn"]

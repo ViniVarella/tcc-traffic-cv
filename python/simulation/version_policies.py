@@ -16,10 +16,10 @@ mesmo executor de episódios; muda só a lógica de decisão:
 - ``v1.1``: DQN do estado v1 (13 entradas: contagens, fase e tempo);
 - ``v2``: DQN do estado v2 (41 entradas);
 - ``max_pressure``: referência adaptativa sobre veículos parados;
-- ``global``: o modelo global, experimento DQN de seleção livre de fase para
-  qualquer cruzamento (``dqn-fase-livre-ped40-best.pt``, treinado só em
-  cruzamentos sintéticos). No SP, com duas fases verdes, escolher a outra fase
-  é "trocar".
+- ``global``: o modelo global (produto v6.0, a versão atual), DQN de escolha
+  livre de estágio para qualquer cruzamento (``dqn-fase-livre-ped40-best.pt``,
+  treinado só em cruzamentos sintéticos). No SP, com dois estágios verdes,
+  escolher o outro é "trocar".
 
 Diferença deliberada em relação às execuções originais de ``v1``/``v1.1``: elas usavam
 a contagem pelo centro da bbox com média móvel (``ROICounter`` +
@@ -40,12 +40,15 @@ import numpy as np
 from controller import DqnAgent
 from controller.keep_switch.policies import FixedCyclePolicy, MaxPressurePolicy, QueueBasedPolicy
 from controller.phase_selection.agent import PhaseSelectionAgent
-from simulation.episode import DqnPolicy, EpisodeSettings, Policy
 from controller.keep_switch.state import build_state_encoder
+from simulation.episode import DqnPolicy, EpisodeSettings, Policy
+from simulation.phase_selection_environment import PhaseSelectionEnvironment, pedestrian_seconds, remap_features
+from sumo.intersection import program_green_indices
 
 
 VERSION_ORDER = ("baseline", "v1", "v1.1", "v2", "max_pressure")
-# Experimentos que só entram quando pedidos (fora da lista padrão).
+# Fora da lista padrão de --versions, só quando pedidas: o experimento DQN
+# estado v3 e o modelo global (que precisa do checkpoint e do generic.yaml).
 EXPERIMENT_VERSIONS = ("v3", "global")
 
 
@@ -104,17 +107,13 @@ class GlobalPhasePolicy:
 
     def __init__(self, agent: PhaseSelectionAgent, generic_config: Path, sp_config: Mapping[str, Any],
                  pedestrian_phase: bool = False, net_scenario: str = "sp/calibrated") -> None:
-        from simulation.phase_selection_environment import PhaseSelectionEnvironment
-        from sumo.intersection import program_green_indices
-
         environment = PhaseSelectionEnvironment.from_file(generic_config, EpisodeSettings())
         scenario = environment.scenario(net_scenario)
         self.agent = agent
         self.layout = environment.layout(scenario)
         self.green_index = program_green_indices(scenario.net, self.layout.tls_id)
         pedestrians = sp_config.get("pedestrians", {})
-        self.pedestrian_s = (float(pedestrians.get("green_seconds", 0)) + float(pedestrians.get("clearance_seconds", 0))
-                             if pedestrian_phase else 0.0)
+        self.pedestrian_s = pedestrian_seconds(pedestrians) if pedestrian_phase else 0.0
         # Regra por tempo (teste de sensibilidade): a fase vem ao sair de qualquer verde quando pendente.
         self.pedestrian_by_time = bool(self.pedestrian_s) and pedestrians.get("interval_seconds") is not None
         self.controller: Any | None = None
@@ -142,8 +141,6 @@ class GlobalPhasePolicy:
         return self.transition_s + (self.pedestrian_s if phase == self.pedestrian_after else 0.0)
 
     def observation(self, state: np.ndarray, lane_features: Mapping[tuple[str, str], Any], phase: Any) -> Any:
-        from simulation.phase_selection_environment import remap_features
-
         current = self.green_index[int(phase.phase_index)]
         elapsed = float(state[-1]) * self.max_green_s
         phases = range(len(self.groups))
@@ -201,7 +198,7 @@ def build_version_policies(config: Mapping[str, Any], names: Sequence[str], v1_c
             if global_checkpoint is None or generic_config is None:
                 raise ValueError("A versão global exige o checkpoint e o generic.yaml.")
             agent = PhaseSelectionAgent.load(global_checkpoint)
-            result.append(VersionPolicy(name, "modelo global: DQN de seleção livre de fase (experimento)",
+            result.append(VersionPolicy(name, "modelo global (v6.0): DQN de escolha livre de estágio",
                                         GlobalPhasePolicy(agent, generic_config, config,
                                                           pedestrian_phase=str(scenario or "").endswith("_ped")), 5.0))
         else:

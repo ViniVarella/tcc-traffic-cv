@@ -22,6 +22,7 @@ from paths import PYTHON_DIR
 from bridge import UnityBridge
 from controller.phase_selection.agent import PhaseSelectionAgent
 from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy, PhaseDqnPolicy
+from simulation.scenario_config import parse_seeds, parse_csv
 from simulation.episode import EpisodeSettings
 from simulation.statistics import METRICS, summarize
 from simulation.phase_selection_environment import PhaseSelectionEnvironment
@@ -68,7 +69,7 @@ def reference_runs(path: Path, seeds: list[int], settings: EpisodeSettings) -> d
 def main() -> None:
     base_dir = PYTHON_DIR
     args = parse_args(base_dir)
-    seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
+    seeds = parse_seeds(args.seeds)
     settings = EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval)
     sp_config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
     generic = PhaseSelectionEnvironment.from_file(args.generic_config.resolve(), settings)
@@ -79,7 +80,7 @@ def main() -> None:
     greedy = PhaseDqnPolicy(agent)
     factories = {"dqn_fase_livre": lambda layout: greedy, "max_pressure": lambda layout: MaxPressurePhasePolicy(),
                  "fixed_time": FixedTimePhasePolicy.from_layout}
-    names = [name.strip() for name in args.policies.split(",") if name.strip()]
+    names = parse_csv(args.policies)
     unknown = set(names) - set(factories)
     if unknown:
         raise ValueError(f"Políticas desconhecidas: {sorted(unknown)}.")

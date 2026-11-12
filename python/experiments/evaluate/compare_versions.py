@@ -23,7 +23,7 @@ from paths import PYTHON_DIR
 from bridge import UnityBridge
 from simulation.episode import EpisodeSettings
 from simulation.policy_evaluation import evaluate
-from simulation.scenario_config import add_scenario_argument
+from simulation.scenario_config import add_scenario_argument, parse_csv, parse_seeds
 from simulation.sp_environment import SpEnvironment
 from simulation.version_policies import VERSION_ORDER, build_version_policies
 from simulation.visual_observer import StepLogger, add_vision_arguments, build_unity_observer
@@ -58,8 +58,8 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
 def main() -> None:
     base_dir = PYTHON_DIR
     args = parse_args(base_dir)
-    seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
-    names = [value.strip() for value in args.versions.split(",") if value.strip()]
+    seeds = parse_seeds(args.seeds)
+    names = parse_csv(args.versions)
     config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
     if args.pedestrian_interval is not None:
         config["pedestrians"]["interval_seconds"] = args.pedestrian_interval

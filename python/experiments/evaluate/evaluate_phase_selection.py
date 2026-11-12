@@ -18,6 +18,7 @@ from typing import Any
 from paths import PYTHON_DIR
 from controller.phase_selection.agent import PhaseSelectionAgent
 from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy, PhaseDqnPolicy
+from simulation.scenario_config import parse_seeds
 from simulation.episode import EpisodeSettings
 from simulation.phase_selection_environment import PhaseSelectionEnvironment
 from simulation.statistics import METRICS, summarize
@@ -43,7 +44,7 @@ def main() -> None:
     parser.add_argument("--seeds", default="201,202,203")
     parser.add_argument("--output", type=Path, default=base_dir.parent / "results" / "evaluation" / "fase-livre-test.json")
     args = parser.parse_args()
-    seeds = [int(item) for item in args.seeds.split(",") if item.strip()]
+    seeds = parse_seeds(args.seeds)
     settings = EpisodeSettings()
     environment = PhaseSelectionEnvironment.from_file(args.config.resolve(), settings)
     scenarios = environment.scenarios if args.split == "all" else environment.split(args.split)

@@ -26,7 +26,7 @@ from paths import PYTHON_DIR
 from bridge import UnityBridge
 from controller.keep_switch.preemption import PreemptionSettings
 from simulation.episode import EpisodeSettings
-from simulation.scenario_config import add_scenario_argument
+from simulation.scenario_config import add_scenario_argument, parse_csv, parse_seeds
 from simulation.sp_environment import EMERGENCY_DETECTIONS, SpEnvironment
 from simulation.version_policies import build_version_policies
 from simulation.visual_observer import StepLogger, add_vision_arguments, build_unity_observer
@@ -69,7 +69,7 @@ def _mean(values: list[float | None]) -> float | None:
 def main() -> None:
     base_dir = PYTHON_DIR
     args = parse_args(base_dir)
-    seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
+    seeds = parse_seeds(args.seeds)
     detections = [item.strip() for item in (args.detections or ("v2i" if args.perception == "oracle" else "v2i,vision,both")).split(",")
                   if item.strip()]
     if detections == ["none"]:
@@ -86,7 +86,7 @@ def main() -> None:
     output = args.output or base_dir.parent / "results" / "evaluation" / f"preempcao-{scenario}-{args.perception}.json"
     emergency = EmergencySettings.from_config(config)
     preemption = PreemptionSettings.from_config(config)
-    versions = build_version_policies(config, [item.strip() for item in args.versions.split(",") if item.strip()],
+    versions = build_version_policies(config, parse_csv(args.versions),
                                       args.v1_dqn_model, args.v2_dqn_model, args.v3_dqn_model,
                                       args.global_dqn_model, base_dir / "configs" / "generic.yaml", scenario)
     modes = [] if args.skip_no_preemption else [("sem_preempcao", None, "v2i")]

@@ -22,7 +22,7 @@ from bridge import UnityBridge
 from controller import DqnAgent
 from simulation.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
 from simulation.episode import DqnPolicy, EpisodeSettings, EpsilonSchedule
-from simulation.scenario_config import add_scenario_argument
+from simulation.scenario_config import add_scenario_argument, parse_seeds
 from simulation.sp_environment import SpEnvironment
 from simulation.visual_observer import StepLogger, add_vision_arguments, build_unity_observer
 
@@ -58,7 +58,7 @@ def main() -> None:
     if args.episodes <= 0 or args.validation_interval <= 0:
         raise ValueError("--episodes e --validation-interval devem ser positivos.")
     training_seeds = list(range(args.seed_start, args.seed_start + args.episodes))
-    validation_seeds = [int(value) for value in args.validation_seeds.split(",") if value.strip()]
+    validation_seeds = parse_seeds(args.validation_seeds)
     if set(training_seeds) & set(validation_seeds) or set(training_seeds) & set(range(1, 41)) or set(training_seeds) & {201, 202, 203}:
         raise ValueError("Seeds de ajuste fino devem ser disjuntas do pré-treino (1–40), da validação e do teste (201–203).")
 

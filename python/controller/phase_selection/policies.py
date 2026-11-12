@@ -11,6 +11,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
+from controller.dqn_base import EpsilonGreedyPolicy
+
 from .agent import PhaseSelectionAgent
 from .state import PhaseObservation
 
@@ -70,18 +72,10 @@ class MaxPressurePhasePolicy:
         return best if stopped[best] > stopped[current] + margin else current
 
 
-class PhaseDqnPolicy:
-    name = "dqn"
+class PhaseDqnPolicy(EpsilonGreedyPolicy):
+    """Política ε-gulosa sobre um ``PhaseSelectionAgent`` (o modelo global)."""
 
-    def __init__(self, agent: PhaseSelectionAgent, epsilon=None) -> None:
-        self.agent = agent
-        self.epsilon = epsilon
-        self.decisions = 0
-
-    def current_epsilon(self) -> float:
-        return 0.0 if self.epsilon is None else self.epsilon.value(self.decisions)
+    agent: PhaseSelectionAgent
 
     def __call__(self, observation: PhaseObservation) -> int:
-        epsilon = self.current_epsilon()
-        self.decisions += 1
-        return self.agent.select_action(observation.state, epsilon=epsilon, explore=epsilon > 0)
+        return self._choose(observation.state)

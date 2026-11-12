@@ -20,7 +20,7 @@ from controller.keep_switch.policies import FixedCyclePolicy, MaxPressurePolicy
 from simulation.episode import DqnPolicy, EpisodeSettings, Policy
 from simulation.policy_evaluation import evaluate
 from simulation.sp_environment import SpEnvironment
-from simulation.scenario_config import add_scenario_argument
+from simulation.scenario_config import add_scenario_argument, parse_seeds
 
 
 def parse_args(base_dir: Path) -> argparse.Namespace:
@@ -39,7 +39,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
 def main() -> None:
     base_dir = PYTHON_DIR
     args = parse_args(base_dir)
-    seeds = [int(value) for value in args.seeds.split(",") if value.strip()]
+    seeds = parse_seeds(args.seeds)
     config = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
     environment = SpEnvironment(config, base_dir, args.scenario, EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval))
     policies: dict[str, Policy] = {"fixed_cycle": FixedCyclePolicy(), "max_pressure": MaxPressurePolicy()}

@@ -1,6 +1,6 @@
-"""DQN com pesos compartilhados entre fases: uma nota por fase candidata.
+"""DQN com pesos compartilhados entre estágios: um valor Q por estágio candidato.
 
-A mesma MLP embute cada linha do estado por fase (``phase_selection_state``);
+A mesma MLP embute cada linha do estado por estágio (``controller.phase_selection.state``);
 a média e o máximo das linhas das fases existentes resumem o cruzamento. Rede
 *dueling*: ``Q(s, fase) = V(resumo) + A(linha, resumo) − média das vantagens
 válidas``, então o modelo serve para qualquer número de fases (até
@@ -18,17 +18,15 @@ TD aprende a superá-la.
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import asdict, dataclass
-from pathlib import Path
-import random
-from typing import Any, Deque, Mapping
+from dataclasses import dataclass
+from typing import Deque
 
 import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as functional
 
-from controller.keep_switch.agent import Transition
+from controller.dqn_base import DqnAgentBase, Transition
 from .state import LANE_COUNT_INDEX, ROW_FEATURE_NAMES, ROW_FEATURES_BY_VERSION, STATE_VERSION
 
 
@@ -82,25 +80,19 @@ class PhaseScoringNetwork(nn.Module):
         return self.value(summary) + advantage - mean_advantage
 
 
-class PhaseSelectionAgent:
-    """Agente de seleção de fase com replay, Huber loss e rede-alvo periódica."""
+class PhaseSelectionAgent(DqnAgentBase):
+    """Agente de seleção de estágio com replay, Huber loss, rede-alvo periódica e demonstrações."""
+
+    CONFIG_CLASS = PhaseAgentConfig
 
     def __init__(self, config: PhaseAgentConfig = PhaseAgentConfig(), device: str | None = None, seed: int = 42) -> None:
         if config.max_phases < 2 or config.row_size <= 0:
             raise ValueError("Configuração do agente de seleção de fase inválida.")
-        self.config = config
-        self.device = torch.device(device or "cpu")
-        self._random = random.Random(seed)
-        torch.manual_seed(seed)
-        self.online = PhaseScoringNetwork(config.row_size, config.hidden_size).to(self.device)
-        self.target = PhaseScoringNetwork(config.row_size, config.hidden_size).to(self.device)
-        self.target.load_state_dict(self.online.state_dict())
-        self.target.eval()
-        self.optimizer = torch.optim.Adam(self.online.parameters(), lr=config.learning_rate)
-        self.replay: Deque[Transition] = deque(maxlen=config.replay_capacity)
+        super().__init__(config, torch.device(device or "cpu"), seed)
         self.demo_replay: Deque[Transition] = deque(maxlen=config.replay_capacity)
-        self.training_steps = 0
-        self.metadata: dict[str, Any] = {}
+
+    def _build_network(self) -> nn.Module:
+        return PhaseScoringNetwork(self.config.row_size, self.config.hidden_size)
 
     def q_values(self, state: np.ndarray) -> np.ndarray:
         """Notas das fases válidas (as demais ficam em ``MASKED_Q``)."""
@@ -110,6 +102,7 @@ class PhaseSelectionAgent:
         return values.squeeze(0).cpu().numpy()
 
     def select_action(self, state: np.ndarray, epsilon: float, explore: bool = True) -> int:
+        """Estágio ε-guloso: aleatório entre os válidos com probabilidade ``epsilon``, senão o de maior Q."""
         if not 0.0 <= epsilon <= 1.0:
             raise ValueError("epsilon deve estar entre 0 e 1.")
         state = self._validate_state(state)
@@ -123,13 +116,12 @@ class PhaseSelectionAgent:
         state = self._validate_state(state)
         if action not in self._valid_actions(state):
             raise ValueError(f"Ação {action} fora da máscara do estado.")
-        discount = self.config.gamma if discount is None else float(discount)
-        if not 0.0 <= discount <= 1.0:
-            raise ValueError("discount deve estar entre 0 e 1.")
+        discount = self._discount(discount)
         buffer = self.demo_replay if demo else self.replay
         buffer.append(Transition(state, int(action), float(reward), self._validate_state(next_state), bool(done), discount))
 
     def train_step(self) -> float | None:
+        """Um passo de TD (mais a margem do DQfD nas demonstrações); ``None`` sem amostras suficientes."""
         size = self.config.batch_size
         if len(self.replay) + len(self.demo_replay) < max(self.config.min_replay_size, size):
             return None
@@ -164,43 +156,13 @@ class PhaseSelectionAgent:
             margins = torch.full_like(demo_q, self.config.demo_margin).scatter(1, actions[:demo_count], 0.0)
             best = (demo_q + margins).masked_fill(~mask[:demo_count], MASKED_Q).max(dim=1).values
             loss = loss + self.config.demo_loss_weight * (best - q_values[:demo_count]).mean()
-        self.optimizer.zero_grad()
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.online.parameters(), max_norm=1.0)
-        self.optimizer.step()
-        self.training_steps += 1
-        if self.training_steps % self.config.target_update_interval == 0:
-            self.target.load_state_dict(self.online.state_dict())
-        return float(loss.item())
-
-    def save(self, path: str | Path, metadata: Mapping[str, Any] | None = None) -> None:
-        checkpoint = {
-            "config": asdict(self.config),
-            "model_state": self.online.state_dict(),
-            "target_model_state": self.target.state_dict(),
-            "optimizer_state": self.optimizer.state_dict(),
-            "training_steps": self.training_steps,
-            "metadata": dict(metadata or {}),
-        }
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        torch.save(checkpoint, Path(path))
+        return self._optimize(loss)
 
     @classmethod
-    def load(cls, path: str | Path, device: str | None = None) -> "PhaseSelectionAgent":
-        checkpoint = torch.load(Path(path), map_location=device or "cpu", weights_only=True)
-        config = PhaseAgentConfig(**checkpoint["config"])
+    def _check_loaded_config(cls, config: PhaseAgentConfig) -> None:
         expected = ROW_FEATURES_BY_VERSION.get(config.state_version)
         if expected is None or len(expected) != config.row_size:
             raise ValueError(f"Checkpoint de versão de estado desconhecida: {config.state_version!r}.")
-        agent = cls(config, device=device)
-        agent.online.load_state_dict(checkpoint["model_state"])
-        agent.target.load_state_dict(checkpoint.get("target_model_state", checkpoint["model_state"]))
-        if "optimizer_state" in checkpoint:
-            agent.optimizer.load_state_dict(checkpoint["optimizer_state"])
-        agent.training_steps = int(checkpoint.get("training_steps", 0))
-        agent.metadata = dict(checkpoint.get("metadata", {}))
-        agent.online.eval()
-        return agent
 
     def _split(self, states: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Linhas ``(B, P, d)``, fases existentes (têm faixas) e máscara de fases escolhíveis."""
@@ -214,9 +176,3 @@ class PhaseSelectionAgent:
         if not valid:
             raise ValueError("Estado sem nenhuma fase válida.")
         return valid
-
-    def _validate_state(self, state: np.ndarray) -> np.ndarray:
-        result = np.asarray(state, dtype=np.float32).reshape(-1)
-        if result.shape != (self.config.state_size,):
-            raise ValueError(f"Estado deve ter {self.config.state_size} entradas; recebeu {result.shape}.")
-        return result.copy()
