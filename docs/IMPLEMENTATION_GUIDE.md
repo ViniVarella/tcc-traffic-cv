@@ -3,7 +3,7 @@
 > **Nota (2026-11-12):** este é o guia original do projeto, escrito antes da
 > implementação. A árvore de pastas e os nomes de arquivos aqui descritos
 > mudaram desde então: a estrutura atual está no `README.md` e no `CLAUDE.md`,
-> e a correspondência entre comandos antigos e novos está no topo do
+> e a correspondência entre comandos antigos e novos está na seção 5 do
 > `docs/IMPLEMENTATION_PROGRESS.md`.
 
 ## 1. Introdução

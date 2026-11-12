@@ -9,6 +9,12 @@ de São Paulo (cenário `sp`), integrando SUMO, Unity, YOLOv8, ByteTrack e DQN.
   (`IMPLEMENTATION_PROGRESS.md`, `IMPLEMENTATION_GUIDE.md`,
   `SUMO2UNITY_INTEGRATION.md`). `CODEX_HANDOFF.md` é só o retrato da migração
   do Codex: não o edite.
+- `IMPLEMENTATION_PROGRESS.md` tem 5 seções: 1 estado atual (versão em uso,
+  números de referência, onde estão os arquivos), 2 resultados por versão do
+  produto, 3 infraestrutura e decisões técnicas, 4 registro histórico, 5
+  correspondência de comandos. Um resultado novo entra na subseção da versão
+  (seção 2) ou do tema (seção 3), com data, comando e JSON; se mudar os
+  números de referência, atualize também a seção 1 e o README.
 
 ## Versões do produto (TraffIQ)
 
