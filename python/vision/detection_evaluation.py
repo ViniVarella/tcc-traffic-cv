@@ -12,7 +12,6 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-
 DISTANCE_BANDS_M: tuple[tuple[float, float], ...] = ((0.0, 20.0), (20.0, 40.0), (40.0, 60.0))
 OUTSIDE_ROI = "fora_roi"
 UNCALIBRATED = "sem_calibracao"
@@ -53,6 +52,8 @@ def match_boxes(truths: Sequence[Box], predictions: Sequence[Box], iou_threshold
 
 
 def distance_band(distance_m: float | None, calibrated: bool) -> str:
+    """Faixa de distância até a linha de retenção (ex.: ``"0-15m"``) ou fora da ROI / sem calibração."""
+
     if not calibrated:
         return UNCALIBRATED
     if distance_m is None:

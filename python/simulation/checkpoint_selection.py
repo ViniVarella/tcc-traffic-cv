@@ -1,6 +1,6 @@
 """Seleção do melhor checkpoint por validação, com salvaguardas contra o colapso do v1.
 
-O DQN v1 guardou como "melhor" o checkpoint do episódio 4 (240 passos de
+O DQN estado v1 guardou como "melhor" o checkpoint do episódio 4 (240 passos de
 gradiente, ε≈0,98) porque a validação empatava e o primeiro valor vencia.
 Aqui só se compara depois de treino mínimo, empates favorecem o checkpoint
 mais treinado e políticas degeneradas (sempre/nunca trocar) são sinalizadas.
@@ -13,6 +13,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class SelectionCriteria:
+    """Regras para aceitar um checkpoint: treino mínimo, ε baixo e taxa de troca não degenerada."""
+
     min_gradient_steps: int = 5_000
     max_epsilon: float = 0.2
     tie_tolerance: float = 0.01
@@ -22,6 +24,8 @@ class SelectionCriteria:
 
 @dataclass(frozen=True, slots=True)
 class ValidationRecord:
+    """Resultado de uma validação de checkpoint (pontuação, passos de gradiente, ε e taxa de troca)."""
+
     episode: int
     score: float | None
     gradient_steps: int

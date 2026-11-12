@@ -27,7 +27,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-
 GREEN, YELLOW, ALL_RED, PEDESTRIAN = "green", "yellow", "all_red", "pedestrian"
 
 

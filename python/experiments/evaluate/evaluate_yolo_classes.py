@@ -13,8 +13,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
 import yaml
+from PIL import Image
 
 from paths import DEFAULT_YOLO_MODEL, PYTHON_DIR
 from vision.dataset_classes import DATASET_CLASSES

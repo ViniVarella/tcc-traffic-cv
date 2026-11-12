@@ -7,11 +7,10 @@ import unittest
 import cv2
 import numpy as np
 
-from paths import PYTHON_DIR
 from bridge import FramePacket
 from bridge.frame_bundle import CapturedFrame, FrameBundle
+from paths import PYTHON_DIR
 from vision.visual_pipeline import VisualPipeline, load_calibrations, parse_class_ids, queue_counts_by_camera
-
 
 WIDTH, HEIGHT = 640, 360
 

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 import unittest
+from types import SimpleNamespace
 
 import numpy as np
 import yaml
@@ -13,13 +13,14 @@ from sumo.emergency import EmergencySettings, EmergencyTraffic
 from vision.lane_features import LaneGeometry
 from vision.visual_emergency import VisualEmergencyDetector, VisualEmergencySettings, emergency_sightings
 
-
 CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 
 
 class DetectorTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.detector = VisualEmergencyDetector(["east", "south"], VisualEmergencySettings(confirm_frames=2, min_speed_mps=5.0, hold_margin_s=2.0))
+        self.detector = VisualEmergencyDetector(
+            ["east", "south"], VisualEmergencySettings(confirm_frames=2, min_speed_mps=5.0, hold_margin_s=2.0)
+        )
 
     def test_request_only_after_consecutive_frames(self) -> None:
         self.assertEqual(self.detector.update({"east": [60.0]}, 1.0), [])
@@ -56,8 +57,9 @@ class SightingTests(unittest.TestCase):
                 return [SimpleNamespace(lane_id="lane_0", distance_m=12.0)]
 
         source = Source()
-        result = SimpleNamespace(frame=np.zeros((480, 640, 3)), objects=[
-            {"bbox": [0, 0, 1, 1], "class_id": 0}, {"bbox": [5, 5, 9, 9], "class_id": 1}])
+        result = SimpleNamespace(
+            frame=np.zeros((480, 640, 3)), objects=[{"bbox": [0, 0, 1, 1], "class_id": 0}, {"bbox": [5, 5, 9, 9], "class_id": 1}]
+        )
         geometries = {("east", "lane_0"): LaneGeometry("east", "lane_0", "E2_0", 8.4, 68.4, 4.0)}
         self.assertEqual(emergency_sightings({"east": result}, source, geometries), {"east": [20.4]})
         self.assertEqual(source.seen, ("east", [[5, 5, 9, 9]], 640, 480))

@@ -26,7 +26,6 @@ from sumo.intersection import lane_shapes
 from vision.camera_projection import ground_to_image_point, image_point_to_ground
 from vision.lane_geometry import order_lane_quad
 
-
 # Folga da ROI de aproximação além das faixas, em coordenadas normalizadas.
 APPROACH_MARGIN = 0.004
 

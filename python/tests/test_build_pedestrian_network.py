@@ -7,10 +7,15 @@ import unittest
 
 import yaml
 
+from experiments.data.build_pedestrian_network import (
+    crossing_lengths,
+    flows_xml,
+    pedestrian_flows,
+    pedestrian_program,
+    shift_lane_ids,
+    wait_at_stop_line,
+)
 from paths import PYTHON_DIR, SP_NETWORK_DIR
-from experiments.data.build_pedestrian_network import (crossing_lengths, flows_xml, pedestrian_flows, pedestrian_program,
-                                                  shift_lane_ids, wait_at_stop_line)
-
 
 PED_NET = SP_NETWORK_DIR / "Cruzamento.ped.net.xml"
 CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))

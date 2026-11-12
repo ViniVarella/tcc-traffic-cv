@@ -1,4 +1,4 @@
-# Experimento de seleção livre de fase (branch feat/selecao-livre-de-fase): um
+# Modelo global (TraffIQ v6.0, escolha livre de estágio): um
 # único DQN para cruzamentos com qualquer número de faixas e fases, só com SUMO
 # e percepção ground truth. Os cruzamentos sintéticos são gerados por
 # experiments.data.build_generic_intersections; o SP entra só como teste (nunca é

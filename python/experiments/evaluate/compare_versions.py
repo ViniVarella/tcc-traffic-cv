@@ -3,7 +3,7 @@
 Todas as versões rodam no mesmo cenário, seeds, aquecimento, duração, camada de
 segurança e métricas, e com a mesma percepção:
 
-- ``--perception oracle``: features do oráculo TraCI, só SUMO (minutos);
+- ``--perception oracle``: features da percepção ground truth (TraCI), só SUMO (minutos);
 - ``--perception visual``: features estimadas pela câmera, Unity em Play Mode
   (~45 min por seed e versão com 1800 s controlados).
 
@@ -19,8 +19,8 @@ from typing import Any
 
 import yaml
 
-from paths import PYTHON_DIR
 from bridge import UnityBridge
+from paths import PYTHON_DIR
 from simulation.episode import EpisodeSettings
 from simulation.policy_evaluation import evaluate
 from simulation.scenario_config import add_scenario_argument, parse_csv, parse_seeds
@@ -44,7 +44,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--v3-dqn-model", type=Path, default=models / "dqn-v3-fase-curta-best.pt",
                         help="Checkpoint do estado v3 (só cenários *_ped; inclua v3 em --versions).")
     parser.add_argument("--global-dqn-model", type=Path, default=models / "dqn-fase-livre-ped40-best.pt",
-                        help="Modelo global, experimento de seleção livre de fase (inclua global em --versions).")
+                        help="Checkpoint do modelo global (v6.0; inclua global em --versions).")
     add_vision_arguments(parser)
     parser.add_argument("--step-log-dir", type=Path, default=base_dir.parent / "results" / "logs",
                         help="Com --perception visual, grava um JSONL por versão neste diretório.")

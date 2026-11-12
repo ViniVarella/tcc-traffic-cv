@@ -14,20 +14,20 @@ depois (``after_episode=-1``) mostra o ponto de partida do RL.
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict, replace
 import json
+from dataclasses import asdict, replace
 from pathlib import Path
 from time import perf_counter
 from typing import Any
 
-from paths import PYTHON_DIR
 from controller.phase_selection.agent import PhaseAgentConfig, PhaseSelectionAgent
 from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy, PhaseDqnPolicy
 from controller.phase_selection.state import ROW_FEATURES_BY_VERSION
-from simulation.scenario_config import parse_seeds
+from paths import PYTHON_DIR
 from simulation.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
 from simulation.episode import EpisodeSettings, EpsilonSchedule
 from simulation.phase_selection_environment import PhaseSelectionEnvironment, PolicyFactory
+from simulation.scenario_config import parse_seeds
 
 
 class DemonstrationLearner:
@@ -87,16 +87,30 @@ def main() -> None:
     validation_seeds = parse_seeds(args.validation_seeds)
     last_seed = args.seed_start + (args.episodes - 1) // len(scenarios)
     train_seeds = set(range(args.seed_start, last_seed + 1))
-    demo_seeds = set(range(args.demo_seed_start, args.demo_seed_start + (args.demo_episodes + len(scenarios) - 1) // max(1, len(scenarios))))
-    if (not scenarios or args.episodes <= 0 or args.demo_episodes < 0 or train_seeds & set(validation_seeds)
-            or demo_seeds & (train_seeds | set(validation_seeds))):
+    demo_seeds = set(
+        range(args.demo_seed_start, args.demo_seed_start + (args.demo_episodes + len(scenarios) - 1) // max(1, len(scenarios)))
+    )
+    if (
+        not scenarios
+        or args.episodes <= 0
+        or args.demo_episodes < 0
+        or train_seeds & set(validation_seeds)
+        or demo_seeds & (train_seeds | set(validation_seeds))
+    ):
         raise ValueError("Requer cenários de treino, episódios positivos e seeds de treino, demonstração e validação disjuntas.")
     if args.init_checkpoint is None:
-        agent = PhaseSelectionAgent(PhaseAgentConfig(max_phases=environment.max_phases, hidden_size=args.hidden_size,
-                                                     gamma=args.gamma, learning_rate=args.learning_rate or 0.001,
-                                                     demo_batch_fraction=args.demo_batch_fraction,
-                                                     demo_loss_weight=args.demo_loss_weight),
-                                    device=args.device, seed=args.seed_start)
+        agent = PhaseSelectionAgent(
+            PhaseAgentConfig(
+                max_phases=environment.max_phases,
+                hidden_size=args.hidden_size,
+                gamma=args.gamma,
+                learning_rate=args.learning_rate or 0.001,
+                demo_batch_fraction=args.demo_batch_fraction,
+                demo_loss_weight=args.demo_loss_weight,
+            ),
+            device=args.device,
+            seed=args.seed_start,
+        )
     else:
         agent = PhaseSelectionAgent.load(args.init_checkpoint, device=args.device)
         agent.config = replace(agent.config, demo_batch_fraction=args.demo_batch_fraction, demo_loss_weight=args.demo_loss_weight)
@@ -107,16 +121,29 @@ def main() -> None:
         agent.online.train()
     # ~1 decisão a cada 10 s de controle; a estimativa só dimensiona o decaimento de ε.
     estimated_decisions = int(args.episodes * args.control_seconds / 10.0)
-    policy = PhaseDqnPolicy(agent, EpsilonSchedule(args.epsilon_start, args.epsilon_end, int(args.epsilon_decay_fraction * estimated_decisions)))
+    policy = PhaseDqnPolicy(
+        agent, EpsilonSchedule(args.epsilon_start, args.epsilon_end, int(args.epsilon_decay_fraction * estimated_decisions))
+    )
     selector = CheckpointSelector(SelectionCriteria(min_gradient_steps=args.min_gradient_steps))
     metadata_base = {
-        "state_version": agent.config.state_version, "row_features": list(ROW_FEATURES_BY_VERSION[agent.config.state_version]), "feature_source": "traci_oracle",
-        "decision_interval_s": args.decision_interval, "gamma_per_second": args.gamma, "warmup_s": args.warmup_seconds,
-        "control_s": args.control_seconds, "validation_seeds": validation_seeds,
+        "state_version": agent.config.state_version,
+        "row_features": list(ROW_FEATURES_BY_VERSION[agent.config.state_version]),
+        "feature_source": "traci_oracle",
+        "decision_interval_s": args.decision_interval,
+        "gamma_per_second": args.gamma,
+        "warmup_s": args.warmup_seconds,
+        "control_s": args.control_seconds,
+        "validation_seeds": validation_seeds,
         "training_scenarios": [scenario.name for scenario in scenarios],
-        "demonstrations": {"policy": "max_pressure", "episodes": args.demo_episodes, "seeds": sorted(demo_seeds),
-                           "pretrain_steps": args.demo_pretrain_steps, "batch_fraction": args.demo_batch_fraction,
-                           "loss_weight": args.demo_loss_weight, "rl_without": args.rl_without_demonstrations},
+        "demonstrations": {
+            "policy": "max_pressure",
+            "episodes": args.demo_episodes,
+            "seeds": sorted(demo_seeds),
+            "pretrain_steps": args.demo_pretrain_steps,
+            "batch_fraction": args.demo_batch_fraction,
+            "loss_weight": args.demo_loss_weight,
+            "rl_without": args.rl_without_demonstrations,
+        },
         "init_checkpoint": None if args.init_checkpoint is None else str(args.init_checkpoint),
     }
     logs: list[dict[str, Any]] = []
@@ -134,19 +161,34 @@ def main() -> None:
         return score, None if not rates else sum(rates) / len(rates)
 
     try:
-        for label, reference in (("fixed_time", FixedTimePhasePolicy.from_layout), ("max_pressure", lambda layout: MaxPressurePhasePolicy())):
+        for label, reference in (
+            ("fixed_time", FixedTimePhasePolicy.from_layout),
+            ("max_pressure", lambda layout: MaxPressurePhasePolicy()),
+        ):
             score, switch_rate = validate(label, reference)
             print(f"phase_select_reference policy={label} validation_score={score:.4f} switch_rate={switch_rate}", flush=True)
         demonstrator = DemonstrationLearner(agent)
         for index in range(args.demo_episodes):
             scenario = scenarios[index % len(scenarios)]
             seed = args.demo_seed_start + index // len(scenarios)
-            outcome = environment.run(scenario, seed, lambda layout: MaxPressurePhasePolicy(), learner=demonstrator,
-                                      state_version=agent.config.state_version)
-            logs.append({"split": "demonstration", "episode": index, "scenario": scenario.name, "seed": seed,
-                         "demo_replay_size": len(agent.demo_replay), **outcome.summary()})
-            print(f"phase_select_demo episode={index} scenario={scenario.name} seed={seed} "
-                  f"demo_replay={len(agent.demo_replay)} gradient_steps={agent.training_steps}", flush=True)
+            outcome = environment.run(
+                scenario, seed, lambda layout: MaxPressurePhasePolicy(), learner=demonstrator, state_version=agent.config.state_version
+            )
+            logs.append(
+                {
+                    "split": "demonstration",
+                    "episode": index,
+                    "scenario": scenario.name,
+                    "seed": seed,
+                    "demo_replay_size": len(agent.demo_replay),
+                    **outcome.summary(),
+                }
+            )
+            print(
+                f"phase_select_demo episode={index} scenario={scenario.name} seed={seed} "
+                f"demo_replay={len(agent.demo_replay)} gradient_steps={agent.training_steps}",
+                flush=True,
+            )
         if args.demo_episodes or args.init_checkpoint is not None:
             for _ in range(args.demo_pretrain_steps if args.demo_episodes else 0):
                 agent.train_step()
@@ -157,23 +199,47 @@ def main() -> None:
             record = ValidationRecord(-1, score, agent.training_steps, args.epsilon_start, switch_rate)
             selected = selector.consider(record)
             logs.append({"split": "selection", **asdict(record), "selected": selected})
-            print(f"phase_select_validation after_episode=-1 score={score:.4f} switch_rate={switch_rate} "
-                  f"selected={selected} eligible={selector.eligible(record)}", flush=True)
+            print(
+                f"phase_select_validation after_episode=-1 score={score:.4f} switch_rate={switch_rate} "
+                f"selected={selected} eligible={selector.eligible(record)}",
+                flush=True,
+            )
             if selected:
-                agent.save(args.best_checkpoint_output, {**metadata_base, "kind": "best_validation", "training_episode": -1,
-                                                         "validation_score": score, "validation_switch_rate": switch_rate})
+                agent.save(
+                    args.best_checkpoint_output,
+                    {
+                        **metadata_base,
+                        "kind": "best_validation",
+                        "training_episode": -1,
+                        "validation_score": score,
+                        "validation_switch_rate": switch_rate,
+                    },
+                )
         for episode in range(args.episodes):
             started = perf_counter()
             scenario = scenarios[episode % len(scenarios)]
             seed = args.seed_start + episode // len(scenarios)
             outcome = environment.run(scenario, seed, lambda layout: policy, learner=agent, state_version=agent.config.state_version)
             epsilon = policy.current_epsilon()
-            logs.append({"split": "train", "episode": episode, "scenario": scenario.name, "seed": seed, "epsilon": epsilon,
-                         "gradient_steps": agent.training_steps, "replay_size": len(agent.replay), **outcome.summary()})
+            logs.append(
+                {
+                    "split": "train",
+                    "episode": episode,
+                    "scenario": scenario.name,
+                    "seed": seed,
+                    "epsilon": epsilon,
+                    "gradient_steps": agent.training_steps,
+                    "replay_size": len(agent.replay),
+                    **outcome.summary(),
+                }
+            )
             agent.save(args.checkpoint_output, {**metadata_base, "kind": "latest", "training_episode": episode})
-            print(f"phase_select_episode episode={episode} scenario={scenario.name} seed={seed} reward={outcome.mean_reward:.4f} "
-                  f"switch_rate={outcome.switch_rate} wait={outcome.metrics['mean_waiting_time_seconds']:.1f} epsilon={epsilon:.3f} "
-                  f"gradient_steps={agent.training_steps} seconds={perf_counter() - started:.1f}", flush=True)
+            print(
+                f"phase_select_episode episode={episode} scenario={scenario.name} seed={seed} reward={outcome.mean_reward:.4f} "
+                f"switch_rate={outcome.switch_rate} wait={outcome.metrics['mean_waiting_time_seconds']:.1f} epsilon={epsilon:.3f} "
+                f"gradient_steps={agent.training_steps} seconds={perf_counter() - started:.1f}",
+                flush=True,
+            )
             if (episode + 1) % args.validation_interval and episode + 1 != args.episodes:
                 continue
             greedy = PhaseDqnPolicy(agent)
@@ -181,18 +247,33 @@ def main() -> None:
             record = ValidationRecord(episode, score, agent.training_steps, epsilon, switch_rate)
             selected = selector.consider(record)
             logs.append({"split": "selection", **asdict(record), "selected": selected})
-            print(f"phase_select_validation after_episode={episode} score={score:.4f} switch_rate={switch_rate} "
-                  f"selected={selected} eligible={selector.eligible(record)}", flush=True)
+            print(
+                f"phase_select_validation after_episode={episode} score={score:.4f} switch_rate={switch_rate} "
+                f"selected={selected} eligible={selector.eligible(record)}",
+                flush=True,
+            )
             if selected:
-                agent.save(args.best_checkpoint_output, {**metadata_base, "kind": "best_validation", "training_episode": episode,
-                                                         "validation_score": score, "validation_switch_rate": switch_rate})
+                agent.save(
+                    args.best_checkpoint_output,
+                    {
+                        **metadata_base,
+                        "kind": "best_validation",
+                        "training_episode": episode,
+                        "validation_score": score,
+                        "validation_switch_rate": switch_rate,
+                    },
+                )
     finally:
         args.log_output.parent.mkdir(parents=True, exist_ok=True)
         args.log_output.write_text("".join(json.dumps(item, default=str) + "\n" for item in logs), encoding="utf-8")
     best = selector.best
-    print(f"phase_select_pretrain_complete episodes={args.episodes} best_episode={None if best is None else best.episode} "
-          f"best_score={None if best is None else round(best.score, 4)} best_checkpoint={args.best_checkpoint_output if best else 'unavailable'} "
-          f"log={args.log_output}", flush=True)
+    print(
+        f"phase_select_pretrain_complete episodes={args.episodes} best_episode={None if best is None else best.episode} "
+        f"best_score={None if best is None else round(best.score, 4)} "
+        f"best_checkpoint={args.best_checkpoint_output if best else 'unavailable'} "
+        f"log={args.log_output}",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

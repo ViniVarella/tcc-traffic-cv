@@ -15,12 +15,12 @@ import json
 from pathlib import Path
 from typing import Any
 
-from paths import PYTHON_DIR
 from controller.phase_selection.agent import PhaseSelectionAgent
 from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy, PhaseDqnPolicy
-from simulation.scenario_config import parse_seeds
+from paths import PYTHON_DIR
 from simulation.episode import EpisodeSettings
 from simulation.phase_selection_environment import PhaseSelectionEnvironment
+from simulation.scenario_config import parse_seeds
 from simulation.statistics import METRICS, summarize
 
 
@@ -50,10 +50,20 @@ def main() -> None:
     scenarios = environment.scenarios if args.split == "all" else environment.split(args.split)
     agent = PhaseSelectionAgent.load(args.dqn_model)
     greedy = PhaseDqnPolicy(agent)
-    policies = {"fixed_time": FixedTimePhasePolicy.from_layout, "max_pressure": lambda layout: MaxPressurePhasePolicy(), "dqn_fase_livre": lambda layout: greedy}
-    results: dict[str, Any] = {"seeds": seeds, "warmup_s": settings.warmup_s, "control_s": settings.control_s,
-                               "perception": "ground_truth", "dqn_model": str(args.dqn_model),
-                               "dqn_metadata": agent.metadata, "scenarios": {}}
+    policies = {
+        "fixed_time": FixedTimePhasePolicy.from_layout,
+        "max_pressure": lambda layout: MaxPressurePhasePolicy(),
+        "dqn_fase_livre": lambda layout: greedy,
+    }
+    results: dict[str, Any] = {
+        "seeds": seeds,
+        "warmup_s": settings.warmup_s,
+        "control_s": settings.control_s,
+        "perception": "ground_truth",
+        "dqn_model": str(args.dqn_model),
+        "dqn_metadata": agent.metadata,
+        "scenarios": {},
+    }
     for scenario in scenarios:
         layout = environment.layout(scenario)
         runs: dict[str, list[dict[str, Any]]] = {}
@@ -61,20 +71,29 @@ def main() -> None:
             runs[name] = []
             for seed in seeds:
                 outcome = environment.run(scenario, seed, make_policy, state_version=agent.config.state_version)
-                runs[name].append({"seed": seed, "switches": outcome.switches, "decisions": outcome.decisions,
-                                   "phase_seconds": dict(outcome.phase_seconds),
-                                   **{metric: outcome.metrics.get(metric) for metric in METRICS}})
+                runs[name].append(
+                    {
+                        "seed": seed,
+                        "switches": outcome.switches,
+                        "decisions": outcome.decisions,
+                        "phase_seconds": dict(outcome.phase_seconds),
+                        **{metric: outcome.metrics.get(metric) for metric in METRICS},
+                    }
+                )
         if scenario.intersection == "sp":
             specialist = specialist_runs(base_dir.parent / "results" / "evaluation" / f"versoes-{scenario.demand}-oracle.json", seeds)
             if specialist is not None:
                 runs["especialista_dqn_estado_v2"] = specialist
-        entry = {"intersection": scenario.intersection, "demand": scenario.demand, "split": scenario.split,
-                 "green_phases": len(layout.greens), "incoming_lanes": len(layout.incoming_lanes),
-                 "policies": {name: summarize(items, None if name == "fixed_time" else runs["fixed_time"]) for name, items in runs.items()}}
+        entry = {
+            "intersection": scenario.intersection,
+            "demand": scenario.demand,
+            "split": scenario.split,
+            "green_phases": len(layout.greens),
+            "incoming_lanes": len(layout.incoming_lanes),
+            "policies": {name: summarize(items, None if name == "fixed_time" else runs["fixed_time"]) for name, items in runs.items()},
+        }
         results["scenarios"][scenario.name] = entry
-        line = " ".join(
-            f"{name}={summary['mean_waiting_time_seconds']['mean']:.1f}s" for name, summary in entry["policies"].items()
-        )
+        line = " ".join(f"{name}={summary['mean_waiting_time_seconds']['mean']:.1f}s" for name, summary in entry["policies"].items())
         print(f"phase_select_eval scenario={scenario.name} phases={entry['green_phases']} {line}", flush=True)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")

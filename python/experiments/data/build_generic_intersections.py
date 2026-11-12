@@ -1,4 +1,4 @@
-"""Gera os cruzamentos sintéticos do experimento de seleção livre de fase.
+"""Gera os cruzamentos sintéticos do modelo global (escolha livre de estágio).
 
 Para cada cruzamento de ``INTERSECTIONS`` escreve, em ``sumo/generic/<nome>/``:
 
@@ -19,13 +19,12 @@ Não edite os arquivos à mão: rode este gerador.
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
-from pathlib import Path
 import subprocess
 import tempfile
+from dataclasses import dataclass
+from pathlib import Path
 
 from paths import PYTHON_DIR
-
 
 APPROACHES = {"N": (0.0, 200.0), "S": (0.0, -200.0), "E": (200.0, 0.0), "W": (-200.0, 0.0)}
 TURN_SHARES = {"r": 0.2, "s": 0.6, "l": 0.2}
@@ -58,12 +57,14 @@ INTERSECTIONS = (
     IntersectionSpec("t-3", "incoming", {"S": (1, 1), "E": (2, 2), "W": (2, 2)}, _levels(("E", "W"), ("S",))),
     IntersectionSpec("t-avenida", "opposites", {"S": (1, 1), "E": (2, 2), "W": (2, 2)}, _levels(("E", "W"), ("S",))),
     # Teste: nunca usado no treino.
-    IntersectionSpec("cruz-assimetrico", "opposites", {"N": (2, 2), "S": (1, 1), "E": (2, 2), "W": (3, 2)}, _levels(("W", "N"), ("E", "S"))),
+    IntersectionSpec(
+        "cruz-assimetrico", "opposites", {"N": (2, 2), "S": (1, 1), "E": (2, 2), "W": (3, 2)}, _levels(("W", "N"), ("E", "S"))
+    ),
 )
 
 
 def nodes_xml(spec: IntersectionSpec) -> str:
-    lines = ['<nodes>', '    <node id="C" x="0" y="0" type="traffic_light"/>']
+    lines = ["<nodes>", '    <node id="C" x="0" y="0" type="traffic_light"/>']
     for approach in spec.lanes:
         x, y = APPROACHES[approach]
         lines.append(f'    <node id="{approach}" x="{x:g}" y="{y:g}" type="priority"/>')
@@ -84,9 +85,27 @@ def build_network(spec: IntersectionSpec, output: Path) -> None:
         nodes.write_text(nodes_xml(spec), encoding="utf-8")
         edges.write_text(edges_xml(spec), encoding="utf-8")
         subprocess.run(
-            ["netconvert", "-n", str(nodes), "-e", str(edges), "--no-turnarounds", "--tls.layout", spec.layout,
-             "--tls.green.time", "30", "--tls.left-green.time", "10", "--tls.yellow.time", "3", "-o", str(output)],
-            check=True, capture_output=True, text=True,
+            [
+                "netconvert",
+                "-n",
+                str(nodes),
+                "-e",
+                str(edges),
+                "--no-turnarounds",
+                "--tls.layout",
+                spec.layout,
+                "--tls.green.time",
+                "30",
+                "--tls.left-green.time",
+                "10",
+                "--tls.yellow.time",
+                "3",
+                "-o",
+                str(output),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
         )
 
 
@@ -115,8 +134,10 @@ def routes_xml(spec: IntersectionSpec, demand: str, moves: dict[str, list[tuple[
         shares = sum(TURN_SHARES[direction] for _, direction in moves[edge])
         for target, direction in moves[edge]:
             rate = total * TURN_SHARES[direction] / shares / HOUR_S
-            lines.append(f'    <flow id="f_{index}" departLane="best" departSpeed="max" begin="0.00" end="{HOUR_S:.2f}" '
-                         f'period="exp({rate:.6f})" from="{edge}" to="{target}"/>')
+            lines.append(
+                f'    <flow id="f_{index}" departLane="best" departSpeed="max" begin="0.00" end="{HOUR_S:.2f}" '
+                f'period="exp({rate:.6f})" from="{edge}" to="{target}"/>'
+            )
             index += 1
     return "\n".join([*lines, "</routes>", ""])
 

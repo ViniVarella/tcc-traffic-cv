@@ -1,6 +1,6 @@
 """Descrição genérica de um cruzamento semaforizado, lida do ``.net.xml``.
 
-Base do experimento de seleção livre de fase: em vez de faixas e fases fixas do
+Base do modelo global (escolha livre de estágio, v6.0): em vez de faixas e fases fixas do
 cenário SP, cada cruzamento é descrito pelas suas fases verdes (estados do
 programa estático sem amarelo) e pelas faixas de entrada que cada uma atende.
 As ROIs são os últimos ``roi_length_m`` metros de cada faixa de entrada até a
@@ -9,14 +9,13 @@ linha de retenção, no mesmo contrato ``LaneGeometry`` das câmeras.
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ElementTree
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-import xml.etree.ElementTree as ElementTree
 
 from vision.lane_features import LaneGeometry
-
 
 LaneKey = tuple[str, str]
 GREEN_CHARS = frozenset("Gg")
@@ -33,6 +32,8 @@ class GreenPhase:
 
 @dataclass(frozen=True, slots=True)
 class IntersectionLayout:
+    """Semáforo, estágios verdes e ROIs das faixas de entrada de um cruzamento."""
+
     tls_id: str
     greens: tuple[GreenPhase, ...]
     geometries: Mapping[LaneKey, LaneGeometry]

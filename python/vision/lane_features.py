@@ -17,7 +17,6 @@ from typing import Any
 
 import numpy as np
 
-
 # Padrões dos detectores E2 do SUMO (haltingSpeedThreshold / timeThreshold). Acima
 # do ruído de pixel a 1 fps, ao contrário dos 0,1 m/s usados na espera nativa.
 DEFAULT_STOP_SPEED_MPS = 1.39
@@ -77,6 +76,8 @@ class LaneObservation:
 
 @dataclass(frozen=True, slots=True)
 class LaneFeatures:
+    """As 5 medidas de uma faixa no step (contagem, parados, ocupação, velocidade e espera)."""
+
     vehicle_count: int
     stopped_count: int
     occupancy: float
@@ -90,6 +91,8 @@ EMPTY_LANE = LaneFeatures(0, 0, 0.0, None, 0.0, 0)
 
 @dataclass(frozen=True, slots=True)
 class KinematicsParameters:
+    """Limiares de parada e de rastreamento usados para medir as features por faixa."""
+
     stop_speed_mps: float = DEFAULT_STOP_SPEED_MPS
     stop_time_s: float = DEFAULT_STOP_TIME_S
     move_speed_mps: float = 2.0
@@ -211,7 +214,8 @@ class ApproachKinematicsTracker:
                 continue
             elapsed = dt if dt is not None else 1.0
             predicted = obj.distance - (obj.speed or 0.0) * elapsed
-            gate = self.parameters.handover_radius_m if obj.stopped else self.parameters.max_speed_mps * elapsed + self.parameters.jump_tolerance_m
+            parameters = self.parameters
+            gate = parameters.handover_radius_m if obj.stopped else parameters.max_speed_mps * elapsed + parameters.jump_tolerance_m
             gap = abs(predicted - observation.distance_m)
             if gap <= gate and (best is None or gap < best[0]):
                 best = (gap, obj)
@@ -290,10 +294,7 @@ def _approach_speed(history: deque[tuple[float, float]]) -> float | None:
 
 def occupancy_fraction(distances_m: Iterable[float], vehicle_length_m: float, lane_length_m: float) -> float:
     """Fração da ROI coberta pela união de [d, d + comprimento], como a ocupação do E2."""
-    intervals = sorted(
-        (max(0.0, float(distance)), min(lane_length_m, float(distance) + vehicle_length_m))
-        for distance in distances_m
-    )
+    intervals = sorted((max(0.0, float(distance)), min(lane_length_m, float(distance) + vehicle_length_m)) for distance in distances_m)
     covered, current_start, current_end = 0.0, None, None
     for start, end in intervals:
         if end <= start:

@@ -5,7 +5,7 @@ sem preempção e com preempção por cada fonte de detecção, no mesmo cenári
 seeds, aquecimento e duração. Mede o atraso das viaturas até a linha de
 retenção e o impacto no restante do tráfego.
 
-- ``--perception oracle`` (só SUMO): features do oráculo TraCI; só V2I.
+- ``--perception oracle`` (só SUMO): features da percepção ground truth (TraCI); só V2I.
 - ``--perception visual`` (Unity em Play Mode): features e viaturas pela câmera;
   ``--detections`` aceita ``v2i``, ``vision`` (classe ``emergency`` nas ROIs) e
   ``both``. A agenda, a política e a percepção das features são as mesmas; muda
@@ -22,9 +22,9 @@ from typing import Any
 
 import yaml
 
-from paths import PYTHON_DIR
 from bridge import UnityBridge
 from controller.keep_switch.preemption import PreemptionSettings
+from paths import PYTHON_DIR
 from simulation.episode import EpisodeSettings
 from simulation.scenario_config import add_scenario_argument, parse_csv, parse_seeds
 from simulation.sp_environment import EMERGENCY_DETECTIONS, SpEnvironment
@@ -53,7 +53,7 @@ def parse_args(base_dir: Path) -> argparse.Namespace:
     parser.add_argument("--v3-dqn-model", type=Path, default=models / "dqn-v3-fase-curta-best.pt",
                         help="Checkpoint do estado v3 (só cenários *_ped; inclua v3 em --versions).")
     parser.add_argument("--global-dqn-model", type=Path, default=models / "dqn-fase-livre-ped40-best.pt",
-                        help="Modelo global, experimento de seleção livre de fase (inclua global em --versions).")
+                        help="Checkpoint do modelo global (v6.0; inclua global em --versions).")
     add_vision_arguments(parser)
     parser.add_argument("--step-log-dir", type=Path, default=base_dir.parent / "results" / "logs",
                         help="Com --perception visual, grava um JSONL por versão e modo neste diretório.")
@@ -147,21 +147,29 @@ def main() -> None:
                 }
                 report["results"][f"{version.name}/{label}"] = {"summary": summary, "runs": runs}
                 lead = summary["visual_mean_lead_s"]
-                print(f"preemption_evaluated version={version.name} mode={label} perception={args.perception} "
-                      f"viatura_perda_media={summary['emergency_mean_time_loss_s']:.1f}s viatura_perda_max={summary['emergency_max_time_loss_s']:.1f}s "
-                      f"viatura_espera_entrada={summary['emergency_mean_insertion_delay_s']:.1f}s "
-                      f"viatura_perda_total_media={summary['emergency_mean_total_loss_s']:.1f}s "
-                      f"viatura_perda_total_max={summary['emergency_max_total_loss_s']:.1f}s "
-                      f"viaturas_sem_parar={summary['emergency_share_without_stops']:.0%} "
-                      f"cruzaram={summary['emergency_crossed']}/{summary['emergency_scheduled']} "
-                      f"visao_detectou={summary['visual_detected']} visao_antecedencia={'n/a' if lead is None else f'{lead:.1f}s'} "
-                      f"visao_alarmes_falsos={summary['visual_false_events']}/{summary['visual_events']} "
-                      f"trafego_espera={summary['mean_waiting_time_seconds']:.1f}s chegadas={summary['arrived_vehicles']:.0f} "
-                      f"fila_insercao={summary['final_pending_vehicles']:.1f}"
-                      + ("" if summary["pedestrian_mean_waiting_s"] is None else
-                         f" pedestres_espera={summary['pedestrian_mean_waiting_s']:.1f}s pedestres_mediana={summary['pedestrian_median_waiting_s']:.0f}s"
-                         f" pedestres_p90={summary['pedestrian_p90_waiting_s']:.0f}s pedestres_max={summary['pedestrian_max_waiting_s']:.0f}s"),
-                      flush=True)
+                print(
+                    f"preemption_evaluated version={version.name} mode={label} perception={args.perception} "
+                    f"viatura_perda_media={summary['emergency_mean_time_loss_s']:.1f}s "
+                    f"viatura_perda_max={summary['emergency_max_time_loss_s']:.1f}s "
+                    f"viatura_espera_entrada={summary['emergency_mean_insertion_delay_s']:.1f}s "
+                    f"viatura_perda_total_media={summary['emergency_mean_total_loss_s']:.1f}s "
+                    f"viatura_perda_total_max={summary['emergency_max_total_loss_s']:.1f}s "
+                    f"viaturas_sem_parar={summary['emergency_share_without_stops']:.0%} "
+                    f"cruzaram={summary['emergency_crossed']}/{summary['emergency_scheduled']} "
+                    f"visao_detectou={summary['visual_detected']} visao_antecedencia={'n/a' if lead is None else f'{lead:.1f}s'} "
+                    f"visao_alarmes_falsos={summary['visual_false_events']}/{summary['visual_events']} "
+                    f"trafego_espera={summary['mean_waiting_time_seconds']:.1f}s chegadas={summary['arrived_vehicles']:.0f} "
+                    f"fila_insercao={summary['final_pending_vehicles']:.1f}"
+                    + (
+                        ""
+                        if summary["pedestrian_mean_waiting_s"] is None
+                        else f" pedestres_espera={summary['pedestrian_mean_waiting_s']:.1f}s"
+                        f" pedestres_mediana={summary['pedestrian_median_waiting_s']:.0f}s"
+                        f" pedestres_p90={summary['pedestrian_p90_waiting_s']:.0f}s"
+                        f" pedestres_max={summary['pedestrian_max_waiting_s']:.0f}s"
+                    ),
+                    flush=True,
+                )
     finally:
         if bridge is not None:
             bridge.close()

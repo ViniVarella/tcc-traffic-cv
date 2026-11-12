@@ -76,7 +76,9 @@ class BuildUnityYoloDatasetTests(unittest.TestCase):
 
     def test_emergency_vehicles_get_their_own_class(self) -> None:
         self.assertEqual(DATASET_CLASSES, ("vehicle", "emergency"))
-        self.assertEqual((class_for_vehicle_type("emergency"), class_for_vehicle_type("DEFAULT_VEHTYPE"), class_for_vehicle_type(None)), (1, 0, 0))
+        self.assertEqual(
+            (class_for_vehicle_type("emergency"), class_for_vehicle_type("DEFAULT_VEHTYPE"), class_for_vehicle_type(None)), (1, 0, 0)
+        )
         line = yolo_line({"vehicle_type": "emergency", "class_id": 0, "center_x": 0.5, "center_y": 0.5, "width": 0.1, "height": 0.1})
         self.assertTrue(line.startswith("1 "))
         with self.assertRaises(ValueError):
@@ -84,10 +86,12 @@ class BuildUnityYoloDatasetTests(unittest.TestCase):
 
     def test_bridge_derives_class_from_vehicle_type(self) -> None:
         box = {"center_x": 0.5, "center_y": 0.5, "width": 0.1, "height": 0.1}
-        annotations = UnityBridge._parse_ground_truth_vehicles([
-            {"vehicle_id": "amb", "vehicle_type": "emergency", "class_id": 0, **box},
-            {"vehicle_id": "car", "vehicle_type": "DEFAULT_VEHTYPE", **box},
-        ])
+        annotations = UnityBridge._parse_ground_truth_vehicles(
+            [
+                {"vehicle_id": "amb", "vehicle_type": "emergency", "class_id": 0, **box},
+                {"vehicle_id": "car", "vehicle_type": "DEFAULT_VEHTYPE", **box},
+            ]
+        )
         self.assertEqual([item["class_id"] for item in annotations], [1, 0])
 
     def test_runs_are_assigned_whole_to_one_split(self) -> None:
@@ -110,8 +114,16 @@ class BuildUnityYoloDatasetTests(unittest.TestCase):
                 (run_dir / "labels" / "east").mkdir(parents=True)
                 for step in range(2):
                     (run_dir / "frames" / "east" / f"step_{step:06d}.jpg").write_bytes(b"jpeg")
-                    vehicles = [{"vehicle_type": "emergency" if index == 0 else "car", "class_id": 0,
-                                 "center_x": 0.5, "center_y": 0.5, "width": 0.2, "height": 0.2}]
+                    vehicles = [
+                        {
+                            "vehicle_type": "emergency" if index == 0 else "car",
+                            "class_id": 0,
+                            "center_x": 0.5,
+                            "center_y": 0.5,
+                            "width": 0.2,
+                            "height": 0.2,
+                        }
+                    ]
                     (run_dir / "labels" / "east" / f"step_{step:06d}.json").write_text(json.dumps({"vehicles": vehicles}), encoding="utf-8")
                 run_dirs.append(run_dir)
             output = root / "dataset"
@@ -123,8 +135,9 @@ class BuildUnityYoloDatasetTests(unittest.TestCase):
                 files = list((output / "images" / split_name).glob(f"{run_name}_*.jpg"))
                 self.assertEqual(len(files), 2)
             self.assertIn("1: emergency", (output / "data.yaml").read_text(encoding="utf-8"))
-            strided = build_dataset(None, None, root / "strided", DatasetSplit(), seed=1,
-                                    runs=[CaptureRun.from_dir(path) for path in run_dirs], frame_stride=2)
+            strided = build_dataset(
+                None, None, root / "strided", DatasetSplit(), seed=1, runs=[CaptureRun.from_dir(path) for path in run_dirs], frame_stride=2
+            )
             self.assertEqual(strided["train"] + strided["val"] + strided["test"], 3)
 
 

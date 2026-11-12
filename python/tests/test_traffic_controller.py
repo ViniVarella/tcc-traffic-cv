@@ -7,7 +7,6 @@ import unittest
 from controller.keep_switch.phase_manager import SUMO_PHASE_HOLD_SECONDS
 from legacy.traffic_controller import TrafficController
 
-
 CONFIG = {
     "traffic_light": {"phases": {"primary_green": 0, "primary_yellow": 1, "all_red": 2, "secondary_green": 3, "secondary_yellow": 4}},
     "traffic_control": {"min_green_seconds": 10, "max_green_seconds": 40, "yellow_seconds": 3, "all_red_seconds": 1, "switch_margin": 1},
@@ -30,7 +29,9 @@ class TrafficControllerTests(unittest.TestCase):
         all_red_hold = self.controller.update(13.5, counts)
         south_green = self.controller.update(14, counts)
         self.assertEqual((yellow["action"], yellow["phase_index"]), ("set_phase", 1))
-        self.assertEqual((yellow_hold["action"], yellow_hold["phase_index"], yellow_hold["reason"]), ("hold", 1, "east_west_yellow_in_progress"))
+        self.assertEqual(
+            (yellow_hold["action"], yellow_hold["phase_index"], yellow_hold["reason"]), ("hold", 1, "east_west_yellow_in_progress")
+        )
         self.assertEqual((all_red["action"], all_red["phase_index"]), ("set_phase", 2))
         self.assertEqual((all_red_hold["action"], all_red_hold["phase_index"], all_red_hold["reason"]), ("hold", 2, "all_red_in_progress"))
         self.assertEqual((south_green["action"], south_green["phase_index"]), ("set_phase", 3))

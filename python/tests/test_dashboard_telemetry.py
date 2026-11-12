@@ -8,7 +8,6 @@ import unittest
 from dashboard.telemetry import approach_features, build_telemetry, ground_truth_metrics, signal_by_approach
 from vision.lane_features import LaneFeatures
 
-
 FEATURES = {
     ("south", "E3_0"): LaneFeatures(3, 2, 0.2, 1.0, 10.0),
     ("south", "E3_1"): LaneFeatures(1, 0, 0.1, 8.0, 0.0),
@@ -39,17 +38,33 @@ class TelemetryTests(unittest.TestCase):
             self.assertEqual(set(signal_by_approach(phase).values()), {"red"})
 
     def test_telemetry_is_json_serializable(self) -> None:
-        info = {"sim_time": 310.0, "phase": "SOUTH_GREEN", "phase_elapsed": 12.0, "reward": -0.2, "preempt_target": "SOUTH_GREEN",
-                "lane_features": FEATURES, "decision": object(),
-                "lane_metrics": {"halting_vehicles": 6, "waiting_time_s": 40.0, "pending_vehicles": 0, "pedestrian_waiting_s": 12.0},
-                "trip_metrics": {"completed_vehicles": 42, "mean_waiting_time_s": 5.5, "sampled_s": 10.0, "pending_vehicles": 3, "active_vehicles": 20}}
+        info = {
+            "sim_time": 310.0,
+            "phase": "SOUTH_GREEN",
+            "phase_elapsed": 12.0,
+            "reward": -0.2,
+            "preempt_target": "SOUTH_GREEN",
+            "lane_features": FEATURES,
+            "decision": object(),
+            "lane_metrics": {"halting_vehicles": 6, "waiting_time_s": 40.0, "pending_vehicles": 0, "pedestrian_waiting_s": 12.0},
+            "trip_metrics": {
+                "completed_vehicles": 42,
+                "mean_waiting_time_s": 5.5,
+                "sampled_s": 10.0,
+                "pending_vehicles": 3,
+                "active_vehicles": 20,
+            },
+        }
         telemetry = json.loads(json.dumps(build_telemetry(info)))
         self.assertEqual(telemetry["preempt_target"], "SOUTH_GREEN")
         self.assertEqual(telemetry["signals"]["south"], "green")
         self.assertEqual(telemetry["vision"]["east"]["stopped"], 4)
         self.assertEqual(telemetry["ground_truth"]["pedestrian_waiting_s"], 12.0)
         # Espera por veículo (métrica das avaliações), repassada para a página de resultados.
-        self.assertEqual(telemetry["trip"], {"completed_vehicles": 42, "mean_waiting_time_s": 5.5, "sampled_s": 10.0, "pending_vehicles": 3, "active_vehicles": 20})
+        self.assertEqual(
+            telemetry["trip"],
+            {"completed_vehicles": 42, "mean_waiting_time_s": 5.5, "sampled_s": 10.0, "pending_vehicles": 3, "active_vehicles": 20},
+        )
 
 
 if __name__ == "__main__":

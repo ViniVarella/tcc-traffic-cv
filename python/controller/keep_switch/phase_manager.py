@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 # Duração aplicada via TraCI após cada ``setPhase``. O controlador Python decide
 # todas as transições; sem isso o programa estático da rede avançaria sozinho
 # (por exemplo, do amarelo South direto para o verde E/W, sem all-red).

@@ -62,7 +62,9 @@ class OccupancyTests(unittest.TestCase):
         self.assertEqual(occupancy_fraction([0, 5, 10, 15, 20, 24], 5.0, 25.0), 1.0)
 
     def test_tracker_reports_occupancy_and_count_per_lane(self) -> None:
-        result = _tracker().update([LaneObservation("lane_0", 0.0, "a"), LaneObservation("lane_1", 10.0, "b"), LaneObservation("lane_1", 20.0, "c")], 1.0)
+        result = _tracker().update(
+            [LaneObservation("lane_0", 0.0, "a"), LaneObservation("lane_1", 10.0, "b"), LaneObservation("lane_1", 20.0, "c")], 1.0
+        )
         self.assertEqual((result["lane_0"].vehicle_count, result["lane_1"].vehicle_count), (1, 2))
         self.assertAlmostEqual(result["lane_1"].occupancy, 10.0 / 25.0)
 

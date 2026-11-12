@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import unittest
 from pathlib import Path
 from types import SimpleNamespace
-import unittest
 
 import numpy as np
 import yaml
@@ -12,7 +12,6 @@ import yaml
 from paths import PYTHON_DIR
 from simulation.version_policies import DqnV1Policy, HeuristicV1Policy, build_version_policies, lane_counts
 from vision.lane_features import LaneFeatures
-
 
 CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 EAST_WEST = SimpleNamespace(name="EAST_WEST_GREEN", phase_index=0)
@@ -67,7 +66,9 @@ class VersionPolicyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_version_policies(CONFIG, ["v9"], Path("x"), Path("y"))
         versions = build_version_policies(CONFIG, ["baseline", "v1", "max_pressure"], Path("x"), Path("y"))
-        self.assertEqual([(item.name, item.decision_interval_s) for item in versions], [("baseline", 5.0), ("v1", 1.0), ("max_pressure", 5.0)])
+        self.assertEqual(
+            [(item.name, item.decision_interval_s) for item in versions], [("baseline", 5.0), ("v1", 1.0), ("max_pressure", 5.0)]
+        )
 
 
 if __name__ == "__main__":

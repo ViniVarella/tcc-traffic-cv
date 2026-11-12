@@ -21,6 +21,8 @@ __all__ = ["DqnAgent", "DqnConfig", "QNetwork", "Transition"]
 
 @dataclass(frozen=True)
 class DqnConfig:
+    """Hiperparâmetros e contrato do estado do agente manter/trocar (gravados no checkpoint)."""
+
     state_size: int
     action_size: int = 2
     hidden_size: int = 64
@@ -38,6 +40,8 @@ class DqnConfig:
 
 
 class QNetwork(nn.Module):
+    """MLP de duas camadas ocultas: estado → um valor Q por ação (manter, trocar)."""
+
     def __init__(self, state_size: int, action_size: int, hidden_size: int) -> None:
         super().__init__()
         self.layers = nn.Sequential(

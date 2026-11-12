@@ -18,15 +18,15 @@ from typing import Any
 
 import yaml
 
-from paths import PYTHON_DIR
 from bridge import UnityBridge
 from controller.phase_selection.agent import PhaseSelectionAgent
 from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy, PhaseDqnPolicy
-from simulation.scenario_config import parse_seeds, parse_csv
+from paths import PYTHON_DIR
 from simulation.episode import EpisodeSettings
-from simulation.statistics import METRICS, summarize
 from simulation.phase_selection_environment import PhaseSelectionEnvironment
+from simulation.scenario_config import parse_csv, parse_seeds
 from simulation.sp_environment import SpEnvironment
+from simulation.statistics import METRICS, summarize
 from simulation.visual_observer import add_vision_arguments, build_unity_observer
 
 # Rótulos das versões do relatório visual (ids do código → rótulo do modelo).

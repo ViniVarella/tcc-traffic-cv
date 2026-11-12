@@ -27,14 +27,16 @@ from torch import nn
 from torch.nn import functional as functional
 
 from controller.dqn_base import DqnAgentBase, Transition
-from .state import LANE_COUNT_INDEX, ROW_FEATURE_NAMES, ROW_FEATURES_BY_VERSION, STATE_VERSION
 
+from .state import LANE_COUNT_INDEX, ROW_FEATURE_NAMES, ROW_FEATURES_BY_VERSION, STATE_VERSION
 
 MASKED_Q = -1e9
 
 
 @dataclass(frozen=True)
 class PhaseAgentConfig:
+    """Hiperparâmetros do modelo global e do DQfD (gravados no checkpoint)."""
+
     max_phases: int = 8
     row_size: int = len(ROW_FEATURE_NAMES)
     hidden_size: int = 64

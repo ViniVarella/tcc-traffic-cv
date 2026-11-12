@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from .phase_manager import PhaseManager, PhaseState
 
-
 GREEN_PHASES = frozenset({PhaseManager.EAST_WEST_GREEN, PhaseManager.SOUTH_GREEN})
 
 

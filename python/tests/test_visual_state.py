@@ -5,14 +5,11 @@ from __future__ import annotations
 import unittest
 
 import numpy as np
-
-
 import yaml
 
+from controller.keep_switch.state import SP_LANE_ORDER, LaneFeatureStateEncoder, VisualStateEncoder, build_state_encoder
 from paths import PYTHON_DIR
 from vision.lane_features import LaneFeatures
-from controller.keep_switch.state import SP_LANE_ORDER, LaneFeatureStateEncoder, VisualStateEncoder, build_state_encoder
-
 
 SP_CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 
@@ -36,13 +33,17 @@ class LaneFeatureStateEncoderTests(unittest.TestCase):
     def test_state_has_five_features_per_lane_phase_and_elapsed(self) -> None:
         self.assertEqual(self.encoder.state_size, 41)
         self.assertEqual(len(self.encoder.feature_names), 41)
-        self.assertEqual(self.encoder.feature_names[:5], tuple(f"south/lane_0/{name}" for name in ("count", "stopped", "occupancy", "speed", "waiting")))
+        self.assertEqual(
+            self.encoder.feature_names[:5], tuple(f"south/lane_0/{name}" for name in ("count", "stopped", "occupancy", "speed", "waiting"))
+        )
 
     def test_features_are_normalized_by_roi_capacity(self) -> None:
-        features = {("east", "lane_1"): LaneFeatures(vehicle_count=2, stopped_count=1, occupancy=0.3, mean_speed_mps=5.0, waiting_time_s=40.0)}
+        features = {
+            ("east", "lane_1"): LaneFeatures(vehicle_count=2, stopped_count=1, occupancy=0.3, mean_speed_mps=5.0, waiting_time_s=40.0)
+        }
         state = self.encoder.encode(features, phase_index=3, phase_elapsed_seconds=10.0)
         east_1 = SP_LANE_ORDER.index(("east", "lane_1")) * 5
-        np.testing.assert_allclose(state[east_1:east_1 + 5], [0.5, 0.25, 0.3, 0.5, 0.2])
+        np.testing.assert_allclose(state[east_1 : east_1 + 5], [0.5, 0.25, 0.3, 0.5, 0.2])
         np.testing.assert_allclose(state[35:], [0, 0, 0, 1, 0, 0.25])
 
     def test_missing_or_empty_lane_reads_as_free_flow_and_values_are_clipped(self) -> None:

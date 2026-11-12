@@ -16,11 +16,11 @@ from typing import Any
 
 import numpy as np
 
-from paths import PYTHON_DIR
 from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy
-from simulation.scenario_config import parse_seeds
+from paths import PYTHON_DIR
 from simulation.episode import EpisodeSettings
 from simulation.phase_selection_environment import PhaseSelectionEnvironment, pedestrian_hcm_delay
+from simulation.scenario_config import parse_seeds
 
 POLICIES = {"fixed_time": FixedTimePhasePolicy.from_layout, "max_pressure": lambda layout: MaxPressurePhasePolicy()}
 
@@ -57,10 +57,16 @@ def main() -> None:
                 summary = {key: float(np.mean([run[key] for run in runs if key in run]))
                            for key in ("wait_s", "stopped_wait_s", "pending", "pedestrian_seconds", "pedestrian_mean_wait_s",
                                        "pedestrian_max_wait_s", "pedestrian_mean_interval_s")}
-                report["results"].setdefault(str(int(interval)), {}).setdefault(scenario.name, {})[name] = {"summary": summary, "runs": runs}
-                print(f"pedestrian_interval N={interval:.0f} scenario={scenario.name} policy={name} "
-                      f"wait={summary['wait_s']:.1f}s ped_hcm={summary['pedestrian_mean_wait_s']:.1f}s "
-                      f"ped_max={summary['pedestrian_max_wait_s']:.0f}s interval={summary['pedestrian_mean_interval_s']:.0f}s", flush=True)
+                report["results"].setdefault(str(int(interval)), {}).setdefault(scenario.name, {})[name] = {
+                    "summary": summary,
+                    "runs": runs,
+                }
+                print(
+                    f"pedestrian_interval N={interval:.0f} scenario={scenario.name} policy={name} "
+                    f"wait={summary['wait_s']:.1f}s ped_hcm={summary['pedestrian_mean_wait_s']:.1f}s "
+                    f"ped_max={summary['pedestrian_max_wait_s']:.0f}s interval={summary['pedestrian_mean_interval_s']:.0f}s",
+                    flush=True,
+                )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"pedestrian_interval_complete output={args.output}", flush=True)

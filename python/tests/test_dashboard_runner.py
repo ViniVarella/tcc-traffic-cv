@@ -4,20 +4,26 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from pathlib import Path
-import threading
-import unittest
-
 import json
 import tempfile
-
+import threading
+import unittest
+from pathlib import Path
 from types import SimpleNamespace
 
-from paths import PYTHON_DIR
-from dashboard.app import (FIXED_TIME_REFERENCE_S, FIXED_TIME_STOPPED_REFERENCE_S, SCENARIOS, EpisodeRunner, NoCacheStaticFiles,
-                           PanelSettings, StartRequest, emergency_board, load_fixed_time_reference)
+from dashboard.app import (
+    FIXED_TIME_REFERENCE_S,
+    FIXED_TIME_STOPPED_REFERENCE_S,
+    SCENARIOS,
+    EpisodeRunner,
+    NoCacheStaticFiles,
+    PanelSettings,
+    StartRequest,
+    emergency_board,
+    load_fixed_time_reference,
+)
 from dashboard.server import GENERIC_CLASSES, choose_detector, parse_args
-
+from paths import PYTHON_DIR
 
 BASE_DIR = PYTHON_DIR
 

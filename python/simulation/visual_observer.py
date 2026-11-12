@@ -2,7 +2,7 @@
 
 Em cada step: envia o estado SUMO à Unity, reúne os frames das câmeras do mesmo
 ``step_id``, roda o pipeline visual e devolve as ``LaneFeatures`` estimadas.
-Opcionalmente calcula o oráculo TraCI em paralelo, só para registro (domain
+Opcionalmente calcula a percepção ground truth (TraCI) em paralelo, só para registro (domain
 gap) — ele nunca decide. Antes de ``active_from_s`` a Unity não é usada, o que
 permite aquecer o SUMO rápido e ligar a visão alguns segundos antes do controle
 para inicializar os trackers.
@@ -10,15 +10,15 @@ para inicializar os trackers.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from dataclasses import asdict
-import json
 from time import sleep
 from typing import Any
 
-from paths import DEFAULT_YOLO_MODEL
 from bridge import FrameBundleCollector
 from controller.keep_switch.preemption import EmergencyRequest
+from paths import DEFAULT_YOLO_MODEL
 from sumo import SumoStateExtractor
 from sumo.lane_feature_source import TraciLaneFeatureSource
 from vision.lane_features import LaneFeatures, LaneObservation
@@ -26,19 +26,24 @@ from vision.visual_emergency import VisualEmergencyDetector, VisualEmergencySett
 from vision.visual_lane_features import VisualLaneFeatureSource
 from vision.visual_pipeline import VisualPipeline
 
-
 MISSING_STREAK_WARNING = 10
 
 
 def features_record(features: dict[tuple[str, str], LaneFeatures] | None) -> dict[str, Any] | None:
+    """Features por faixa em formato JSON (``"câmera/faixa"`` → medidas)."""
+
     return None if features is None else {f"{camera}/{lane}": asdict(values) for (camera, lane), values in features.items()}
 
 
 def observations_record(observations: dict[str, list[LaneObservation]]) -> dict[str, list[list[Any]]]:
+    """Observações por câmera em formato JSON compacto: ``[faixa, distância, id]``."""
+
     return {camera: [[item.lane_id, round(item.distance_m, 3), item.object_id] for item in items] for camera, items in observations.items()}
 
 
 class UnityVisualObserver:
+    """Percepção pelas câmeras da Unity: envia o estado do SUMO, recebe os frames e extrai as features por faixa."""
+
     def __init__(
         self,
         *,
@@ -151,7 +156,7 @@ def add_vision_arguments(parser: Any) -> None:
                         help="Liga a Unity este tanto antes do fim do aquecimento para inicializar os trackers.")
     parser.add_argument("--ground-offset", type=float, default=None,
                         help="Sobrescreve lane_state.visual_ground_offset_m (m somados à distância visual).")
-    parser.add_argument("--no-oracle-shadow", action="store_true", help="Não registra o oráculo TraCI em paralelo.")
+    parser.add_argument("--no-oracle-shadow", action="store_true", help="Não registra a percepção ground truth (TraCI) em paralelo.")
 
 
 def build_unity_observer(config: dict[str, Any], base_dir: Any, args: Any, environment: Any, bridge: Any) -> UnityVisualObserver:
@@ -164,18 +169,23 @@ def build_unity_observer(config: dict[str, Any], base_dir: Any, args: Any, envir
     detector = YoloVehicleDetector(args.model, args.confidence, parse_class_ids(args.classes), args.image_size)
     pipeline = VisualPipeline(calibrations, detector,
                               lambda: ByteTrackVehicleTracker(args.frame_rate, args.confidence, args.track_match_threshold))
-    offset = args.ground_offset if args.ground_offset is not None else float(config.get("lane_state", {}).get("visual_ground_offset_m", 0.0))
+    configured_offset = float(config.get("lane_state", {}).get("visual_ground_offset_m", 0.0))
+    offset = args.ground_offset if args.ground_offset is not None else configured_offset
     visual_source = VisualLaneFeatureSource(calibrations, environment.geometries, environment.parameters, ground_offset_m=offset)
     return UnityVisualObserver(
-        bridge=bridge, pipeline=pipeline, visual_source=visual_source, tls_id=environment.tls_id,
-        send_interval_s=args.send_interval, active_from_s=max(0.0, environment.settings.warmup_s - args.prime_seconds),
+        bridge=bridge,
+        pipeline=pipeline,
+        visual_source=visual_source,
+        tls_id=environment.tls_id,
+        send_interval_s=args.send_interval,
+        active_from_s=max(0.0, environment.settings.warmup_s - args.prime_seconds),
         shadow_factory=None if args.no_oracle_shadow else environment.oracle_source,
         emergency_detector=VisualEmergencyDetector(sorted(calibrations), VisualEmergencySettings.from_config(config)),
     )
 
 
 class StepLogger:
-    """Grava uma linha JSONL por step controlado: features visuais, oráculo e decisão."""
+    """Grava uma linha JSONL por step controlado: features visuais, ground truth e decisão."""
 
     def __init__(self, handle: Any, observer: UnityVisualObserver, policy: str) -> None:
         self.handle = handle
@@ -188,8 +198,14 @@ class StepLogger:
             return
         decision = info["decision"]
         line = {
-            **record, "policy": self.policy, "phase": info["phase"], "phase_index": info["phase_index"],
-            "phase_elapsed": info["phase_elapsed"], "requested_action": info["requested_action"],
-            "decision_action": decision["action"], "decision_reason": decision["reason"], "reward": info["reward"],
+            **record,
+            "policy": self.policy,
+            "phase": info["phase"],
+            "phase_index": info["phase_index"],
+            "phase_elapsed": info["phase_elapsed"],
+            "requested_action": info["requested_action"],
+            "decision_action": decision["action"],
+            "decision_reason": decision["reason"],
+            "reward": info["reward"],
         }
         self.handle.write(json.dumps(line) + "\n")

@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 from typing import Any
-import xml.etree.ElementTree as ElementTree
 
 import numpy as np
 import yaml

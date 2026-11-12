@@ -4,15 +4,13 @@ from __future__ import annotations
 
 import unittest
 
-
 import yaml
 
-from paths import PYTHON_DIR
 from controller import DqnTrafficController
 from controller.keep_switch.phase_manager import PhaseManager, PhaseState
-from simulation.episode import encode_state
 from controller.keep_switch.state import build_state_encoder
-
+from paths import PYTHON_DIR
+from simulation.episode import encode_state
 
 SP_CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 

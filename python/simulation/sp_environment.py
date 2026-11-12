@@ -1,4 +1,4 @@
-"""Ambiente de episódio v2: perfil, geometria, encoder e recompensa fixos entre episódios."""
+"""Ambiente de episódios do cruzamento de SP (linha manter/trocar): perfil, ROIs, encoder e recompensa fixos."""
 
 from __future__ import annotations
 
@@ -8,21 +8,20 @@ from typing import Any, Protocol
 
 from controller import DqnAgent, DqnTrafficController
 from controller.keep_switch.preemption import EmergencyPreemption, PreemptionSettings
+from controller.keep_switch.state import build_state_encoder
 from controller.rewards import RewardWeights
 from simulation.episode import EpisodeSettings, Observer, Policy, RewardModel, incoming_lane_capacity, run_episode
 from sumo import SumoClient
 from sumo.emergency import EmergencySettings, EmergencyTraffic
-from sumo.pedestrian_metrics import PedestrianMetricsCollector
 from sumo.lane_feature_source import TraciLaneFeatureSource, noise_from_config
-from controller.keep_switch.state import build_state_encoder
+from sumo.pedestrian_metrics import PedestrianMetricsCollector
 from vision.lane_features import KinematicsParameters, load_lane_geometries
-
 
 EMERGENCY_DETECTIONS = ("v2i", "vision", "both")
 
 
 class EpisodeObserver(Protocol):
-    """Fonte de features de um episódio; o padrão é o oráculo TraCI.
+    """Fonte de features de um episódio; o padrão é a percepção *ground truth* (TraCI).
 
     Para a detecção visual de viaturas, o observador também expõe
     ``emergency_requests(sim_time)``, válido depois do ``observe`` do mesmo step.
@@ -32,6 +31,12 @@ class EpisodeObserver(Protocol):
 
 
 class SpEnvironment:
+    """Episódios no cruzamento de SP com a camada de segurança ``DqnTrafficController``.
+
+    Todas as versões (``simulation.version_policies``) rodam aqui com a mesma
+    percepção, recompensa e protocolo; muda só a política.
+    """
+
     def __init__(self, config: dict[str, Any], base_dir: Path, scenario: str | None, settings: EpisodeSettings,
                  state_version: int = 2) -> None:
         self.config = config
@@ -57,6 +62,7 @@ class SpEnvironment:
         self.emergency_preemption: EmergencyPreemption | None = None
 
     def oracle_source(self, seed: int) -> TraciLaneFeatureSource:
+        """Features por faixa da percepção *ground truth* (posições reais nas ROIs)."""
         return TraciLaneFeatureSource(self.geometries, self.parameters, self.noise, seed=seed)
 
     def run(
@@ -70,30 +76,21 @@ class SpEnvironment:
         preemption: PreemptionSettings | None = None,
         emergency_detection: str = "v2i",
     ) -> tuple[Any, str | None]:
-        """Executa um episódio completo na seed; sem ``observer`` usa o oráculo TraCI.
+        """Executa um episódio completo na seed; sem ``observer`` a percepção é *ground truth*.
 
         Com ``emergency``, viaturas agendadas pela seed entram após o aquecimento;
         com ``preemption`` também, elas recebem prioridade. ``emergency_detection``
         escolhe a fonte do pedido: aviso V2I, visão (classe ``emergency`` nas ROIs)
         ou a união das duas.
         """
-        if preemption is not None and emergency is None:
-            raise ValueError("Preempção exige a agenda de viaturas de emergência.")
-        if emergency_detection not in EMERGENCY_DETECTIONS:
-            raise ValueError(f"emergency_detection deve ser um de {EMERGENCY_DETECTIONS}.")
-        visual_requests = getattr(observer, "emergency_requests", None)
-        if emergency_detection != "v2i" and visual_requests is None:
-            raise ValueError("A detecção visual de viaturas exige um observador visual com emergency_requests.")
+        visual_requests = self._check_emergency_options(observer, emergency, preemption, emergency_detection)
         client = SumoClient.from_config(self.config, self.base_dir, seed_override=seed, scenario_override=self.scenario)
         client.start()
         try:
             pedestrian_phase = client.pedestrian_link_count(self.tls_id) > 0
             if self.state_version == 3 and not pedestrian_phase:
                 raise ValueError("O estado v3 exige um cenário com pedestres (ex.: calibrated_ped).")
-            pedestrian_reward = self.config.get("pedestrians", {}) if pedestrian_phase else {}
-            reward = RewardModel(self.reward_lanes, incoming_lane_capacity([client.get_lane_length(lane) for lane in self.reward_lanes]),
-                                 self.reward_weights, float(pedestrian_reward.get("reward_weight", 0.0)),
-                                 float(pedestrian_reward.get("reward_waiting_reference_s", 600.0)))
+            reward = self._reward_model(client, pedestrian_phase)
             if observer is None:
                 source = self.oracle_source(seed)
                 observe: Observer = lambda sim_time: source.observe(client, sim_time)
@@ -126,3 +123,24 @@ class SpEnvironment:
             self.emergency_preemption = None
             client.close()
         return outcome, client.scenario
+
+    def _reward_model(self, client: SumoClient, pedestrian_phase: bool) -> RewardModel:
+        """Recompensa de nível nas faixas de entrada; com pedestres, inclui a espera deles."""
+        pedestrian_reward = self.config.get("pedestrians", {}) if pedestrian_phase else {}
+        capacity = incoming_lane_capacity([client.get_lane_length(lane) for lane in self.reward_lanes])
+        return RewardModel(self.reward_lanes, capacity, self.reward_weights,
+                           float(pedestrian_reward.get("reward_weight", 0.0)),
+                           float(pedestrian_reward.get("reward_waiting_reference_s", 600.0)))
+
+    @staticmethod
+    def _check_emergency_options(observer: EpisodeObserver | None, emergency: EmergencySettings | None,
+                                 preemption: PreemptionSettings | None, emergency_detection: str) -> Any:
+        """Valida as opções de viaturas e devolve os pedidos visuais do observador (ou ``None``)."""
+        if preemption is not None and emergency is None:
+            raise ValueError("Preempção exige a agenda de viaturas de emergência.")
+        if emergency_detection not in EMERGENCY_DETECTIONS:
+            raise ValueError(f"emergency_detection deve ser um de {EMERGENCY_DETECTIONS}.")
+        visual_requests = getattr(observer, "emergency_requests", None)
+        if emergency_detection != "v2i" and visual_requests is None:
+            raise ValueError("A detecção visual de viaturas exige um observador visual com emergency_requests.")
+        return visual_requests

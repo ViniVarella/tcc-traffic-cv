@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import unittest
 
-from paths import REPO_DIR
 from experiments.data.build_calibrated_demand import (
-    APPROACHES, Flow, approach_demand, kept_share, read_summary, read_labels, scale_flows,
+    APPROACHES,
+    Flow,
+    approach_demand,
+    kept_share,
+    read_labels,
+    read_summary,
+    scale_flows,
 )
-
+from paths import REPO_DIR
 
 SP_DATA = REPO_DIR / "simjamcv" / "DigitalTwinsforSmartCities" / "SP"
 

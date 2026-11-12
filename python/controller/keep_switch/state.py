@@ -6,7 +6,6 @@ from typing import Any, Mapping
 
 import numpy as np
 
-
 SP_LANE_ORDER = (
     ("south", "lane_0"),
     ("south", "lane_1"),

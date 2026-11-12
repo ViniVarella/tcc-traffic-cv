@@ -5,25 +5,27 @@ Com a Unity em Play Mode na cena SPImport:
     ../.venv/bin/python -m dashboard.server
 
 e abra http://127.0.0.1:8000/. Escolha cenário, versão e fonte da preempção e
-clique em Iniciar. Só um SUMO por vez (porta TraCI 8873): não rode outro
-experimento junto.
+clique em Iniciar. Só um SUMO por vez (porta TraCI 8873): não rode outra
+avaliação junto.
 """
 
 from __future__ import annotations
 
 import argparse
+import sys
 from collections.abc import Sequence
 from pathlib import Path
-import sys
 
 import uvicorn
 
-from paths import PYTHON_DIR
 from dashboard.app import PanelSettings, create_app
+from paths import PYTHON_DIR
 from simulation.visual_observer import add_vision_arguments
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    """Argumentos do painel (porta, duração e os mesmos argumentos de visão das avaliações)."""
+
     # Sem abreviações: "--mod"/"--class" não podem passar por --model/--classes.
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
                                      allow_abbrev=False)
@@ -80,6 +82,8 @@ class PanelServer(uvicorn.Server):
 
 
 def main() -> None:
+    """Confere o detector e sobe o painel em http://127.0.0.1:8000/."""
+
     argv = sys.argv[1:]
     args = parse_args(argv)
     base_dir = PYTHON_DIR

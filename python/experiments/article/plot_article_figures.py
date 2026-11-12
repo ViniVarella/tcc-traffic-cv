@@ -292,12 +292,17 @@ def markdown(sp: dict[str, Any], generic: dict[str, Any]) -> str:
             cells = [f"{fmt(summary[m]['mean'])} ± {fmt(summary[m]['ci95'])}" if m in summary else "—"
                      for m in (WAIT, STOPPED, "mean_pending_vehicles")]
             lines.append(f"| {LABELS[name]} | {' | '.join(cells)} |")
-        lines += ["", "| Modelo global contra | Δ espera média [IC 95%] | p | Δ espera parado [IC 95%] | p | seeds em que o modelo global vence |",
-                  "|---|---|---|---|---|---|"]
+        lines += [
+            "",
+            "| Modelo global contra | Δ espera média [IC 95%] | p | Δ espera parado [IC 95%] | p | seeds em que o modelo global vence |",
+            "|---|---|---|---|---|---|",
+        ]
         for reference, result in block["paired"].items():
             w, s = result[WAIT], result[STOPPED]
-            lines.append(f"| {LABELS[reference]} | {fmt(w['diff'], 2)} [{fmt(w['ci_low'], 2)}; {fmt(w['ci_high'], 2)}] | {p_text(w['p'])} | "
-                         f"{fmt(s['diff'], 2)} [{fmt(s['ci_low'], 2)}; {fmt(s['ci_high'], 2)}] | {p_text(s['p'])} | {w['wins']}/{w['n']} |")
+            lines.append(
+                f"| {LABELS[reference]} | {fmt(w['diff'], 2)} [{fmt(w['ci_low'], 2)}; {fmt(w['ci_high'], 2)}] | {p_text(w['p'])} | "
+                f"{fmt(s['diff'], 2)} [{fmt(s['ci_low'], 2)}; {fmt(s['ci_high'], 2)}] | {p_text(s['p'])} | {w['wins']}/{w['n']} |"
+            )
         lines.append("")
     return "\n".join(lines)
 
@@ -306,15 +311,19 @@ def main() -> None:
     root = REPO_DIR
     parser = argparse.ArgumentParser(description="Gráficos e estatísticas do artigo final.")
     parser.add_argument("--evaluation-dir", type=Path, default=root / "results" / "evaluation")
-    parser.add_argument("--model", default="ped40", help="Sufixo das avaliações do modelo global (checkpoint dqn-fase-livre-<model>-best.pt).")
+    parser.add_argument(
+        "--model", default="ped40", help="Sufixo das avaliações do modelo global (checkpoint dqn-fase-livre-<model>-best.pt)."
+    )
     parser.add_argument("--training-log", type=Path, default=root / "results" / "logs" / "dqn-fase-livre-ped40-pretrain.jsonl")
     parser.add_argument("--output-dir", type=Path, default=root / "docs" / "artigo")
     args = parser.parse_args()
     style()
     figures = args.output_dir / "figuras"
     figures.mkdir(parents=True, exist_ok=True)
-    sp = {scenario: compare(sp_runs(args.evaluation_dir, scenario, args.model), ["baseline", "max_pressure", "v2", "v1"])
-          for scenario in SP_SCENARIOS}
+    sp = {
+        scenario: compare(sp_runs(args.evaluation_dir, scenario, args.model), ["baseline", "max_pressure", "v2", "v1"])
+        for scenario in SP_SCENARIOS
+    }
     generic = {name: compare(group, ["baseline", "max_pressure"]) for name, group in generic_runs(args.evaluation_dir, args.model).items()}
     figure_architecture(figures / "fig-arquitetura.png")
     figure_model(figures / "fig-modelo-global.png")
@@ -322,7 +331,9 @@ def main() -> None:
     figure_generic(generic, figures / "fig-generalizacao.png")
     figure_training(args.training_log, figures / "fig-treino.png")
     figure_pedestrians(sp, figures / "fig-pedestres.png")
-    (args.output_dir / "estatisticas.json").write_text(json.dumps({"sp": sp, "generic": generic}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    (args.output_dir / "estatisticas.json").write_text(
+        json.dumps({"sp": sp, "generic": generic}, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     (args.output_dir / "estatisticas.md").write_text(markdown(sp, generic) + "\n", encoding="utf-8")
     print(f"article_figures_complete output={args.output_dir}", flush=True)
 

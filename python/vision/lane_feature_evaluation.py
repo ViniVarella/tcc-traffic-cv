@@ -1,4 +1,4 @@
-"""Domain gap visão × oráculo TraCI a partir do log por step de ``run_visual_policy``."""
+"""Domain gap visão × ground truth (TraCI) a partir do log por step de ``run_visual_policy``."""
 
 from __future__ import annotations
 
@@ -11,12 +11,11 @@ import numpy as np
 
 from .lane_features import LaneFeatures
 
-
 FEATURES = ("vehicle_count", "stopped_count", "occupancy", "mean_speed_mps", "waiting_time_s")
 
 
 def feature_gap(records: Iterable[Mapping[str, Any]]) -> dict[str, dict[str, dict[str, float | int | None]]]:
-    """Por faixa e feature: amostras, MAE, viés (visão − oráculo), RMSE e correlação."""
+    """Por faixa e feature: amostras, MAE, viés (visão − ground truth), RMSE e correlação."""
     pairs: dict[str, dict[str, list[tuple[float, float]]]] = defaultdict(lambda: defaultdict(list))
     for record in records:
         visual, oracle = record.get("visual"), record.get("oracle")
@@ -51,10 +50,10 @@ def _error_summary(values: list[tuple[float, float]]) -> dict[str, float | int |
 
 
 def ground_offset_estimate(records: Iterable[Mapping[str, Any]], max_gap_m: float = 5.0) -> dict[str, dict[str, float | int | None]]:
-    """Estima, por câmera, quanto somar à distância visual para coincidir com o oráculo.
+    """Estima, por câmera, quanto somar à distância visual para coincidir com o ground truth.
 
     Em cada step e faixa, pareia gulosamente cada observação visual com a do
-    oráculo mais próxima (até ``max_gap_m``). O resultado sugere
+    ground truth mais próxima (até ``max_gap_m``). O resultado sugere
     ``lane_state.visual_ground_offset_m``.
     """
     gaps: dict[str, list[float]] = defaultdict(list)
@@ -66,7 +65,11 @@ def ground_offset_estimate(records: Iterable[Mapping[str, Any]], max_gap_m: floa
                 truth = sorted(item[1] for item in oracle.get(camera, []) if item[0] == lane)
                 gaps[camera].extend(_greedy_gaps(estimated, truth, max_gap_m))
     return {
-        camera: {"matches": len(values), "mean_offset_m": fmean(values) if values else None, "median_offset_m": median(values) if values else None}
+        camera: {
+            "matches": len(values),
+            "mean_offset_m": fmean(values) if values else None,
+            "median_offset_m": median(values) if values else None,
+        }
         for camera, values in sorted(gaps.items())
     }
 
@@ -85,8 +88,10 @@ def _greedy_gaps(estimated: list[float], truth: list[float], max_gap_m: float) -
     return gaps
 
 
-def action_agreement(records: Iterable[Mapping[str, Any]], q_values: Callable[[np.ndarray], np.ndarray], encoder: Any) -> dict[str, float | int | None]:
-    """Nos pontos de decisão, compara a ação gulosa com features visuais e do oráculo."""
+def action_agreement(
+    records: Iterable[Mapping[str, Any]], q_values: Callable[[np.ndarray], np.ndarray], encoder: Any
+) -> dict[str, float | int | None]:
+    """Nos pontos de decisão, compara a ação gulosa com features visuais e de ground truth."""
     agreements: list[bool] = []
     gaps: list[float] = []
     for record in records:

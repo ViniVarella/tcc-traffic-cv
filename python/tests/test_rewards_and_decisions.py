@@ -9,9 +9,8 @@ import torch
 
 from controller import DqnAgent, DqnConfig, DqnTrafficController
 from controller.keep_switch.decision_scheduler import DecisionScheduler
-from controller.smdp import SmdpAccumulator
 from controller.rewards import RewardWeights, TrafficSnapshot, level_reward
-
+from controller.smdp import SmdpAccumulator
 
 CONFIG = {"traffic_light": {"phases": {"primary_green": 0, "primary_yellow": 1, "all_red": 2, "secondary_green": 3, "secondary_yellow": 4}},
           "traffic_control": {"min_green_seconds": 10, "max_green_seconds": 40, "yellow_seconds": 3, "all_red_seconds": 1}}

@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import replace
 import json
 import shutil
+from dataclasses import replace
 from pathlib import Path
 from time import sleep
 from typing import Any
 
 import yaml
 
-from paths import PYTHON_DIR
 from bridge import FrameBundleCollector, UnityBridge
+from paths import PYTHON_DIR
 from simulation.scenario_config import add_scenario_argument
 from sumo import GroundTruthCollector, SumoClient, SumoStateExtractor
 from sumo.emergency import EmergencySettings, EmergencyTraffic

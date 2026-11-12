@@ -14,12 +14,13 @@ from typing import Any
 
 from .phase_manager import PhaseManager
 
-
 APPROACH_GREEN = {"south": PhaseManager.SOUTH_GREEN, "east": PhaseManager.EAST_WEST_GREEN, "west": PhaseManager.EAST_WEST_GREEN}
 
 
 @dataclass(frozen=True, slots=True)
 class EmergencyRequest:
+    """Pedido de prioridade de uma viatura: aproximação e tempo estimado até a linha de retenção."""
+
     vehicle_id: str
     approach: str
     eta_s: float
@@ -27,6 +28,8 @@ class EmergencyRequest:
 
 @dataclass(frozen=True, slots=True)
 class PreemptionSettings:
+    """Parâmetros da prioridade para viaturas (bloco ``emergency.preemption`` do ``sp.yaml``)."""
+
     # Só assume o semáforo quando o veículo está a até este tempo da linha:
     # tempo de amarelo + all-red + escoar a fila à frente dele, com folga.
     activation_eta_s: float = 20.0

@@ -191,4 +191,12 @@ class DqnTrafficController:
         return yellow, reason
 
     def _decision(self, action: str, phase: Any, sim_time: float, requested_action: int | None, reason: str) -> dict[str, Any]:
-        return {"tls_id": self.tls_id, "sim_time": float(sim_time), "action": action, "phase_name": phase.name, "phase_index": phase.phase_index, "requested_action": requested_action, "reason": reason}
+        return {
+            "tls_id": self.tls_id,
+            "sim_time": float(sim_time),
+            "action": action,
+            "phase_name": phase.name,
+            "phase_index": phase.phase_index,
+            "requested_action": requested_action,
+            "reason": reason,
+        }

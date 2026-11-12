@@ -8,7 +8,6 @@ from typing import Any
 from simulation.episode import Policy
 from simulation.sp_environment import SpEnvironment
 
-
 SUMMARY_KEYS = (
     "mean_waiting_time_seconds", "mean_waiting_time_stopped_seconds", "stopped_vehicle_share",
     "mean_travel_time_seconds", "arrived_vehicles", "throughput_vehicles_per_hour",
@@ -30,4 +29,7 @@ def evaluate(environment: SpEnvironment, policy: Policy, seeds: list[int], **run
                      "east_west_green_share": green["EAST_WEST_GREEN"] / max(1, sum(green.values())),
                      **{key: outcome.metrics.get(key) for key in SUMMARY_KEYS}})
     numeric = ("mean_reward", "switches", "east_west_green_share", *SUMMARY_KEYS)
-    return {"runs": runs, "mean": {key: fmean(float(run[key]) for run in runs) for key in numeric if all(run[key] is not None for run in runs)}}
+    return {
+        "runs": runs,
+        "mean": {key: fmean(float(run[key]) for run in runs) for key in numeric if all(run[key] is not None for run in runs)},
+    }

@@ -8,15 +8,14 @@ from pathlib import Path
 
 import numpy as np
 
-from paths import PYTHON_DIR
 from controller.phase_selection.agent import PhaseAgentConfig, PhaseSelectionAgent
 from controller.phase_selection.controller import PhaseSelectionController, all_red_state, yellow_state
 from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy
 from controller.phase_selection.state import ROW_FEATURE_NAMES, PhaseObservation, PhaseStateEncoder, split_state
+from paths import PYTHON_DIR
 from simulation.phase_selection_environment import decision_mask, max_red_seconds, pedestrian_hcm_delay
 from sumo.intersection import green_phases, roi_geometry
 from vision.lane_features import LaneFeatures
-
 
 GREENS = ("GGrrrr", "rrGGrr", "rrrrGG")
 
@@ -341,6 +340,7 @@ class ScenarioTests(unittest.TestCase):
 class VisualKeyTests(unittest.TestCase):
     def test_camera_keys_become_sumo_lane_keys(self) -> None:
         import yaml
+
         from simulation.phase_selection_environment import camera_key_map, profile_geometries, remap_features
 
         profile = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
@@ -382,6 +382,7 @@ class GlobalPhasePolicyTests(unittest.TestCase):
 
     def test_sp_pedestrian_phase_comes_after_the_south_green(self) -> None:
         from types import SimpleNamespace
+
         import yaml
 
         from simulation.version_policies import GlobalPhasePolicy

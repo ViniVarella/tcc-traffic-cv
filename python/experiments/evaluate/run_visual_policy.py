@@ -1,7 +1,7 @@
 """Executa uma política v2 com percepção visual (Unity em Play Mode) e registra o domain gap.
 
 Cada step controlado gera uma linha JSONL com as features visuais, as do
-oráculo TraCI calculadas em paralelo (só registro) e a decisão. Esse log
+ground truth (TraCI) calculadas em paralelo (só registro) e a decisão. Esse log
 alimenta ``experiments.evaluate.evaluate_lane_features``. As métricas de tráfego vão
 para ``--output`` no mesmo formato de ``evaluate_policies_sumo``.
 """
@@ -15,10 +15,10 @@ from typing import Any
 
 import yaml
 
-from paths import PYTHON_DIR
 from bridge import UnityBridge
 from controller import DqnAgent
 from controller.keep_switch.policies import FixedCyclePolicy, MaxPressurePolicy
+from paths import PYTHON_DIR
 from simulation.episode import DqnPolicy, EpisodeSettings, Policy
 from simulation.policy_evaluation import evaluate
 from simulation.scenario_config import add_scenario_argument, parse_seeds
@@ -27,7 +27,7 @@ from simulation.visual_observer import StepLogger, add_vision_arguments, build_u
 
 
 def parse_args(base_dir: Path) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Executa uma política v2 com visão Unity e registra visão × oráculo.")
+    parser = argparse.ArgumentParser(description="Executa uma política do SP com visão Unity e registra visão × ground truth.")
     parser.add_argument("--config", type=Path, default=base_dir / "configs" / "sp.yaml")
     add_scenario_argument(parser)
     parser.add_argument("--policy", choices=("dqn", "fixed_cycle", "max_pressure"), default="dqn")
@@ -58,7 +58,9 @@ def main() -> None:
     args = parse_args(base_dir)
     seeds = parse_seeds(args.seeds)
     config: dict[str, Any] = yaml.safe_load(args.config.resolve().read_text(encoding="utf-8"))
-    environment = SpEnvironment(config, base_dir, args.scenario, EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval))
+    environment = SpEnvironment(
+        config, base_dir, args.scenario, EpisodeSettings(args.warmup_seconds, args.control_seconds, args.decision_interval)
+    )
     policy_name, policy = build_policy(args)
     bridge = UnityBridge.from_config(config)
     args.step_log_output.parent.mkdir(parents=True, exist_ok=True)
@@ -69,16 +71,26 @@ def main() -> None:
             result = evaluate(environment, policy, seeds, observer=observer, on_step=StepLogger(handle, observer, policy_name))
     finally:
         bridge.close()
-    report = {"perception": "visual", "policy": policy_name, "scenario": args.scenario or config["sumo"].get("default_scenario"),
-              "seeds": seeds, "warmup_s": args.warmup_seconds, "control_s": args.control_seconds,
-              "missing_frames": observer.missing_frames, "step_log": str(args.step_log_output), **result}
+    report = {
+        "perception": "visual",
+        "policy": policy_name,
+        "scenario": args.scenario or config["sumo"].get("default_scenario"),
+        "seeds": seeds,
+        "warmup_s": args.warmup_seconds,
+        "control_s": args.control_seconds,
+        "missing_frames": observer.missing_frames,
+        "step_log": str(args.step_log_output),
+        **result,
+    }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     mean = result["mean"]
-    print(f"visual_policy_complete policy={policy_name} seeds={args.seeds} wait={mean['mean_waiting_time_seconds']:.1f}s "
-          f"arrived={mean['arrived_vehicles']:.0f} pending_end={mean['final_pending_vehicles']:.1f} "
-          f"ew_green_share={mean['east_west_green_share']:.2f} missing_frames={observer.missing_frames} "
-          f"output={args.output} step_log={args.step_log_output}")
+    print(
+        f"visual_policy_complete policy={policy_name} seeds={args.seeds} wait={mean['mean_waiting_time_seconds']:.1f}s "
+        f"arrived={mean['arrived_vehicles']:.0f} pending_end={mean['final_pending_vehicles']:.1f} "
+        f"ew_green_share={mean['east_west_green_share']:.2f} missing_frames={observer.missing_frames} "
+        f"output={args.output} step_log={args.step_log_output}"
+    )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""Resume o domain gap visão × oráculo TraCI a partir do log de ``run_visual_policy``."""
+"""Resume o domain gap visão × ground truth (TraCI) a partir do log de ``run_visual_policy``."""
 
 from __future__ import annotations
 
@@ -9,14 +9,14 @@ from typing import Any
 
 import yaml
 
-from paths import PYTHON_DIR
 from controller import DqnAgent
 from controller.keep_switch.state import build_state_encoder
+from paths import PYTHON_DIR
 from vision.lane_feature_evaluation import action_agreement, feature_gap, ground_offset_estimate
 
 
 def parse_args(base_dir: Path) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Mede erros das features visuais contra o oráculo TraCI.")
+    parser = argparse.ArgumentParser(description="Mede erros das features visuais contra a percepção ground truth (TraCI).")
     parser.add_argument("--config", type=Path, default=base_dir / "configs" / "sp.yaml")
     parser.add_argument("--step-log", type=Path, action="append", required=True, help="JSONL de run_visual_policy (repetível).")
     parser.add_argument("--dqn-model", type=Path, default=None, help="Checkpoint v2 para medir a concordância de ações.")
@@ -33,7 +33,7 @@ def main() -> None:
     if not records:
         raise ValueError("Nenhum step registrado nos logs informados.")
     if all(record.get("oracle") is None for record in records):
-        raise ValueError("Os logs não têm o oráculo em paralelo; rode run_visual_policy sem --no-oracle-shadow.")
+        raise ValueError("Os logs não têm a percepção ground truth em paralelo; rode run_visual_policy sem --no-oracle-shadow.")
     report: dict[str, Any] = {
         "steps": len(records),
         "steps_without_vision": sum(record.get("visual") is None for record in records),

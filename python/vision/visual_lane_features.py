@@ -9,7 +9,6 @@ from .camera_calibration import CameraCalibration
 from .lane_features import ApproachKinematicsTracker, KinematicsParameters, LaneFeatures, LaneGeometry, LaneObservation
 from .lane_geometry import LaneHomography, bbox_ground_point
 
-
 LaneKey = tuple[str, str]
 
 
@@ -48,7 +47,9 @@ class VisualLaneFeatureSource:
         }
         self.last_observations: dict[str, list[LaneObservation]] = {}
 
-    def observations(self, camera_id: str, objects: Sequence[Mapping[str, Any]], frame_width: int, frame_height: int) -> list[LaneObservation]:
+    def observations(
+        self, camera_id: str, objects: Sequence[Mapping[str, Any]], frame_width: int, frame_height: int
+    ) -> list[LaneObservation]:
         """Projeta os objetos de uma câmera nas faixas calibradas."""
         if frame_width <= 1 or frame_height <= 1:
             raise ValueError("Dimensões de frame inválidas.")
@@ -79,7 +80,9 @@ class VisualLaneFeatureSource:
         self.last_observations = {}
         for camera_id, tracker in self._trackers.items():
             result = camera_results.get(camera_id)
-            observations = [] if result is None else self.observations(camera_id, result.objects, result.frame.shape[1], result.frame.shape[0])
+            observations = (
+                [] if result is None else self.observations(camera_id, result.objects, result.frame.shape[1], result.frame.shape[0])
+            )
             self.last_observations[camera_id] = observations
             for lane_id, lane_features in tracker.update(observations, sim_time).items():
                 features[(camera_id, lane_id)] = lane_features

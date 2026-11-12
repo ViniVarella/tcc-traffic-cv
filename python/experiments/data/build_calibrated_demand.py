@@ -15,12 +15,12 @@ o total de cada aproximação muda.
 from __future__ import annotations
 
 import argparse
-from collections.abc import Iterable, Mapping, Sequence
 import csv
-from dataclasses import dataclass
-from pathlib import Path
 import re
 import xml.etree.ElementTree as ElementTree
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
+from pathlib import Path
 
 from paths import REPO_DIR
 

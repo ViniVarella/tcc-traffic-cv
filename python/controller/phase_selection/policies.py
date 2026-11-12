@@ -23,11 +23,15 @@ def cyclic_order(current: int, count: int) -> list[int]:
 
 
 def next_valid(observation: PhaseObservation) -> int:
+    """Próximo estágio válido na ordem do ciclo, a partir do atual."""
+
     count = len(observation.mask)
     return next(phase for phase in cyclic_order(observation.current, count) if observation.mask[phase])
 
 
 class FixedTimePhasePolicy:
+    """Tempo fixo: cada estágio fica verde pela sua duração e passa ao próximo válido do ciclo."""
+
     name = "fixed_time"
 
     def __init__(self, durations_s: Sequence[float], min_green_s: float = 10.0, max_green_s: float = 40.0) -> None:

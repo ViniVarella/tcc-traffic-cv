@@ -8,7 +8,7 @@ detectores do SUMO, em ``optimization/SP``) não roda aqui. Nos textos, use a
 numeração do produto.
 
 Para que as versões sejam comparáveis, todas recebem a mesma percepção (as
-``LaneFeatures`` do oráculo TraCI ou da visão), a mesma camada de segurança e o
+``LaneFeatures`` da percepção ground truth (TraCI) ou da visão), a mesma camada de segurança e o
 mesmo executor de episódios; muda só a lógica de decisão:
 
 - ``baseline``: ciclo fixo 40/40 (nunca pede troca; o verde máximo alterna);
@@ -39,12 +39,11 @@ import numpy as np
 
 from controller import DqnAgent
 from controller.keep_switch.policies import FixedCyclePolicy, MaxPressurePolicy, QueueBasedPolicy
-from controller.phase_selection.agent import PhaseSelectionAgent
 from controller.keep_switch.state import build_state_encoder
+from controller.phase_selection.agent import PhaseSelectionAgent
 from simulation.episode import DqnPolicy, EpisodeSettings, Policy
 from simulation.phase_selection_environment import PhaseSelectionEnvironment, pedestrian_seconds, remap_features
 from sumo.intersection import program_green_indices
-
 
 VERSION_ORDER = ("baseline", "v1", "v1.1", "v2", "max_pressure")
 # Fora da lista padrão de --versions, só quando pedidas: o experimento DQN
@@ -158,6 +157,8 @@ class GlobalPhasePolicy:
 
 @dataclass(frozen=True, slots=True)
 class VersionPolicy:
+    """Uma versão comparável: nome do código, descrição, política, intervalo de decisão e estado."""
+
     name: str
     description: str
     policy: Policy
@@ -181,7 +182,8 @@ def build_version_policies(config: Mapping[str, Any], names: Sequence[str], v1_c
         elif name == "v1":
             result.append(VersionPolicy(name, "heurística por fila visual", HeuristicV1Policy(margin), 1.0))
         elif name == "v1.1":
-            result.append(VersionPolicy(name, "DQN estado v1 (13 entradas)", DqnV1Policy(DqnAgent.load(v1_checkpoint, device="cpu"), config), 1.0))
+            policy = DqnV1Policy(DqnAgent.load(v1_checkpoint, device="cpu"), config)
+            result.append(VersionPolicy(name, "DQN estado v1 (13 entradas)", policy, 1.0))
         elif name == "v2":
             agent = DqnAgent.load(v2_checkpoint, device="cpu")
             if agent.config.state_version != 2:
@@ -198,9 +200,14 @@ def build_version_policies(config: Mapping[str, Any], names: Sequence[str], v1_c
             if global_checkpoint is None or generic_config is None:
                 raise ValueError("A versão global exige o checkpoint e o generic.yaml.")
             agent = PhaseSelectionAgent.load(global_checkpoint)
-            result.append(VersionPolicy(name, "modelo global (v6.0): DQN de escolha livre de estágio",
-                                        GlobalPhasePolicy(agent, generic_config, config,
-                                                          pedestrian_phase=str(scenario or "").endswith("_ped")), 5.0))
+            result.append(
+                VersionPolicy(
+                    name,
+                    "modelo global (v6.0): DQN de escolha livre de estágio",
+                    GlobalPhasePolicy(agent, generic_config, config, pedestrian_phase=str(scenario or "").endswith("_ped")),
+                    5.0,
+                )
+            )
         else:
             result.append(VersionPolicy(name, "max-pressure (referência)", MaxPressurePolicy(), 5.0))
     return result

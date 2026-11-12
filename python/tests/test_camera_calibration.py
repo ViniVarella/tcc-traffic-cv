@@ -15,7 +15,10 @@ def calibration_payload(camera_id: str = "south") -> dict:
         "schemaVersion": 1,
         "cameraId": camera_id,
         "capture": {"width": 1280, "height": 720},
-        "approachRoi": {"id": "approach", "points": [{"x": 0.0, "y": 0.0}, {"x": 1.0, "y": 0.0}, {"x": 1.0, "y": 1.0}, {"x": 0.0, "y": 1.0}]},
+        "approachRoi": {
+            "id": "approach",
+            "points": [{"x": 0.0, "y": 0.0}, {"x": 1.0, "y": 0.0}, {"x": 1.0, "y": 1.0}, {"x": 0.0, "y": 1.0}],
+        },
         "laneRois": [{"id": "lane_0", "points": [{"x": 0.0, "y": 0.0}, {"x": 0.5, "y": 0.0}, {"x": 0.5, "y": 1.0}, {"x": 0.0, "y": 1.0}]}],
     }
 

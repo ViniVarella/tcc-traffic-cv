@@ -10,7 +10,6 @@ import math
 from statistics import fmean, stdev
 from typing import Any
 
-
 METRICS = ("mean_waiting_time_seconds", "mean_waiting_time_stopped_seconds", "mean_pending_vehicles",
            "unfinished_vehicles", "teleported_vehicles")
 # t de Student bicaudal 95% por graus de liberdade.
@@ -32,6 +31,8 @@ def paired_reduction(policy: list[float], reference: list[float]) -> dict[str, f
 
 
 def summarize(runs: list[dict[str, Any]], reference: list[dict[str, Any]] | None) -> dict[str, Any]:
+    """Média e IC de 95% de cada métrica e, com referência, a redução pareada da espera."""
+
     summary: dict[str, Any] = {"runs": runs}
     for metric in METRICS:
         values = [float(run[metric]) for run in runs if run.get(metric) is not None]

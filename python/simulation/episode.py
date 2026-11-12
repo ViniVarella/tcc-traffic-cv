@@ -21,16 +21,17 @@ import numpy as np
 from controller import DqnAgent, DqnTrafficController
 from controller.dqn_base import EpsilonGreedyPolicy
 from controller.keep_switch.decision_scheduler import DecisionScheduler
-from controller.smdp import SmdpAccumulator
 from controller.rewards import RewardWeights, TrafficSnapshot, level_reward
+from controller.smdp import SmdpAccumulator
 from sumo import ExperimentMetricsCollector
-
 
 LaneKey = tuple[str, str]
 Observer = Callable[[float], Mapping[LaneKey, Any] | None]
 
 
 class Policy(Protocol):
+    """Decide manter (0) ou trocar (1) a partir do estado codificado, das features e da fase atual."""
+
     def __call__(self, state: np.ndarray, lane_features: Mapping[LaneKey, Any], phase: Any) -> int: ...
 
 
@@ -99,7 +100,9 @@ class RewardModel:
             raise ValueError("pedestrian_weight deve estar em [0, 1] e a referência ser positiva.")
 
     def __call__(self, lane_metrics: Mapping[str, float | int]) -> float:
-        snapshot = TrafficSnapshot(int(lane_metrics["halting_vehicles"]), float(lane_metrics["waiting_time_s"]), int(lane_metrics["pending_vehicles"]))
+        snapshot = TrafficSnapshot(
+            int(lane_metrics["halting_vehicles"]), float(lane_metrics["waiting_time_s"]), int(lane_metrics["pending_vehicles"])
+        )
         vehicles = level_reward(snapshot, self.capacity, self.weights)
         if self.pedestrian_weight == 0.0:
             return vehicles
@@ -223,12 +226,22 @@ def run_episode(
                     decision = controller.update(sim_time, controller.KEEP)
         controller.apply(client, decision)
         if on_step is not None:
-            on_step({"sim_time": sim_time, "reward": step_reward, "phase": phase.name, "phase_index": phase.phase_index,
-                     "preempt_target": preempt_target,
-                     "phase_elapsed": elapsed, "decision": decision,
-                     "requested_action": requested, "lane_features": lane_features, "lane_metrics": lane_metrics,
-                     # Sem as viaturas: a avaliação de versões não as tem.
-                     "trip_metrics": metrics.progress(sim_time, exclude_emergencies=True)})
+            on_step(
+                {
+                    "sim_time": sim_time,
+                    "reward": step_reward,
+                    "phase": phase.name,
+                    "phase_index": phase.phase_index,
+                    "preempt_target": preempt_target,
+                    "phase_elapsed": elapsed,
+                    "decision": decision,
+                    "requested_action": requested,
+                    "lane_features": lane_features,
+                    "lane_metrics": lane_metrics,
+                    # Sem as viaturas: a avaliação de versões não as tem.
+                    "trip_metrics": metrics.progress(sim_time, exclude_emergencies=True),
+                }
+            )
     # Episódio truncado pelo tempo: a última transição faz bootstrap (done=False).
     if last_state is not None:
         learn_transition(learner, accumulator.close(last_state), outcome)
@@ -254,16 +267,22 @@ def encode_state(encoder: Any, controller: DqnTrafficController, lane_features: 
     return encoder.encode(lane_features, phase_index, elapsed)
 
 
-def observe_traffic(client: Any, sim_time: float, reward: RewardModel, metrics: ExperimentMetricsCollector,
-                    pedestrians: Any | None = None) -> tuple[Mapping[str, Any], float]:
+def observe_traffic(
+    client: Any, sim_time: float, reward: RewardModel, metrics: ExperimentMetricsCollector, pedestrians: Any | None = None
+) -> tuple[Mapping[str, Any], float]:
     """Registra as métricas do step e devolve as métricas das faixas de entrada e a recompensa.
 
     Com ``pedestrians``, também registra os pedestres; com peso de pedestres na
     recompensa, a espera deles entra nas métricas das faixas.
     """
     lane_metrics = client.get_incoming_lane_metrics(reward.lanes)
-    metrics.observe(sim_time, client.get_simulation_events(), client.get_active_vehicle_metrics(),
-                    pending_vehicles=int(lane_metrics["pending_vehicles"]), teleports=client.get_teleport_count())
+    metrics.observe(
+        sim_time,
+        client.get_simulation_events(),
+        client.get_active_vehicle_metrics(),
+        pending_vehicles=int(lane_metrics["pending_vehicles"]),
+        teleports=client.get_teleport_count(),
+    )
     if pedestrians is not None:
         pedestrians.observe(sim_time, client.get_pedestrian_speeds())
     if reward.pedestrian_weight > 0:
@@ -275,8 +294,7 @@ def learn_transition(learner: Any | None, transition: Any, outcome: EpisodeOutco
     """Passa a transição SMDP fechada ao agente e treina um passo (sem ``learner``, nada)."""
     if learner is None or transition is None:
         return
-    learner.remember(transition.state, transition.action, transition.reward, transition.next_state, False,
-                     discount=transition.discount)
+    learner.remember(transition.state, transition.action, transition.reward, transition.next_state, False, discount=transition.discount)
     outcome.transitions += 1
     loss = learner.train_step()
     if loss is not None:

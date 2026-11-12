@@ -23,12 +23,13 @@ from controller.keep_switch.preemption import EmergencyRequest
 from .lane_features import LaneGeometry
 from .visual_lane_features import VisualLaneFeatureSource
 
-
 EMERGENCY_CLASS_ID = 1
 
 
 @dataclass(frozen=True, slots=True)
 class VisualEmergencySettings:
+    """Parâmetros da detecção visual de viaturas (bloco ``emergency.visual_detection``)."""
+
     confirm_frames: int = 2
     # Velocidade mínima usada na estimativa do tempo até a linha (mesma regra do
     # aviso V2I: metade da velocidade livre), para que uma viatura parada na

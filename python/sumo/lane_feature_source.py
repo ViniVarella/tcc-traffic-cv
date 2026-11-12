@@ -1,31 +1,32 @@
-"""Features por faixa a partir das posições reais do SUMO (oráculo do pré-treino).
+"""Features por faixa a partir das posições reais do SUMO (percepção ground truth do pré-treino).
 
 Usa o mesmo intervalo físico das ROIs das câmeras (``lane_geometry`` do perfil)
 e o mesmo ``ApproachKinematicsTracker`` da visão. Não consulta os detectores
 E2, que cobrem outro trecho da via. Nunca deve decidir o controle implantado
-sem ser rotulado como percepção oráculo.
+sem ser rotulado como percepção ground truth.
 """
 
 from __future__ import annotations
 
+import random
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
-import random
 from typing import Any, Protocol
 
 from vision.lane_features import ApproachKinematicsTracker, KinematicsParameters, LaneFeatures, LaneGeometry, LaneObservation
-
 
 LaneKey = tuple[str, str]
 
 
 class LanePositionClient(Protocol):
+    """O que a percepção ground truth precisa do cliente SUMO (veículos e posições por faixa)."""
+
     def get_lane_vehicle_positions(self, lane_id: str) -> list[tuple[str, float]]: ...
 
 
 @dataclass(frozen=True, slots=True)
 class ObservationNoise:
-    """Degrada o oráculo para aproximar a visão (calibrado pela medição do domain gap)."""
+    """Degrada a percepção ground truth para aproximar a visão (calibrado pela medição do domain gap)."""
 
     position_std_m: float = 0.0
     drop_probability: float = 0.0
@@ -98,4 +99,6 @@ class TraciLaneFeatureSource:
 
 
 def noise_from_config(config: Mapping[str, Any]) -> ObservationNoise:
+    """Ruído opcional da percepção ground truth (``lane_state.oracle_noise`` do perfil)."""
+
     return ObservationNoise(**dict(config.get("lane_state", {}).get("oracle_noise", {})))

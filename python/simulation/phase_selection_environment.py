@@ -22,10 +22,9 @@ import yaml
 
 from controller.phase_selection.controller import PhaseSelectionController
 from controller.phase_selection.state import STATE_VERSION, PhaseObservation, PhaseStateEncoder
-from controller.smdp import SmdpAccumulator
 from controller.rewards import RewardWeights
-from simulation.episode import (EpisodeOutcome, EpisodeSettings, RewardModel, incoming_lane_capacity, learn_transition,
-                                observe_traffic)
+from controller.smdp import SmdpAccumulator
+from simulation.episode import EpisodeOutcome, EpisodeSettings, RewardModel, incoming_lane_capacity, learn_transition, observe_traffic
 from sumo import ExperimentMetricsCollector, SumoClient
 from sumo.intersection import IntersectionLayout, load_intersection
 from sumo.lane_feature_source import TraciLaneFeatureSource

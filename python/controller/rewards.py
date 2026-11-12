@@ -1,4 +1,4 @@
-"""Recompensa de treino do DQN v2, calculada com verdade de terreno do TraCI.
+"""Recompensa de treino dos DQN (as duas linhas), calculada com verdade de terreno do TraCI.
 
 A recompensa é um sinal de aprendizado, não entrada da política: usa as lanes de
 entrada inteiras (não só as ROIs) e a fila de inserção do SUMO. É um *nível*
@@ -24,6 +24,8 @@ class TrafficSnapshot:
 
 @dataclass(frozen=True, slots=True)
 class RewardWeights:
+    """Pesos (somam 1) e referências de normalização dos termos da recompensa de nível."""
+
     halting: float = 0.5
     pending: float = 0.3
     waiting: float = 0.2

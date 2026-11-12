@@ -13,6 +13,8 @@ import numpy as np
 
 @dataclass(frozen=True, slots=True)
 class SmdpTransition:
+    """Transição entre duas decisões: recompensa descontada acumulada e ``discount = gamma ** steps``."""
+
     state: np.ndarray
     action: int
     reward: float

@@ -22,7 +22,6 @@ from typing import Any
 
 import numpy as np
 
-
 GROUP_FEATURE_NAMES = ("count", "stopped", "occupancy", "speed", "waiting",
                        "stopped_vehicles", "vehicles", "lane_count")
 ROW_FEATURE_NAMES_V2 = (

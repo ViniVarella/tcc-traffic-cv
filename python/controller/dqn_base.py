@@ -9,10 +9,10 @@ mudar sem invalidar os arquivos salvos.
 
 from __future__ import annotations
 
+import random
 from collections import deque
 from dataclasses import asdict
 from pathlib import Path
-import random
 from typing import Any, Deque, Mapping, NamedTuple
 
 import numpy as np
@@ -21,6 +21,8 @@ from torch import nn
 
 
 class Transition(NamedTuple):
+    """Uma transição do replay (SMDP: ``discount`` = ``gamma ** k``)."""
+
     state: np.ndarray
     action: int
     reward: float

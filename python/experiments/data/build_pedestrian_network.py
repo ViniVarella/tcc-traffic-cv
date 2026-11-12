@@ -22,14 +22,14 @@ o verde de pedestre resultante à velocidade de projeto.
 from __future__ import annotations
 
 import argparse
-from collections.abc import Sequence
 import itertools
 import math
-from pathlib import Path
 import re
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ElementTree
+from collections.abc import Sequence
+from pathlib import Path
 
 from paths import SP_NETWORK_DIR
 
