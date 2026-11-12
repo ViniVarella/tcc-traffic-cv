@@ -378,6 +378,7 @@ Todos a partir de `python/`:
 ```bash
 # Testes unitários (rápidos, sem SUMO/Unity)
 ../.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+../.venv/bin/ruff check .                                                     # lint (python/pyproject.toml)
 ../.venv/bin/python -m unittest discover -s tests -p 'test_visual_state.py'   # um módulo
 # (tests/ não tem __init__.py: "unittest tests.test_x" não funciona)
 
@@ -474,8 +475,14 @@ os fluxos `perHour` são equiespaçados e a seed quase não muda a demanda; no
 
 - Python: `from __future__ import annotations`, type hints, `dataclass`
   (frequentemente `frozen`/`slots`), docstrings curtas em português, módulos
-  pequenos. Entry points são módulos em `experiments/` com `argparse`, rodados
-  via `python -m`, e imprimem linhas `chave=valor` (ex.: `control_complete ...`).
+  pequenos. Entry points são módulos em `experiments/<grupo>/` com `argparse`,
+  rodados via `python -m`, e imprimem linhas `chave=valor` (ex.: `control_complete ...`).
+  Lógica usada por mais de um script vai para a biblioteca (`simulation/`,
+  `controller/`, `vision/`, `sumo/`), nunca importada de outro script.
+- Caminhos de dados vêm de `paths.py`, nunca de `Path(__file__).parents[n]`.
+- Lint: `../.venv/bin/ruff check .` (configuração em `python/pyproject.toml`:
+  E, W, F e ordem dos imports, 140 colunas). Não há formatador automático: não
+  reformate arquivos inteiros.
 - Sempre feche TraCI em `finally` (`SumoClient.close()`).
 - Testes com `unittest` + `numpy.testing`; todo contrato novo (features, métricas,
   protocolo) deve ganhar teste antes de ser consumido pelo DQN.

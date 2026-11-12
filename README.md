@@ -477,6 +477,7 @@ Todos os comandos rodam a partir de `python/`, com o ambiente virtual da raiz
 ```bash
 cd python
 ../.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+../.venv/bin/ruff check .   # lint (configuração em python/pyproject.toml)
 
 # Pré-treino só no SUMO (percepção ground truth; sem Unity)
 ../.venv/bin/python -m experiments.train.pretrain_dqn_sumo --double-dqn
