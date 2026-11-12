@@ -20,12 +20,13 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any
 
+from controller.dqn_base import EpsilonSchedule
 from controller.phase_selection.agent import PhaseAgentConfig, PhaseSelectionAgent
 from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy, PhaseDqnPolicy
 from controller.phase_selection.state import ROW_FEATURES_BY_VERSION
 from paths import PYTHON_DIR
 from simulation.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
-from simulation.episode import EpisodeSettings, EpsilonSchedule
+from simulation.episode import EpisodeSettings
 from simulation.phase_selection_environment import PhaseSelectionEnvironment, PolicyFactory
 from simulation.scenario_config import parse_seeds
 

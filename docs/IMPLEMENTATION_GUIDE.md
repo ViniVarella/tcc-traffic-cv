@@ -775,7 +775,7 @@ experiment:
   controller: "vision_adaptive"
 
 sumo:
-  config_path: "../sumo/fictional/RL.sumocfg"
+  config_path: "../legacy/sumo/fictional/RL.sumocfg"
   gui: true
   step_length: 0.1
 

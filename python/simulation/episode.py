@@ -19,7 +19,7 @@ from typing import Any, Protocol
 import numpy as np
 
 from controller import DqnAgent, DqnTrafficController
-from controller.dqn_base import EpsilonGreedyPolicy, EpsilonSchedule  # noqa: F401 (reexportado aos scripts de treino)
+from controller.dqn_base import EpsilonGreedyPolicy
 from controller.keep_switch.decision_scheduler import DecisionScheduler
 from controller.rewards import RewardWeights, TrafficSnapshot, level_reward
 from controller.smdp import SmdpAccumulator

@@ -1,4 +1,4 @@
-"""Pré-treino rápido do DQN estado v2 só com SUMO, usando o percepção ground truth (TraCI) das ROIs.
+"""Pré-treino rápido do DQN estado v2 só com SUMO, usando a percepção ground truth (TraCI) das ROIs.
 
 As features vêm de ``TraciLaneFeatureSource`` (mesmo contrato e mesmo
 intervalo físico das ROIs das câmeras); a política implantada depois usa a
@@ -18,11 +18,12 @@ from typing import Any
 import yaml
 
 from controller import DqnAgent, DqnConfig
+from controller.dqn_base import EpsilonSchedule
 from controller.keep_switch.policies import FixedCyclePolicy, MaxPressurePolicy
 from controller.keep_switch.state import SP_LANE_ORDER
 from paths import PYTHON_DIR
 from simulation.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
-from simulation.episode import DqnPolicy, EpisodeSettings, EpsilonSchedule, Policy
+from simulation.episode import DqnPolicy, EpisodeSettings, Policy
 from simulation.scenario_config import add_scenario_argument, parse_csv
 from simulation.sp_environment import SpEnvironment
 

@@ -19,9 +19,10 @@ import yaml
 
 from bridge import UnityBridge
 from controller import DqnAgent
+from controller.dqn_base import EpsilonSchedule
 from paths import PYTHON_DIR
 from simulation.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
-from simulation.episode import DqnPolicy, EpisodeSettings, EpsilonSchedule
+from simulation.episode import DqnPolicy, EpisodeSettings
 from simulation.scenario_config import add_scenario_argument, parse_seeds
 from simulation.sp_environment import SpEnvironment
 from simulation.visual_observer import StepLogger, add_vision_arguments, build_unity_observer

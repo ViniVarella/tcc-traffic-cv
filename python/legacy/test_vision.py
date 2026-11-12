@@ -17,6 +17,7 @@ import cv2
 import yaml
 
 from legacy.sort_tracker import VehicleTracker
+from paths import PYTHON_DIR
 from vision import QueueEstimator, ROICounter, VisualDebugger, YoloVehicleDetector
 
 
@@ -75,7 +76,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Valida a pipeline de visao do projeto com imagem ou video local.")
     parser.add_argument("--input", required=True, help="Caminho para imagem ou video local.")
     parser.add_argument("--model", default="yolov8n.pt", help="Caminho do modelo YOLO .pt.")
-    parser.add_argument("--config", default="legacy/config.yaml", help="Arquivo de configuracao YAML do projeto.")
+    parser.add_argument("--config", default=str(PYTHON_DIR / "legacy" / "config.yaml"), help="Arquivo de configuracao YAML do projeto.")
     parser.add_argument("--max-frames", type=int, default=30, help="Numero maximo de frames de video para processar.")
     parser.add_argument("--frame-step", type=int, default=5, help="Processa um frame a cada N frames no video.")
     parser.add_argument("--output-dir", default="../results/frames", help="Diretorio para salvar frames de debug.")

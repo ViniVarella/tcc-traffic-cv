@@ -1,4 +1,4 @@
-"""Avalia as políticas do cruzamento de SP só no SUMO (percepção ground truth (TraCI)) nas mesmas seeds.
+"""Avalia as políticas do cruzamento de SP só no SUMO (percepção ground truth, TraCI) nas mesmas seeds.
 
 Compara ciclo fixo, max-pressure e checkpoints DQN estado v2 com o mesmo executor de
 episódios, aquecimento e features. Os resultados usam percepção ground truth e devem

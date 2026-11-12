@@ -131,6 +131,13 @@ optimization/*/tripinfo*.xml
 optimization/*/baseline_metrics.csv
 optimization/*/dqn_metrics.csv
 optimization/*/*_last.keras
+# As mesmas saídas dos protótipos movidos para legacy/optimization
+legacy/optimization/*/runs/
+legacy/optimization/*/e2_*.xml
+legacy/optimization/*/tripinfo*.xml
+legacy/optimization/*/baseline_metrics.csv
+legacy/optimization/*/dqn_metrics.csv
+legacy/optimization/*/*_last.keras
 
 # Artefatos versionados para rodar o projeto em outra máquina: checkpoints em
 # uso e referências do tempo fixo do painel. O detector YOLO
