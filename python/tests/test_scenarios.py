@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 import yaml
 
-from experiments.scenario_config import add_scenario_argument
+from paths import PYTHON_DIR
+from simulation.scenario_config import add_scenario_argument
 from sumo import SumoClient
 from sumo.scenarios import resolve_sumo_scenario
 
-
-PYTHON_DIR = Path(__file__).resolve().parents[1]
 CONFIG = {
     "sumo": {
         "scenarios": {"calibrated": "../sumo/sp/Cruzamento.calibrated.sumocfg", "original": "../sumo/sp/Cruzamento.sumocfg"},
@@ -41,8 +40,8 @@ class ResolveScenarioTests(unittest.TestCase):
             resolve_sumo_scenario(config)
 
     def test_legacy_profile_with_config_path_has_no_named_scenario(self) -> None:
-        config = {"sumo": {"config_path": "../sumo/fictional/RL.sumocfg"}}
-        self.assertEqual(resolve_sumo_scenario(config), (None, "../sumo/fictional/RL.sumocfg"))
+        config = {"sumo": {"config_path": "../legacy/sumo/fictional/RL.sumocfg"}}
+        self.assertEqual(resolve_sumo_scenario(config), (None, "../legacy/sumo/fictional/RL.sumocfg"))
         with self.assertRaises(ValueError):
             resolve_sumo_scenario(config, "calibrated")
 

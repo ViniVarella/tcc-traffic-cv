@@ -10,7 +10,7 @@ namespace TccTrafficVision.Editor.CameraCalibration
     /// <summary>
     /// Loads Assets/Calibration/&lt;cameraId&gt;-calibration.json back into the
     /// scene's TrafficCameraCalibration components. Used after the ROIs are
-    /// regenerated outside Unity (python -m experiments.extend_lane_rois), so a
+    /// regenerated outside Unity (python -m experiments.data.extend_lane_rois), so a
     /// later "Export calibration JSON" does not revert them.
     /// </summary>
     public static class SpCalibrationImporter

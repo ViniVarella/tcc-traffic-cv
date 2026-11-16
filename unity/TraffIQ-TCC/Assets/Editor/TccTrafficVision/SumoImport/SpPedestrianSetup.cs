@@ -125,7 +125,7 @@ namespace TccTrafficVision.Editor.SumoImport
             Selection.activeObject = manager;
             Debug.Log(
                 $"Configured {prefabs.Count} SP pedestrian prefabs. Save the scene (Cmd+S), enter Play Mode and run " +
-                "python -m experiments.test_sumo_to_unity --config configs/sp.yaml --scenario calibrated_ped --steps 300 --send-interval 0.1",
+                "python -m experiments.checks.check_sumo_to_unity --config configs/sp.yaml --scenario calibrated_ped --steps 300 --send-interval 0.1",
                 manager);
         }
 

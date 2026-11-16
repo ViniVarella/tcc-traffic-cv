@@ -9,19 +9,20 @@ na rede e reporta posição até cruzar a linha de retenção.
 
 from __future__ import annotations
 
+import random
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-import random
 from statistics import fmean
 from typing import Any, Protocol
 
-from controller.preemption import EmergencyRequest
-
+from controller.keep_switch.preemption import EmergencyRequest
 
 EMERGENCY_TYPE = "emergency"
 
 
 class EmergencyClient(Protocol):
+    """O que a agenda de viaturas precisa do cliente SUMO (criar tipo e veículo, ler a posição)."""
+
     def ensure_vehicle_type(self, type_id: str, vehicle_class: str, speed_factor: float, color: tuple[int, int, int]) -> None: ...
     def add_vehicle(self, vehicle_id: str, from_edge: str, to_edge: str, type_id: str) -> None: ...
     def get_vehicle_road_state(self, vehicle_id: str) -> dict[str, Any] | None: ...
@@ -29,6 +30,8 @@ class EmergencyClient(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class EmergencySettings:
+    """Agenda das viaturas (intervalo, sorteio, rotas) e antecedência do aviso V2I (bloco ``emergency``)."""
+
     interval_s: float = 300.0
     jitter_s: float = 60.0
     first_after_s: float = 30.0
@@ -57,6 +60,8 @@ class EmergencySettings:
 
 @dataclass(frozen=True, slots=True)
 class ScheduledEmergency:
+    """Uma viatura da agenda (ou despachada pelo painel) com rota e instante de entrada."""
+
     vehicle_id: str
     depart_s: float
     approach: str

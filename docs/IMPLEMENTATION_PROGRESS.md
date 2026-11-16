@@ -2,6 +2,26 @@
 
 Este arquivo registra o andamento prático do plano descrito em `docs/IMPLEMENTATION_GUIDE.md`.
 
+## Reorganização das pastas (2026-11-12)
+
+O código foi reorganizado sem mudar comportamento (mesmos resultados nas
+mesmas seeds, mesmos ids `--versions` e checkpoints). Os registros abaixo são
+históricos e citam os comandos e caminhos da época; a correspondência é:
+
+| Antes | Agora |
+|---|---|
+| `experiments.{pretrain_dqn_sumo,finetune_dqn_visual,pretrain_phase_selection}` | `experiments.train.<script>` |
+| `experiments.{compare_versions,evaluate_*,run_visual_policy,run_phase_selection_visual,sweep_pedestrian_interval}` | `experiments.evaluate.<script>` |
+| `experiments.{build_*,check_lane_geometry,extend_lane_rois}` | `experiments.data.<script>` |
+| `experiments.test_sp_traci`, `test_sumo_to_unity`, `test_unity_vision` | `experiments.checks.check_sp_traci`, `check_sumo_to_unity`, `check_unity_vision` |
+| `experiments.plot_article_figures` | `experiments.article.plot_article_figures` |
+| `experiments.api_server` | `dashboard.server` |
+| `experiments.{train_visual_dqn,run_visual_controller,compare_control_experiments,run_fixed_time_baseline,test_sumo_traci,test_unity_comm,test_vision}`, `main.py`, `config.yaml` | `legacy.<módulo>` (`python/legacy/`) |
+| `experiments.{episode_runner,sumo_environment,phase_selection_environment,visual_observer,version_policies,scenario_config,checkpoint_selection}` | `simulation.{episode,sp_environment,...}` (`Environment` → `SpEnvironment`) |
+| `controller.{dqn_agent,dqn_traffic_controller,phase_manager,policies,preemption,decision_scheduler}`, `vision.visual_state` | `controller.keep_switch.{agent,traffic_controller,phase_manager,policies,preemption,decision_scheduler,state}` (`SmdpAccumulator` em `controller.smdp`) |
+| `controller.phase_selection_{agent,state,controller,policies}` | `controller.phase_selection.{agent,state,controller,policies}` |
+| `optimization/Teste`, `optimization/EUA`, `models/*.keras`, `sumo/fictional` | `legacy/` |
+
 ## Status Geral
 
 - Marco 1: concluído

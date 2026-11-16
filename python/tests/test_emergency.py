@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import unittest
 
 import yaml
 
+from paths import PYTHON_DIR
 from sumo.emergency import EmergencySettings, EmergencyTraffic, build_schedule
 
-
-CONFIG = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs" / "sp.yaml").read_text(encoding="utf-8"))
+CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 EDGES = {"south": "E3", "east": "E2", "west": "E6"}
 
 
@@ -32,11 +31,17 @@ class FakeClient:
         states: list[dict | None] = [None] * self.insert_delay_steps
         position = 0.0
         for _ in range(self.stop_steps):
-            states.append({"road_id": road, "lane_length": 70.0, "lane_position": 60.0, "speed": 0.0, "time_loss": 5.0, "waiting_time": 3.0})
+            states.append(
+                {"road_id": road, "lane_length": 70.0, "lane_position": 60.0, "speed": 0.0, "time_loss": 5.0, "waiting_time": 3.0}
+            )
         while position < 70.0:
-            states.append({"road_id": road, "lane_length": 70.0, "lane_position": position, "speed": 10.0, "time_loss": 5.0, "waiting_time": 3.0})
+            states.append(
+                {"road_id": road, "lane_length": 70.0, "lane_position": position, "speed": 10.0, "time_loss": 5.0, "waiting_time": 3.0}
+            )
             position += 10.0
-        states.append({"road_id": ":junction_0", "lane_length": 0.0, "lane_position": 0.0, "speed": 10.0, "time_loss": 6.0, "waiting_time": 3.0})
+        states.append(
+            {"road_id": ":junction_0", "lane_length": 0.0, "lane_position": 0.0, "speed": 10.0, "time_loss": 6.0, "waiting_time": 3.0}
+        )
         states.append(None)
         self.states[vehicle_id] = states
 

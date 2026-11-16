@@ -1,0 +1,15 @@
+# Configuração do ruff (só checagem; o projeto não usa formatador automático).
+# Rode a partir de python/: ../.venv/bin/ruff check .
+[tool.ruff]
+line-length = 140
+target-version = "py312"
+extend-exclude = ["legacy"]
+
+[tool.ruff.lint]
+# E/W: estilo pycodestyle; F: erros (nomes indefinidos, imports sem uso); I: ordem dos imports.
+select = ["E", "W", "F", "I"]
+# E731: ``observe = lambda sim_time: ...`` monta a percepção do episódio numa linha; é intencional.
+ignore = ["E731"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["bridge", "controller", "dashboard", "experiments", "paths", "simulation", "sumo", "vision"]

@@ -8,7 +8,6 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
-
 Point = tuple[float, float]
 
 

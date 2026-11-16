@@ -1,7 +1,7 @@
-# Experimento de seleção livre de fase (branch feat/selecao-livre-de-fase): um
+# Modelo global (TraffIQ v6.0, escolha livre de estágio): um
 # único DQN para cruzamentos com qualquer número de faixas e fases, só com SUMO
 # e percepção ground truth. Os cruzamentos sintéticos são gerados por
-# experiments.build_generic_intersections; o SP entra só como teste (nunca é
+# experiments.data.build_generic_intersections; o SP entra só como teste (nunca é
 # visto no treino). Mesmas regras de segurança e normalizações do sp.yaml.
 
 sumo:
@@ -37,7 +37,7 @@ dqn:
 # A fase é obrigatória por tempo: interval_seconds depois do fim da última, ela
 # entra na próxima troca de verde, venha de qual fase vier (com seleção livre,
 # "depois do último verde" deixava a política evitá-la). N = 40 s, escolhido
-# pelo usuário com experiments.sweep_pedestrian_interval (espera HCM dos
+# pelo usuário com experiments.evaluate.sweep_pedestrian_interval (espera HCM dos
 # pedestres de ~29–31 s com o max-pressure, nível C a D). As redes sintéticas
 # não têm pedestres: a variante reproduz o custo da fase para os veículos.
 pedestrian_phase:

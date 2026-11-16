@@ -8,14 +8,14 @@ from pathlib import Path
 
 import numpy as np
 
-from controller.phase_selection_agent import PhaseAgentConfig, PhaseSelectionAgent
-from controller.phase_selection_controller import PhaseSelectionController, all_red_state, yellow_state
-from controller.phase_selection_policies import FixedTimePhasePolicy, MaxPressurePhasePolicy
-from controller.phase_selection_state import ROW_FEATURE_NAMES, PhaseObservation, PhaseStateEncoder, split_state
-from experiments.phase_selection_environment import decision_mask, max_red_seconds, pedestrian_hcm_delay
+from controller.phase_selection.agent import PhaseAgentConfig, PhaseSelectionAgent
+from controller.phase_selection.controller import PhaseSelectionController, all_red_state, yellow_state
+from controller.phase_selection.policies import FixedTimePhasePolicy, MaxPressurePhasePolicy
+from controller.phase_selection.state import ROW_FEATURE_NAMES, PhaseObservation, PhaseStateEncoder, split_state
+from paths import PYTHON_DIR
+from simulation.phase_selection_environment import decision_mask, max_red_seconds, pedestrian_hcm_delay
 from sumo.intersection import green_phases, roi_geometry
 from vision.lane_features import LaneFeatures
-
 
 GREENS = ("GGrrrr", "rrGGrr", "rrrrGG")
 
@@ -207,7 +207,7 @@ class PhaseStateEncoderTests(unittest.TestCase):
             encoder.encode(lanes, groups, capacities, 1, 20, [24, 0], (True, True))
 
     def test_version_2_rows_keep_their_size(self) -> None:
-        from controller.phase_selection_state import ROW_FEATURE_NAMES_V2
+        from controller.phase_selection.state import ROW_FEATURE_NAMES_V2
 
         encoder = PhaseStateEncoder(max_phases=2, state_version="phase_select_2")
         groups = ((("a", "lane_0"),), (("b", "lane_0"),))
@@ -285,7 +285,7 @@ class PhaseSelectionAgentTests(unittest.TestCase):
         self.assertEqual(agent.select_action(state, epsilon=0.0), 2)
 
     def test_version_2_checkpoints_still_load(self) -> None:
-        from controller.phase_selection_state import ROW_FEATURE_NAMES_V2
+        from controller.phase_selection.state import ROW_FEATURE_NAMES_V2
 
         old = PhaseSelectionAgent(PhaseAgentConfig(max_phases=3, row_size=len(ROW_FEATURE_NAMES_V2), state_version="phase_select_2"))
         with tempfile.TemporaryDirectory() as tmp:
@@ -309,7 +309,7 @@ class PhaseSelectionAgentTests(unittest.TestCase):
 
 class EvaluationStatisticsTests(unittest.TestCase):
     def test_confidence_interval_uses_student_t(self) -> None:
-        from experiments.evaluate_phase_selection import confidence_interval
+        from simulation.statistics import confidence_interval
 
         interval = confidence_interval([13.0, 13.3, 12.6])
         self.assertAlmostEqual(interval["mean"], 12.9667, places=4)
@@ -317,7 +317,7 @@ class EvaluationStatisticsTests(unittest.TestCase):
         self.assertIsNone(confidence_interval([1.0])["ci95_low"])
 
     def test_reduction_is_paired_by_seed(self) -> None:
-        from experiments.evaluate_phase_selection import paired_reduction
+        from simulation.statistics import paired_reduction
 
         reduction = paired_reduction([4.0, 5.0], [10.0, 10.0])
         self.assertAlmostEqual(reduction["mean"], 0.55)
@@ -327,9 +327,9 @@ class ScenarioTests(unittest.TestCase):
     def test_pedestrian_variants_double_the_scenarios(self) -> None:
         import yaml
 
-        from experiments.phase_selection_environment import load_scenarios
+        from simulation.phase_selection_environment import load_scenarios
 
-        base = Path(__file__).resolve().parents[1]
+        base = PYTHON_DIR
         scenarios = load_scenarios(yaml.safe_load((base / "configs" / "generic.yaml").read_text(encoding="utf-8")), base)
         names = {scenario.name: scenario for scenario in scenarios}
         self.assertEqual(names["t-3/media+ped"].pedestrian_s, 18.0)
@@ -340,9 +340,10 @@ class ScenarioTests(unittest.TestCase):
 class VisualKeyTests(unittest.TestCase):
     def test_camera_keys_become_sumo_lane_keys(self) -> None:
         import yaml
-        from experiments.phase_selection_environment import camera_key_map, profile_geometries, remap_features
 
-        profile = yaml.safe_load((Path(__file__).resolve().parents[1] / "configs" / "sp.yaml").read_text(encoding="utf-8"))
+        from simulation.phase_selection_environment import camera_key_map, profile_geometries, remap_features
+
+        profile = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
         key_map = camera_key_map(profile)
         self.assertEqual(key_map[("south", "lane_0")], ("E3", "lane_0"))
         self.assertEqual(set(key_map.values()), set(profile_geometries(profile)))  # mesmas chaves das ROIs do ambiente
@@ -350,7 +351,7 @@ class VisualKeyTests(unittest.TestCase):
         self.assertIsNone(remap_features(None, key_map))  # sem frames continua sem frames
 
     def test_summary_skips_reductions_without_the_metric(self) -> None:
-        from experiments.evaluate_phase_selection import summarize
+        from simulation.statistics import summarize
 
         runs = [{"mean_waiting_time_seconds": 4.0, "mean_waiting_time_stopped_seconds": 8.0}]
         summary = summarize(runs, [{"mean_waiting_time_seconds": 10.0}])
@@ -362,9 +363,9 @@ class GlobalPhasePolicyTests(unittest.TestCase):
     def test_sp_phases_and_red_time_in_the_keep_switch_loop(self) -> None:
         from types import SimpleNamespace
 
-        from experiments.version_policies import GlobalPhasePolicy
+        from simulation.version_policies import GlobalPhasePolicy
 
-        config = Path(__file__).resolve().parents[1] / "configs" / "generic.yaml"
+        config = PYTHON_DIR / "configs" / "generic.yaml"
         import yaml
 
         sp = yaml.safe_load((config.parent / "sp.yaml").read_text(encoding="utf-8"))
@@ -381,11 +382,12 @@ class GlobalPhasePolicyTests(unittest.TestCase):
 
     def test_sp_pedestrian_phase_comes_after_the_south_green(self) -> None:
         from types import SimpleNamespace
+
         import yaml
 
-        from experiments.version_policies import GlobalPhasePolicy
+        from simulation.version_policies import GlobalPhasePolicy
 
-        config = Path(__file__).resolve().parents[1] / "configs" / "generic.yaml"
+        config = PYTHON_DIR / "configs" / "generic.yaml"
         sp = yaml.safe_load((config.parent / "sp.yaml").read_text(encoding="utf-8"))
         policy = GlobalPhasePolicy(PhaseSelectionAgent(PhaseAgentConfig(max_phases=8), seed=1), config, sp, pedestrian_phase=True)
         lanes = {key: features(2) for key in policy.key_map}

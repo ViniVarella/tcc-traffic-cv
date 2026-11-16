@@ -7,7 +7,6 @@ from dataclasses import dataclass
 
 from .protocol import FramePacket
 
-
 ReceivedFrame = tuple[bytes, FramePacket]
 
 

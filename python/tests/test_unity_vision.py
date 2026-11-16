@@ -1,6 +1,6 @@
 import unittest
 
-from experiments.test_unity_vision import parse_class_ids
+from experiments.checks.check_unity_vision import parse_class_ids
 
 
 class UnityVisionArgumentTests(unittest.TestCase):

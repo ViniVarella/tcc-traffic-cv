@@ -6,7 +6,6 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from statistics import fmean, median
 
-
 # Mesmo limiar de parada da espera dos veículos no SUMO.
 PEDESTRIAN_WAITING_SPEED_MPS = 0.1
 

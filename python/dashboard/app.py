@@ -1,8 +1,8 @@
 """Painel web (FastAPI): roda um episódio SUMO + Unity + visão e transmite o que acontece.
 
-O episódio roda numa thread própria, pelo mesmo ``Environment.run`` das
+O episódio roda numa thread própria, pelo mesmo ``SpEnvironment.run`` das
 avaliações (mesma camada de segurança, mesma visão e mesmas versões de
-``experiments.version_policies``). A API só escolhe o cenário, a versão e a
+``simulation.version_policies``). A API só escolhe o cenário, a versão e a
 fonte da preempção, despacha viaturas e lê a telemetria; nada do painel entra
 na decisão da política.
 """
@@ -10,32 +10,32 @@ na decisão da política.
 from __future__ import annotations
 
 import asyncio
-from contextlib import asynccontextmanager
-from dataclasses import dataclass, replace
 import json
-from pathlib import Path
 import queue
 import threading
 import traceback
+from collections.abc import Callable
+from contextlib import asynccontextmanager
+from dataclasses import dataclass, replace
+from pathlib import Path
 from typing import Any
 
 import cv2
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+import yaml
+from fastapi import APIRouter, FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-import yaml
 
 from bridge import UnityBridge
-from controller.preemption import PreemptionSettings
+from controller.keep_switch.preemption import PreemptionSettings
 from dashboard.telemetry import APPROACHES, build_telemetry
-from experiments.episode_runner import EpisodeSettings
-from experiments.sumo_environment import EMERGENCY_DETECTIONS, Environment
-from experiments.version_policies import build_version_policies
-from experiments.visual_observer import build_unity_observer
+from simulation.episode import EpisodeSettings
+from simulation.sp_environment import EMERGENCY_DETECTIONS, SpEnvironment
+from simulation.version_policies import build_version_policies
+from simulation.visual_observer import build_unity_observer
 from sumo.emergency import EmergencySettings
 from vision.visual_debug import VisualDebugger
-
 
 SCENARIOS = ("calibrated", "calibrated_ped", "original")
 # Controladores oferecidos no painel (nomes do código). O atual é o TraffIQ
@@ -84,6 +84,8 @@ VERSION_LABELS = {"global": "TraffIQ (IA Global, v6.0)", "v2": "TraffIQ (IA, v5.
 
 
 class StartRequest(BaseModel):
+    """Corpo de ``POST /api/start``: cenário, versão, fonte da prioridade e seed do episódio."""
+
     scenario: str = "calibrated"
     version: str = "global"
     preemption: str = "v2i"
@@ -94,6 +96,8 @@ class StartRequest(BaseModel):
 
 
 class EmergencyRequestBody(BaseModel):
+    """Corpo de ``POST /api/emergency``: aproximação da viatura e, opcionalmente, a saída."""
+
     approach: str
     exit: str | None = None  # None: sorteia entre as saídas da aproximação
 
@@ -114,6 +118,8 @@ def emergency_board(traffic: Any, preemption: Any, sim_time: float) -> dict[str,
 
 @dataclass(frozen=True, slots=True)
 class PanelSettings:
+    """Configuração do painel: pasta ``python/``, argumentos de visão e duração do episódio."""
+
     base_dir: Path
     vision_args: Any
     warmup_s: float = 300.0
@@ -281,7 +287,7 @@ class EpisodeRunner:
                                          global_checkpoint=self.checkpoints["global"],
                                          generic_config=self.settings.base_dir / "configs" / "generic.yaml",
                                          scenario=request.scenario)[0]
-        environment = Environment(self.config, self.settings.base_dir, request.scenario,
+        environment = SpEnvironment(self.config, self.settings.base_dir, request.scenario,
                                   EpisodeSettings(self.settings.warmup_s, self.settings.control_s, version.decision_interval_s),
                                   state_version=version.state_version)
         if self._observer is None:
@@ -352,6 +358,7 @@ class NoCacheStaticFiles(StaticFiles):
 
 
 def create_app(settings: PanelSettings) -> FastAPI:
+    """Aplicação do painel: páginas estáticas, API de controle do episódio e streams ao vivo."""
     runner = EpisodeRunner(settings)
 
     @asynccontextmanager
@@ -363,64 +370,81 @@ def create_app(settings: PanelSettings) -> FastAPI:
     app = FastAPI(title="TraffIQ — painel", lifespan=lifespan)
     app.state.runner = runner
     app.mount("/dashboard", NoCacheStaticFiles(directory=settings.base_dir / "static", html=True), name="static")
+    app.include_router(_info_routes(runner, settings))
+    app.include_router(_control_routes(runner))
+    app.include_router(_stream_routes(runner))
+    return app
 
-    @app.get("/")
+
+def _info_routes(runner: EpisodeRunner, settings: PanelSettings) -> APIRouter:
+    """Página inicial, opções do formulário e estado atual do episódio."""
+    router = APIRouter()
+
+    @router.get("/")
     async def root() -> RedirectResponse:
         return RedirectResponse("/dashboard/")
 
-    @app.get("/api/options")
+    @router.get("/api/options")
     async def options() -> dict[str, Any]:
         return {"scenarios": list(SCENARIOS), "versions": [{"id": key, "label": VERSION_LABELS[key]} for key in VERSIONS],
                 "preemption": list(PREEMPTION_SOURCES), "approaches": list(APPROACHES),
                 "emergency_routes": runner.emergency_routes(), "announce_before_s": runner.announce_before_s,
                 "fixed_time_reference_s": runner.fixed_time_reference,
                 "fixed_time_reference_source": runner.fixed_time_reference_source,
-                "fixed_time_stopped_reference_s": runner.fixed_time_stopped_reference, "min_sample_s": MIN_SAMPLE_S, "warmup_s": settings.warmup_s,
+                "fixed_time_stopped_reference_s": runner.fixed_time_stopped_reference, "min_sample_s": MIN_SAMPLE_S,
+                "warmup_s": settings.warmup_s,
                 "reference_warmup_s": OFFICIAL_PROTOCOL["warmup_s"],
                 "generic_detector": settings.generic_detector}
 
-    @app.get("/api/state")
+    @router.get("/api/state")
     async def state() -> dict[str, Any]:
         return runner.state
 
-    @app.post("/api/start")
-    async def start(request: StartRequest) -> dict[str, Any]:
-        try:
-            runner.start(request)
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error)) from error
-        return {"status": "ok"}
+    return router
 
-    @app.post("/api/stop")
+
+def _run_or_400(action: Callable[..., Any], *args: Any) -> dict[str, Any]:
+    """Executa um comando do episódio; um ``ValueError`` (comando fora de hora) vira HTTP 400."""
+    try:
+        action(*args)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"status": "ok"}
+
+
+def _control_routes(runner: EpisodeRunner) -> APIRouter:
+    """Iniciar, parar, pausar e retomar o episódio e despachar viaturas."""
+    router = APIRouter()
+
+    @router.post("/api/start")
+    async def start(request: StartRequest) -> dict[str, Any]:
+        return _run_or_400(runner.start, request)
+
+    @router.post("/api/stop")
     async def stop() -> dict[str, Any]:
         runner.stop()
         return {"status": "ok"}
 
-    @app.post("/api/pause")
+    @router.post("/api/pause")
     async def pause() -> dict[str, Any]:
-        try:
-            runner.pause()
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error)) from error
-        return {"status": "ok"}
+        return _run_or_400(runner.pause)
 
-    @app.post("/api/resume")
+    @router.post("/api/resume")
     async def resume() -> dict[str, Any]:
-        try:
-            runner.resume()
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error)) from error
-        return {"status": "ok"}
+        return _run_or_400(runner.resume)
 
-    @app.post("/api/emergency")
+    @router.post("/api/emergency")
     async def emergency(body: EmergencyRequestBody) -> dict[str, Any]:
-        try:
-            runner.dispatch_emergency(body.approach, body.exit)
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail=str(error)) from error
-        return {"status": "ok"}
+        return _run_or_400(runner.dispatch_emergency, body.approach, body.exit)
 
-    @app.websocket("/ws/telemetry")
+    return router
+
+
+def _stream_routes(runner: EpisodeRunner) -> APIRouter:
+    """Telemetria (WebSocket, 2 Hz) e câmeras (MJPEG); terminam quando o servidor encerra."""
+    router = APIRouter()
+
+    @router.websocket("/ws/telemetry")
     async def telemetry(websocket: WebSocket) -> None:
         await websocket.accept()
         try:
@@ -442,11 +466,10 @@ def create_app(settings: PanelSettings) -> FastAPI:
                 yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
             await asyncio.sleep(0.1)
 
-    @app.get("/api/video/{camera_id}")
+    @router.get("/api/video/{camera_id}")
     async def video(camera_id: str) -> StreamingResponse:
         if camera_id not in APPROACHES:
             raise HTTPException(status_code=404, detail="Câmera desconhecida.")
         return StreamingResponse(frames(camera_id), media_type="multipart/x-mixed-replace; boundary=frame")
 
-    app.state.runner = runner
-    return app
+    return router

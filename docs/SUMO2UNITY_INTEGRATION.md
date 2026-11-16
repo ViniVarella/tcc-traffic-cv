@@ -78,7 +78,7 @@ originou a decisão. O `FrameBundleCollector` agrupa `south`, `east` e `west`
 por `step_id`, preserva frames futuros em buffer e informa explicitamente as
 câmeras ausentes antes de a percepção visual ser executada.
 
-O processamento offline `python -m experiments.test_unity_vision` carrega os
+O processamento offline `python -m experiments.checks.check_unity_vision` carrega os
 JSONs de calibração, escala suas ROIs normalizadas para cada JPEG, executa
 YOLO, filtra as detecções pela ROI externa, mantém um ByteTrack independente
 por câmera e conta os tracks nas ROIs de faixa. Ele grava imagens anotadas e um
@@ -108,7 +108,7 @@ enquanto a ROI operacional pode cobrir outro trecho da aproximação.
   `Assets/Scenes/SPImport.unity`. A validação manual confirmou 22 faixas, um
   cruzamento e a câmera aérea; limpar e reconstruir a rede não duplicou objetos.
 - O perfil `python/configs/sp.yaml` e o teste
-  `python -m experiments.test_sp_traci` já validaram o cenário por TraCI: o
+  `python -m experiments.checks.check_sp_traci` já validaram o cenário por TraCI: o
   TLS, as cinco fases e os sete detectores E2 estão acessíveis pelo Python.
 - A comunicação Python -> Unity existente continua preservada. Não há ponte
   ZeroMQ nem segundo cliente TraCI no projeto do TCC.
@@ -199,10 +199,10 @@ semáforo via TraCI.
 
 O DQN visual pertence ao processo Python, não à Unity. Ele é implementado em
 PyTorch. O DQN v2 atual é pré-treinado só no SUMO por
-`experiments.pretrain_dqn_sumo` e executado com a Unity por
-`experiments.run_visual_policy` (ajuste fino: `experiments.finetune_dqn_visual`).
-O v1 legado continua em `experiments.train_visual_dqn` e
-`experiments.run_visual_controller`. O checkpoint de produção é selecionado
+`experiments.train.pretrain_dqn_sumo` e executado com a Unity por
+`experiments.evaluate.run_visual_policy` (ajuste fino: `experiments.train.finetune_dqn_visual`).
+O v1 legado continua em `legacy.train_visual_dqn` e
+`legacy.run_visual_controller`. O checkpoint de produção é selecionado
 pela validação, e não simplesmente pelo último episódio.
 
 Quando a Unity está no loop, o Python processa amarelo, all-red e verde
@@ -251,11 +251,11 @@ métricas como contexto experimental, pois elas ainda não têm estimadores
 visuais semanticamente equivalentes.
 
 Os detectores E2 do SP cobrem hoje 42,6–45,8 m, mas as ROIs das câmeras
-cobrem só 23–26 m por faixa (medido por `experiments.check_lane_geometry` a
+cobrem só 23–26 m por faixa (medido por `experiments.data.check_lane_geometry` a
 partir da pose e do FOV; intervalos em `lane_geometry` no `sp.yaml`). Portanto,
 visão e E2 não são diretamente comparáveis. A comparação estrita da
 percepção é visão × *ground truth* TraCI no intervalo de cada ROI, feita por
-`experiments.evaluate_lane_features`.
+`experiments.evaluate.evaluate_lane_features`.
 
 ## Limites verificados
 

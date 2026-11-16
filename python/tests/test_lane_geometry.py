@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import unittest
 
 import numpy as np
 import yaml
 
-from experiments.check_lane_geometry import ground_to_image_point, image_point_to_ground, measure_lane_rois
+from experiments.data.check_lane_geometry import measure_lane_rois
+from paths import REPO_DIR
 from vision.camera_calibration import load_camera_calibration
+from vision.camera_projection import ground_to_image_point, image_point_to_ground
 from vision.lane_geometry import LaneHomography, bbox_ground_point, order_lane_quad
 
-
-REPO_DIR = Path(__file__).resolve().parents[2]
 CALIBRATION_DIR = REPO_DIR / "unity" / "TraffIQ-TCC" / "Assets" / "Calibration"
 # Trapézio em perspectiva: borda próxima larga embaixo, borda distante estreita em cima.
 TRAPEZOID = [(0.2, 0.9), (0.6, 0.9), (0.45, 0.2), (0.35, 0.2)]
@@ -94,7 +93,11 @@ class CalibratedLaneExtentTests(unittest.TestCase):
         self.assertGreater(image_point_to_ground(pose, 16 / 9, 0.5, 0.0)[1], -4.0)
 
     def test_ground_to_image_inverts_image_to_ground(self) -> None:
-        pose = {"fieldOfView": 26.0, "position": {"x": -1.63, "y": 8.0, "z": -6.08}, "rotationEulerDegrees": {"x": 17.08, "y": 176.74, "z": 0.0}}
+        pose = {
+            "fieldOfView": 26.0,
+            "position": {"x": -1.63, "y": 8.0, "z": -6.08},
+            "rotationEulerDegrees": {"x": 17.08, "y": 176.74, "z": 0.0},
+        }
         for u, v in ((0.5, 0.5), (0.1, 0.9), (0.8, 0.2)):
             x, y = image_point_to_ground(pose, 16 / 9, u, v)
             np.testing.assert_allclose(ground_to_image_point(pose, 16 / 9, x, y), (u, v), atol=1e-9)
@@ -102,7 +105,10 @@ class CalibratedLaneExtentTests(unittest.TestCase):
     def test_sp_yaml_lane_geometry_matches_unity_calibration(self) -> None:
         config = yaml.safe_load((REPO_DIR / "python" / "configs" / "sp.yaml").read_text(encoding="utf-8"))
         measured = measure_lane_rois(
-            config, REPO_DIR / "sumo" / "sp" / "Cruzamento.net.xml", REPO_DIR / "sumo" / "sp" / "Cruzamento.add.xml", CALIBRATION_DIR,
+            config,
+            REPO_DIR / "sumo" / "sp" / "Cruzamento.net.xml",
+            REPO_DIR / "sumo" / "sp" / "Cruzamento.add.xml",
+            CALIBRATION_DIR,
         )
         for name, row in measured.items():
             camera_id, lane_id = name.split("/")

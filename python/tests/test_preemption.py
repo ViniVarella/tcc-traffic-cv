@@ -5,9 +5,8 @@ from __future__ import annotations
 import unittest
 
 from controller import DqnTrafficController
-from controller.phase_manager import PhaseManager
-from controller.preemption import EmergencyPreemption, EmergencyRequest, PreemptionSettings
-
+from controller.keep_switch.phase_manager import PhaseManager
+from controller.keep_switch.preemption import EmergencyPreemption, EmergencyRequest, PreemptionSettings
 
 CONFIG = {"traffic_light": {"phases": {"primary_green": 0, "primary_yellow": 1, "all_red": 2, "secondary_green": 3, "secondary_yellow": 4}},
           "traffic_control": {"min_green_seconds": 10, "max_green_seconds": 40, "yellow_seconds": 3, "all_red_seconds": 1}}
@@ -15,7 +14,9 @@ SOUTH, EAST_WEST = PhaseManager.SOUTH_GREEN, PhaseManager.EAST_WEST_GREEN
 
 
 def _run(controller: DqnTrafficController, times: range, target: str) -> list[tuple[float, str, str]]:
-    return [(float(time), (decision := controller.update_preemption(float(time), target))["phase_name"], decision["reason"]) for time in times]
+    return [
+        (float(time), (decision := controller.update_preemption(float(time), target))["phase_name"], decision["reason"]) for time in times
+    ]
 
 
 class ControllerPreemptionTests(unittest.TestCase):
@@ -42,7 +43,7 @@ class ControllerPreemptionTests(unittest.TestCase):
     def test_all_red_goes_straight_back_to_the_target_green(self) -> None:
         controller = DqnTrafficController("tls", CONFIG)
         controller.update(10.0, controller.SWITCH)  # rumo ao verde South...
-        controller.update(13.0, controller.KEEP)    # all-red
+        controller.update(13.0, controller.KEEP)  # all-red
         # ...mas a emergência vem pelo Leste: sai do all-red direto para E/W, sem verde South.
         self.assertEqual(controller.update_preemption(14.0, EAST_WEST)["phase_name"], EAST_WEST)
 

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import unittest
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -12,7 +12,6 @@ from vision.camera_calibration import CameraCalibration
 from vision.lane_features import KinematicsParameters, LaneGeometry
 from vision.lane_geometry import LaneHomography
 from vision.visual_lane_features import VisualLaneFeatureSource
-
 
 WIDTH, HEIGHT = 1280, 720
 GEOMETRIES = {

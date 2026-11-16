@@ -8,7 +8,6 @@ import unittest
 from bridge import PedestrianState, SimulationState, VehicleState, serialize_state, serialize_state_datagrams
 from sumo import SumoStateExtractor
 
-
 VEHICLE = {"id": "f_1.0", "x": 50.0, "y": -20.0, "angle": 250.0, "speed": 8.0, "type": "DEFAULT_VEHTYPE"}
 PEDESTRIAN = {"id": "p_0.3", "x": 12.5, "y": -18.0, "angle": 90.0, "speed": 1.2}
 

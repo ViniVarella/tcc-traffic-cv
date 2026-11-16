@@ -4,7 +4,7 @@ experiment:
 
 sumo:
   # calibrated: demanda medida nos vídeos de drone sem motos (andam no corredor),
-  # gerada por experiments.build_calibrated_demand: Leste v/c ~0,58, Sul 0,22,
+  # gerada por experiments.data.build_calibrated_demand: Leste v/c ~0,58, Sul 0,22,
   # Oeste 0,17 com o plano fixo.
   # original: demanda do netedit, equilibrada entre as fases (v/c ~0,5).
   # calibrated_motos: REGISTRO HISTÓRICO — a calibração anterior, que contava
@@ -14,7 +14,7 @@ sumo:
     original: "../sumo/sp/Cruzamento.sumocfg"
     calibrated_motos: "../sumo/sp/Cruzamento.calibrated-motos.sumocfg"
     # Mesmas demandas de veículos + pedestres (rede Cruzamento.ped.net.xml com
-    # calçadas e faixas de pedestre; gerada por experiments.build_pedestrian_network).
+    # calçadas e faixas de pedestre; gerada por experiments.data.build_pedestrian_network).
     calibrated_ped: "../sumo/sp/Cruzamento.calibrated.ped.sumocfg"
     original_ped: "../sumo/sp/Cruzamento.ped.sumocfg"
   default_scenario: "calibrated"
@@ -50,7 +50,7 @@ traffic_light:
 # (Leste, 13,0 m) a 1,2 m/s: quem entra no último segundo do verde termina antes
 # de os veículos voltarem. Quem atravessa duas ruas espera a fase seguinte na
 # esquina. Até 2026-10-13 a fase era a cada 2 ciclos, com 41 s de verde (maior
-# "L", 48,05 m) + 3 s. Comprimentos de experiments.build_pedestrian_network.
+# "L", 48,05 m) + 3 s. Comprimentos de experiments.data.build_pedestrian_network.
 pedestrians:
   every_cycles: 1
   walking_speed_mps: 1.2
@@ -99,9 +99,9 @@ vision_evaluation:
 
 # Extensão física das ROIs de faixa das câmeras Unity ao longo de cada lane SUMO,
 # em metros desde o início da lane (roi_end fica na linha de retenção). Medida por
-# `python -m experiments.check_lane_geometry` a partir da pose/FOV exportados; um
+# `python -m experiments.data.check_lane_geometry` a partir da pose/FOV exportados; um
 # teste falha se a calibração mudar sem atualizar estes valores. As ROIs cobrem
-# 60 m em todas as faixas (gerado por experiments.extend_lane_rois), mais que os
+# 60 m em todas as faixas (gerado por experiments.data.extend_lane_rois), mais que os
 # E2 (42,6-45,8 m): as features por faixa usam este intervalo nas duas fontes
 # (visão e TraCI), nunca o intervalo do E2.
 lane_geometry:

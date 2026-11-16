@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, is_dataclass
 import json
+from dataclasses import asdict, is_dataclass
 from typing import Any
 
 from .protocol import FramePacket, SimulationState
-
 
 # O macOS limita um datagrama UDP a 9216 bytes (net.inet.udp.maxdgram). Com
 # pedestres o estado passa disso; acima deste tamanho ele vai em partes, que a

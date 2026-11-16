@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
+import unittest
 from pathlib import Path
 from types import SimpleNamespace
-import unittest
 from unittest import mock
 
-from sumo import SumoClient
-from sumo import traci_client
+from sumo import SumoClient, traci_client
 
 
 class SumoClientTests(unittest.TestCase):

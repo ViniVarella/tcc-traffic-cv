@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-
 # O índice é o class_id do YOLO. Ordem estável: não reordene sem retreinar.
 DATASET_CLASSES = ("vehicle", "emergency")
 EMERGENCY_VEHICLE_TYPE = "emergency"
@@ -15,4 +14,6 @@ def class_for_vehicle_type(vehicle_type: str | None) -> int:
 
 
 def yaml_names() -> str:
+    """Bloco ``names:`` do ``data.yaml`` do YOLO, na ordem de ``DATASET_CLASSES``."""
+
     return "names:\n" + "".join(f"  {index}: {name}\n" for index, name in enumerate(DATASET_CLASSES))

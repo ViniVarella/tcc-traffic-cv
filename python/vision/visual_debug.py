@@ -8,7 +8,6 @@ from typing import Any
 import cv2
 import numpy as np
 
-
 ROI_COLORS = {
     "north": (255, 128, 0),
     "south": (0, 255, 255),

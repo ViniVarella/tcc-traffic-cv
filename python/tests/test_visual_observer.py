@@ -5,7 +5,6 @@ from __future__ import annotations
 import contextlib
 import io
 import json
-from pathlib import Path
 import unittest
 
 import cv2
@@ -13,15 +12,14 @@ import numpy as np
 import yaml
 
 from bridge import FramePacket
-from experiments.visual_observer import StepLogger, UnityVisualObserver
+from paths import PYTHON_DIR
+from simulation.visual_observer import StepLogger, UnityVisualObserver
 from sumo.lane_feature_source import TraciLaneFeatureSource
 from vision.lane_feature_evaluation import action_agreement, feature_gap, ground_offset_estimate
-from vision.lane_features import LaneFeatures, load_lane_geometries
+from vision.lane_features import load_lane_geometries
 from vision.visual_lane_features import VisualLaneFeatureSource
 from vision.visual_pipeline import VisualPipeline, load_calibrations
 
-
-PYTHON_DIR = Path(__file__).resolve().parents[1]
 CONFIG = yaml.safe_load((PYTHON_DIR / "configs" / "sp.yaml").read_text(encoding="utf-8"))
 CAMERAS = ("south", "east", "west")
 _, JPEG = cv2.imencode(".jpg", np.zeros((36, 64, 3), dtype=np.uint8))

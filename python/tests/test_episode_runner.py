@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 import unittest
+from types import SimpleNamespace
 
 import numpy as np
 
 from controller import DqnAgent, DqnConfig, DqnTrafficController
-from controller.policies import FixedCyclePolicy, MaxPressurePolicy
-from experiments.episode_runner import DqnPolicy, EpisodeSettings, EpsilonSchedule, RewardModel, incoming_lane_capacity, run_episode
+from controller.dqn_base import EpsilonSchedule
+from controller.keep_switch.policies import FixedCyclePolicy, MaxPressurePolicy
+from simulation.episode import DqnPolicy, EpisodeSettings, RewardModel, incoming_lane_capacity, run_episode
 from vision.lane_features import LaneFeatures
-
 
 CONFIG = {"traffic_light": {"phases": {"primary_green": 0, "primary_yellow": 1, "all_red": 2, "secondary_green": 3, "secondary_yellow": 4}},
           "traffic_control": {"min_green_seconds": 10, "max_green_seconds": 40, "yellow_seconds": 3, "all_red_seconds": 1}}

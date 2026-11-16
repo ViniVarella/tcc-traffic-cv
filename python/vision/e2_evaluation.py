@@ -6,7 +6,6 @@ import math
 from collections import defaultdict
 from typing import Any
 
-
 LaneMapping = dict[str, dict[str, str]]
 
 

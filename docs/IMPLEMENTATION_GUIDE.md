@@ -1,5 +1,11 @@
 # Guia de Implementação — TCC: Otimização de Tráfego com Visão Computacional, SUMO, Unity e YOLO
 
+> **Nota (2026-11-12):** este é o guia original do projeto, escrito antes da
+> implementação. A árvore de pastas e os nomes de arquivos aqui descritos
+> mudaram desde então: a estrutura atual está no `README.md` e no `CLAUDE.md`,
+> e a correspondência entre comandos antigos e novos está no topo do
+> `docs/IMPLEMENTATION_PROGRESS.md`.
+
 ## 1. Introdução
 
 Este projeto tem como objetivo desenvolver um sistema de controle semafórico adaptativo baseado em visão computacional. A proposta é simular o tráfego urbano no SUMO, renderizar esse tráfego em ambiente 3D na Unity, processar os frames das câmeras virtuais com YOLO e usar a estimativa visual de veículos em fila para tomar decisões de controle semafórico.
@@ -604,9 +610,9 @@ steps de visão durante os experimentos finais.
 Arquivos:
 
 ```text
-python/controller/traffic_controller.py
-python/controller/phase_manager.py
-python/controller/policies.py
+python/legacy/traffic_controller.py
+python/controller/keep_switch/phase_manager.py
+python/controller/keep_switch/policies.py
 ```
 
 Responsabilidade:
@@ -769,7 +775,7 @@ experiment:
   controller: "vision_adaptive"
 
 sumo:
-  config_path: "../sumo/fictional/RL.sumocfg"
+  config_path: "../legacy/sumo/fictional/RL.sumocfg"
   gui: true
   step_length: 0.1
 
@@ -989,7 +995,7 @@ No cenário SP, os perfis implementados são `calibrated` (demanda medida nos
 vídeos de drone, com o Leste saturado — o caso de pico assimétrico) e
 `original` (fluxo equilibrado), selecionados por `--scenario`. O controle
 idealizado corresponde à política avaliada com percepção *ground truth* (TraCI)
-(`experiments.evaluate_policies_sumo`), sempre rotulada como tal.
+(`experiments.evaluate.evaluate_policies_sumo`), sempre rotulada como tal.
 
 ---
 
@@ -1187,7 +1193,7 @@ Status: concluído com o DQN v2 no cenário calibrado, nas seeds inéditas
 `201`–`203` e com 1800 s controlados. Pela câmera, o DQN v2 superou o ciclo
 fixo (espera 10,3 s × 16,1 s; 1599 × 1503 chegadas) e o max-pressure visual
 (11,1 s; fila de inserção de 104 veículos × 1). As versões são comparadas no
-mesmo ambiente por `experiments.compare_versions`: com percepção *ground truth* no
+mesmo ambiente por `experiments.evaluate.compare_versions`: com percepção *ground truth* no
 cenário calibrado, a regra de fila e o DQN estado v1 deixam 250–290 veículos fora da rede, contra
 6 do DQN estado v2; com percepção visual, 253–289 contra 1. No cenário `original`, as
 versões adaptativas empatam com as duas percepções.

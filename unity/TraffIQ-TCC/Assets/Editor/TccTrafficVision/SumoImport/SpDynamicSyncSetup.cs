@@ -54,7 +54,7 @@ namespace TccTrafficVision.Editor.SumoImport
             Selection.activeGameObject = synchronizationRoot;
             Debug.Log(
                 "SP dynamic synchronization configured. Enter Play Mode, then run " +
-                "python -m experiments.test_sumo_to_unity --config configs/sp.yaml --steps 120 --send-interval 0.1",
+                "python -m experiments.checks.check_sumo_to_unity --config configs/sp.yaml --steps 120 --send-interval 0.1",
                 synchronizationRoot);
         }
 

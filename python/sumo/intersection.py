@@ -1,6 +1,6 @@
 """Descrição genérica de um cruzamento semaforizado, lida do ``.net.xml``.
 
-Base do experimento de seleção livre de fase: em vez de faixas e fases fixas do
+Base do modelo global (escolha livre de estágio, v6.0): em vez de faixas e fases fixas do
 cenário SP, cada cruzamento é descrito pelas suas fases verdes (estados do
 programa estático sem amarelo) e pelas faixas de entrada que cada uma atende.
 As ROIs são os últimos ``roi_length_m`` metros de cada faixa de entrada até a
@@ -9,13 +9,13 @@ linha de retenção, no mesmo contrato ``LaneGeometry`` das câmeras.
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ElementTree
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from vision.lane_features import LaneGeometry
-
 
 LaneKey = tuple[str, str]
 GREEN_CHARS = frozenset("Gg")
@@ -32,6 +32,8 @@ class GreenPhase:
 
 @dataclass(frozen=True, slots=True)
 class IntersectionLayout:
+    """Semáforo, estágios verdes e ROIs das faixas de entrada de um cruzamento."""
+
     tls_id: str
     greens: tuple[GreenPhase, ...]
     geometries: Mapping[LaneKey, LaneGeometry]
@@ -44,6 +46,14 @@ class IntersectionLayout:
         """Chaves ``(edge, faixa)`` das ROIs das faixas atendidas pela fase."""
         lanes = set(self.greens[phase].lanes)
         return tuple(key for key, geometry in self.geometries.items() if geometry.sumo_lane in lanes)
+
+    def lane_groups(self) -> list[tuple[LaneKey, ...]]:
+        """ROIs de cada estágio verde, na ordem do programa (entrada do encoder por estágio)."""
+        return [self.lane_keys(phase) for phase in range(len(self.greens))]
+
+    def lane_capacities(self) -> dict[LaneKey, float]:
+        """Capacidade (veículos que cabem) de cada ROI."""
+        return {key: geometry.capacity for key, geometry in self.geometries.items()}
 
 
 def green_phases(states: Sequence[tuple[str, float]], link_lanes: Mapping[int, str]) -> tuple[GreenPhase, ...]:
@@ -110,3 +120,12 @@ def load_intersection(net_path: str | Path, tls_id: str | None = None, roi_lengt
         geometry = roi_geometry(lane, length, roi_length_m)
         geometries[(geometry.camera_id, geometry.lane_id)] = geometry
     return IntersectionLayout(tls.getID(), greens, geometries)
+
+
+def lane_shapes(net_path: Path) -> dict[str, tuple[list[tuple[float, float]], float]]:
+    """Forma (pontos x, y) e largura de cada faixa do ``.net.xml``, pelo id da faixa."""
+    shapes = {}
+    for lane in ElementTree.parse(net_path).getroot().iter("lane"):
+        points = [tuple(float(value) for value in pair.split(",")) for pair in lane.attrib["shape"].split()]
+        shapes[lane.attrib["id"]] = (points, float(lane.attrib.get("width", 3.2)))
+    return shapes

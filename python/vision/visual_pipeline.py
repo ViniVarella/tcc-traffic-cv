@@ -16,10 +16,14 @@ from .roi_counter import ROICounter, filter_detections_to_roi, select_counting_o
 
 
 class Detector(Protocol):
+    """Detector de objetos de um frame (YOLO)."""
+
     def detect(self, frame: Any) -> list[dict[str, Any]]: ...
 
 
 class Tracker(Protocol):
+    """Rastreador que associa detecções entre frames (ByteTrack)."""
+
     def update(self, detections: list[dict[str, Any]]) -> list[dict[str, Any]]: ...
 
 

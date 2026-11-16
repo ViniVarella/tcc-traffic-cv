@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import socket
 import json
+import socket
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +13,6 @@ from vision.dataset_classes import class_for_vehicle_type
 
 from .protocol import FramePacket, SimulationState
 from .serialization import serialize_state_datagrams
-
 
 FRAME_SERVER_BACKLOG = 64
 

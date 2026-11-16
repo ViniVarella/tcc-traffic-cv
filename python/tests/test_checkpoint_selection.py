@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import unittest
 
-from experiments.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
+from simulation.checkpoint_selection import CheckpointSelector, SelectionCriteria, ValidationRecord
 
 
-def _record(episode: int, score: float | None, steps: int = 10_000, epsilon: float = 0.1, switch_rate: float | None = 0.5) -> ValidationRecord:
+def _record(
+    episode: int, score: float | None, steps: int = 10_000, epsilon: float = 0.1, switch_rate: float | None = 0.5
+) -> ValidationRecord:
     return ValidationRecord(episode, score, steps, epsilon, switch_rate)
 
 
@@ -35,8 +37,10 @@ class CheckpointSelectorTests(unittest.TestCase):
 
     def test_degenerate_policies_are_flagged(self) -> None:
         selector = CheckpointSelector()
-        self.assertEqual([selector.degeneracy(rate) for rate in (1.0, 0.96, 0.5, 0.02, None)],
-                         ["always_switch", "always_switch", None, "never_switch", None])
+        self.assertEqual(
+            [selector.degeneracy(rate) for rate in (1.0, 0.96, 0.5, 0.02, None)],
+            ["always_switch", "always_switch", None, "never_switch", None],
+        )
 
 
 if __name__ == "__main__":
