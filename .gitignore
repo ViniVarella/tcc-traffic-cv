@@ -155,6 +155,7 @@ legacy/optimization/*/*_last.keras
 /Artigo*.pdf
 /Artigo*.docx
 /Template TCC.pdf
+/Template*.docx
 /~$*
 
 # Dependências do gerador do artigo
