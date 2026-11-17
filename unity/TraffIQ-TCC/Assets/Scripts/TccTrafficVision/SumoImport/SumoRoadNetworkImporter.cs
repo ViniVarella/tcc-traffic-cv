@@ -405,6 +405,7 @@ namespace TccTrafficVision.SumoImport
                 network.Descendants("connection")
                     .Where(connection => !string.IsNullOrEmpty(connection.Attribute("tl")?.Value))
                     .Select(connection => $"{connection.Attribute("from")?.Value}_{connection.Attribute("fromLane")?.Value}"));
+            List<EdgeLaneGeometry> geometry = ReadExternalEdgeGeometry(network, origin);
 
             int stopLineCount = 0;
             foreach (XElement edge in network.Descendants("edge"))
@@ -414,23 +415,131 @@ namespace TccTrafficVision.SumoImport
                     continue;
                 }
 
-                foreach (XElement lane in edge.Elements("lane"))
+                List<XElement> lanes = edge.Elements("lane")
+                    .Where(lane => controlledLaneIds.Contains(lane.Attribute("id")?.Value ?? string.Empty))
+                    .OrderBy(lane => ParseFloat(lane.Attribute("index")?.Value, 0f))
+                    .ToList();
+                if (lanes.Count == 0)
                 {
-                    string laneId = lane.Attribute("id")?.Value;
-                    if (string.IsNullOrEmpty(laneId) || !controlledLaneIds.Contains(laneId))
-                    {
-                        continue;
-                    }
+                    continue;
+                }
 
-                    List<Vector3> points = ParseShape(lane.Attribute("shape")?.Value, origin);
-                    float laneWidth = ParseFloat(lane.Attribute("width")?.Value, defaultLaneWidth);
-                    Mesh stopLine = CreateStopLine(points, laneWidth, stopLineWidth, stopLineOffset, stopLineOverlap);
-                    if (stopLine != null)
-                    {
-                        CreateMeshObject($"StopLine_{stopLineCount++}_{laneId}", stopLine, material, parent);
-                    }
+                // One bar per approach, from the right edge of the rightmost lane
+                // to the outer edge of the far yellow line of the double centre
+                // line (or the left edge of the leftmost lane on one-way roads).
+                List<Vector3> rightLane = ParseShape(lanes[0].Attribute("shape")?.Value, origin);
+                List<Vector3> leftLane = ParseShape(lanes[lanes.Count - 1].Attribute("shape")?.Value, origin);
+                float rightWidth = ParseFloat(lanes[0].Attribute("width")?.Value, defaultLaneWidth);
+                float leftWidth = ParseFloat(lanes[lanes.Count - 1].Attribute("width")?.Value, defaultLaneWidth);
+                List<Vector3> centreLine = OpposingBoundaryOf(geometry, edge);
+                string edgeId = edge.Attribute("id")?.Value;
+
+                Mesh stopLine = CreateApproachStopLine(rightLane, rightWidth, leftLane, leftWidth, centreLine, stopLineOffset);
+                if (stopLine != null)
+                {
+                    CreateMeshObject($"StopLine_{stopLineCount++}_{edgeId}", stopLine, material, parent);
                 }
             }
+        }
+
+        private static List<Vector3> OpposingBoundaryOf(IReadOnlyList<EdgeLaneGeometry> geometry, XElement edge)
+        {
+            EdgeLaneGeometry self = geometry.FirstOrDefault(item => item.edge == edge);
+            if (self == null)
+            {
+                return null;
+            }
+
+            foreach (EdgeLaneGeometry other in geometry)
+            {
+                if (other != self && AreOpposingEdges(self.edge, other.edge) && TryCreateOpposingBoundary(self, other, out List<Vector3> boundary))
+                {
+                    return boundary;
+                }
+            }
+
+            return null;
+        }
+
+        private Mesh CreateApproachStopLine(
+            IReadOnlyList<Vector3> rightLane,
+            float rightWidth,
+            IReadOnlyList<Vector3> leftLane,
+            float leftWidth,
+            IReadOnlyList<Vector3> centreLine,
+            float offset)
+        {
+            if (rightLane.Count < 2 || leftLane.Count < 2)
+            {
+                return null;
+            }
+
+            Vector3 rightEnd = rightLane[rightLane.Count - 1];
+            Vector3 finalSegment = rightEnd - rightLane[rightLane.Count - 2];
+            if (finalSegment.magnitude <= Mathf.Epsilon)
+            {
+                return null;
+            }
+
+            Vector3 direction = finalSegment.normalized;
+            Vector3 left = new Vector3(-direction.z, 0f, direction.x);
+            Vector3 anchor = rightEnd - direction * Mathf.Min(offset, finalSegment.magnitude * 0.9f);
+            Vector3 rightPoint = anchor - left * (rightWidth + stopLineOverlap) * 0.5f;
+            Vector3 leftPoint;
+            if (centreLine != null && centreLine.Count >= 2)
+            {
+                // Outer edge of the far line of CreateDoubleSolidLine (lines at
+                // +/- separation/2 around the boundary, each laneMarkingWidth wide).
+                float separation = laneMarkingWidth * 2.5f;
+                leftPoint = ClosestPointOnPolyline(centreLine, anchor) + left * (separation + laneMarkingWidth) * 0.5f;
+            }
+            else
+            {
+                leftPoint = leftLane[leftLane.Count - 1] + left * (leftWidth + stopLineOverlap) * 0.5f;
+            }
+
+            // Keep both ends on the same straight bar, perpendicular to the approach.
+            leftPoint = anchor + left * Vector3.Dot(leftPoint - anchor, left);
+            Vector3 alongLane = direction * stopLineWidth * 0.5f;
+            Vector3 lift = Vector3.up * 0.025f;
+            Mesh mesh = new Mesh
+            {
+                name = "SumoTrafficLightStopLineMesh",
+                vertices = new[]
+                {
+                    rightPoint - alongLane + lift,
+                    leftPoint - alongLane + lift,
+                    rightPoint + alongLane + lift,
+                    leftPoint + alongLane + lift
+                },
+                // Same vertex layout and upward-facing winding as the previous
+                // per-lane bars, so the line is not back-face culled from above.
+                triangles = new[] { 0, 1, 2, 2, 1, 3 }
+            };
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        private static Vector3 ClosestPointOnPolyline(IReadOnlyList<Vector3> points, Vector3 target)
+        {
+            Vector3 best = points[0];
+            float bestDistance = float.MaxValue;
+            for (int index = 0; index < points.Count - 1; index++)
+            {
+                Vector3 from = points[index];
+                Vector3 segment = points[index + 1] - from;
+                float t = segment.sqrMagnitude <= Mathf.Epsilon ? 0f : Mathf.Clamp01(Vector3.Dot(target - from, segment) / segment.sqrMagnitude);
+                Vector3 candidate = from + segment * t;
+                float distance = (candidate - target).sqrMagnitude;
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = candidate;
+                }
+            }
+
+            return best;
         }
 
         public void ClearGenerated()
@@ -773,53 +882,6 @@ namespace TccTrafficVision.SumoImport
             Mesh mesh = new Mesh
             {
                 name = "SumoSidewalkMesh",
-                vertices = vertices.ToArray(),
-                triangles = triangles.ToArray()
-            };
-            mesh.RecalculateNormals();
-            mesh.RecalculateBounds();
-            return mesh;
-        }
-
-        private static Mesh CreateStopLine(IReadOnlyList<Vector3> points, float laneWidth, float lineWidth, float offset, float overlap)
-        {
-            if (points.Count < 2 || laneWidth <= Mathf.Epsilon)
-            {
-                return null;
-            }
-
-            Vector3 laneEnd = points[points.Count - 1];
-            Vector3 previousPoint = points[points.Count - 2];
-            Vector3 finalSegment = laneEnd - previousPoint;
-            float finalSegmentLength = finalSegment.magnitude;
-            if (finalSegmentLength <= Mathf.Epsilon)
-            {
-                return null;
-            }
-
-            Vector3 direction = finalSegment / finalSegmentLength;
-            Vector3 position = laneEnd - direction * Mathf.Min(offset, finalSegmentLength * 0.5f);
-            // Adjacent lane centres are separated by their lane width. A small
-            // overlap removes visual seams so multiple per-lane bars read as
-            // one continuous stop line across the entire approach.
-            Vector3 acrossLane = new Vector3(-direction.z, 0f, direction.x) * Mathf.Max(0.1f, laneWidth + overlap) * 0.5f;
-            Vector3 alongLane = direction * lineWidth * 0.5f;
-            Vector3 lift = Vector3.up * 0.025f;
-
-            List<Vector3> vertices = new List<Vector3>
-            {
-                position - acrossLane - alongLane + lift,
-                position + acrossLane - alongLane + lift,
-                position - acrossLane + alongLane + lift,
-                position + acrossLane + alongLane + lift
-            };
-            // The four vertices are laid out on Unity's XZ ground plane. Use
-            // upward-facing winding so the white stop bar is not back-face
-            // culled when seen from the traffic cameras or from above.
-            List<int> triangles = new List<int> { 0, 1, 2, 2, 1, 3 };
-            Mesh mesh = new Mesh
-            {
-                name = "SumoTrafficLightStopLineMesh",
                 vertices = vertices.ToArray(),
                 triangles = triangles.ToArray()
             };
