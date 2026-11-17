@@ -25,8 +25,8 @@ namespace TccTrafficVision.Editor.CameraCalibration
             // cameras, south_ds_right lets the south signal post touch the lane
             // edge (~0.5% of the lane area): partial occlusion is useful training
             // data, and the labels come from visible-pixel masks.
-            new CameraDefinition("south_ds_left", "SP Dataset South Left", new Vector3(-4.63f, 10f, -6.25f), new Vector3(20.5f, 172.92f, 0f), 32f),
-            new CameraDefinition("south_ds_right", "SP Dataset South Right", new Vector3(-0.46f, 8f, -9.02f), new Vector3(19.99f, 178.1f, 0f), 33.8f),
+            new CameraDefinition("south_ds_left", "SP Dataset South Left", new Vector3(-4.91f, 10f, -6.67f), new Vector3(20.5f, 191.65f, 0f), 32f),
+            new CameraDefinition("south_ds_right", "SP Dataset South Right", new Vector3(-1.85f, 8f, -10.63f), new Vector3(19.99f, 196.83f, 0f), 33.8f),
             new CameraDefinition("east_ds_near", "SP Dataset East Near", new Vector3(7.39f, 8f, -6.87f), new Vector3(19.87f, 103.68f, 0f), 33.5f),
             new CameraDefinition("east_ds_far", "SP Dataset East Far", new Vector3(-3.64f, 6f, -1.91f), new Vector3(9.06f, 106.02f, 0f), 12.4f),
             new CameraDefinition("west_ds_near", "SP Dataset West Near", new Vector3(-3.59f, 11f, -1.97f), new Vector3(16.86f, 280.88f, 0f), 23f),
