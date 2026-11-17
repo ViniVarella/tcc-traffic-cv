@@ -99,7 +99,7 @@ namespace TccTrafficVision.Editor.SumoImport
             // just beyond the respective stop line and sidewalk.
             marker.transform.position = Vector3.zero;
             CreateTrafficSignalPost(marker.transform, "Signal Post East", new Vector3(19.36f, 0f, -2.93f), new Quaternion(0f, -0.5941611f, 0f, 0.80434614f));
-            CreateTrafficSignalPost(marker.transform, "Signal Post South", new Vector3(0.91f, 0f, -22.81f), new Quaternion(0f, 0.1433199f, 0f, 0.9896764f));
+            CreateTrafficSignalPost(marker.transform, "Signal Post South", new Vector3(0.74f, 0f, -22.88f), new Quaternion(0f, 0.1482409f, 0f, 0.9889513f));
             CreateTrafficSignalPost(marker.transform, "Signal Post West", new Vector3(-25.95f, 0f, -4.01f), new Quaternion(0f, 0.8f, 0f, 0.6000001f));
         }
 
