@@ -76,24 +76,24 @@ namespace TccTrafficVision.Editor.SumoImport
             // This layout was refined manually against the imported SP road
             // geometry. Keep the recorded transforms here so rebuilding the
             // presentation environment preserves the approved neighbourhood.
-            PlaceModel(House04Path, "Roadside House 01", root, new Vector3(28.68f, 0f, 32.09f), new Quaternion(0f, 0.6263174f, 0f, -0.7795681f), 6.5f);
-            PlaceModel(House05Path, "Roadside House 02", root, new Vector3(-5.71f, 0f, 71.15f), new Quaternion(0f, 0.7912734f, 0f, 0.6114625f), 7.5f);
-            PlaceModel(House06Path, "Roadside House 03", root, new Vector3(48.61f, 0f, -46.57f), new Quaternion(0f, 0.1851272f, 0f, 0.9827146f), 6.5f);
-            PlaceModel(House08Path, "Roadside House 04", root, new Vector3(42.96f, 0f, 2.36f), new Quaternion(0f, 0.9800589f, 0f, -0.1987072f), 7.5f);
-            PlaceModel(House04Path, "Roadside House 05", root, new Vector3(11.79f, 0f, -63.6f), new Quaternion(0f, 0.6529918f, 0f, -0.757365f), 6.5f);
-            PlaceModel(House05Path, "Roadside House 06", root, new Vector3(-30.5f, 0f, -32.46f), new Quaternion(0f, 0.766937f, 0f, 0.6417225f), 7.5f);
-            PlaceModel(House06Path, "Roadside House 07", root, new Vector3(-32.4f, 0f, 33f), new Quaternion(0f, 0.9748832f, 0f, -0.222717f), 6.5f);
-            PlaceModel(House08Path, "Roadside House 08", root, new Vector3(-67.66f, 0f, -4.76f), new Quaternion(0f, 0.1762364f, 0f, 0.9843479f), 7.5f);
+            PlaceModel(House04Path, "Roadside House 01", root, new Vector3(28.31f, 0f, 32.42f), new Quaternion(0f, 0.6301428f, 0f, -0.7764793f), 6.5f);
+            PlaceModel(House05Path, "Roadside House 02", root, new Vector3(-6.58f, 0f, 71.15f), new Quaternion(0f, 0.7878067f, 0f, 0.6159226f), 7.5f);
+            PlaceModel(House06Path, "Roadside House 03", root, new Vector3(48.46f, 0f, -46.77f), new Quaternion(0f, 0.1869907f, 0f, 0.9823617f), 6.5f);
+            PlaceModel(House08Path, "Roadside House 04", root, new Vector3(42.93f, 0f, 2.55f), new Quaternion(0f, 0.980449f, 0f, -0.1967731f), 7.5f);
+            PlaceModel(House04Path, "Roadside House 05", root, new Vector3(11.18f, 0f, -63.78f), new Quaternion(0f, 0.6490228f, 0f, -0.7607689f), 6.5f);
+            PlaceModel(House05Path, "Roadside House 06", root, new Vector3(-30.82f, 0f, -32.16f), new Quaternion(0f, 0.7707634f, 0f, 0.6371215f), 7.5f);
+            PlaceModel(House06Path, "Roadside House 07", root, new Vector3(-32.63f, 0f, 32.84f), new Quaternion(0f, 0.9755423f, 0f, -0.2198116f), 6.5f);
+            PlaceModel(House08Path, "Roadside House 08", root, new Vector3(-67.66f, 0f, -4.58f), new Quaternion(0f, 0.17772f, 0f, 0.9840811f), 7.5f);
         }
 
         private static void CreateVegetation(Transform root)
         {
             Vector3[] maplePositions =
             {
-                new Vector3(-58.7f, 0f, 79.8f), new Vector3(-51.4f, 0f, 68.5f), new Vector3(-31.6f, 0f, 79.8f), new Vector3(-20.7f, 0f, 70.9f), new Vector3(-59.4f, 0f, 37.9f),
-                new Vector3(36.7f, 0f, 62.5f), new Vector3(52.6f, 0f, 57.3f), new Vector3(68.0f, 0f, 48.8f), new Vector3(79.5f, 0f, 40.6f), new Vector3(73.2f, 0f, 15.3f),
-                new Vector3(-81.9f, 0f, -43.5f), new Vector3(-76.3f, 0f, -57.5f), new Vector3(-63.5f, 0f, -60.8f), new Vector3(-65.4f, 0f, -27.2f), new Vector3(-50.5f, 0f, -62.8f),
-                new Vector3(2.7f, 0f, -77.9f), new Vector3(25.5f, 0f, -77.9f), new Vector3(52.3f, 0f, -68.9f), new Vector3(69.2f, 0f, -54.7f), new Vector3(77.2f, 0f, -13.6f)
+                new Vector3(-59.3f, 0f, 79.4f), new Vector3(-51.9f, 0f, 68.2f), new Vector3(-32.4f, 0f, 79.6f), new Vector3(-21.4f, 0f, 70.8f), new Vector3(-59.5f, 0f, 37.7f),
+                new Vector3(35.9f, 0f, 63.0f), new Vector3(52.0f, 0f, 57.9f), new Vector3(67.5f, 0f, 49.4f), new Vector3(79.2f, 0f, 41.2f), new Vector3(73.1f, 0f, 15.7f),
+                new Vector3(-82.2f, 0f, -42.9f), new Vector3(-76.8f, 0f, -56.8f), new Vector3(-64.1f, 0f, -60.1f), new Vector3(-65.6f, 0f, -26.8f), new Vector3(-51.3f, 0f, -62.2f),
+                new Vector3(1.8f, 0f, -78.0f), new Vector3(24.8f, 0f, -78.2f), new Vector3(51.9f, 0f, -69.3f), new Vector3(69.0f, 0f, -54.9f), new Vector3(77.2f, 0f, -13.5f)
             };
             for (int index = 0; index < maplePositions.Length; index++)
             {
@@ -102,8 +102,8 @@ namespace TccTrafficVision.Editor.SumoImport
 
             Vector3[] pinePositions =
             {
-                new Vector3(-73.7f, 0f, 82.4f), new Vector3(-78.1f, 0f, 47.7f), new Vector3(90.6f, 0f, 45.8f), new Vector3(86.4f, 0f, 17.1f),
-                new Vector3(-93.4f, 0f, -47.1f), new Vector3(-80.1f, 0f, -70.0f), new Vector3(46.7f, 0f, -86.6f), new Vector3(82.3f, 0f, -54.3f)
+                new Vector3(-73.7f, 0f, 82.0f), new Vector3(-78.2f, 0f, 47.5f), new Vector3(90.2f, 0f, 46.5f), new Vector3(86.3f, 0f, 17.5f),
+                new Vector3(-93.7f, 0f, -46.4f), new Vector3(-80.7f, 0f, -69.2f), new Vector3(46.1f, 0f, -87.0f), new Vector3(82.2f, 0f, -54.5f)
             };
             for (int index = 0; index < pinePositions.Length; index++)
             {
@@ -116,14 +116,14 @@ namespace TccTrafficVision.Editor.SumoImport
             // the background), 14 m from the houses and 9 m from other trees.
             Vector3[] extraMaplePositions =
             {
-                new Vector3(73.1f, 0f, 80.4f), new Vector3(56.7f, 0f, 78.8f), new Vector3(41.3f, 0f, 81.9f), new Vector3(-18.3f, 0f, 95.6f),
-                new Vector3(76.1f, 0f, 71.4f), new Vector3(29.9f, 0f, 48.8f), new Vector3(56.5f, 0f, 44.0f), new Vector3(-81.2f, 0f, 57.5f),
-                new Vector3(-99.0f, 0f, 47.3f), new Vector3(81.9f, 0f, 29.6f), new Vector3(42.4f, 0f, 28.0f), new Vector3(51.4f, 0f, 12.3f),
-                new Vector3(32.0f, 0f, 13.1f), new Vector3(90.4f, 0f, 6.5f), new Vector3(62.2f, 0f, 4.0f), new Vector3(-106.2f, 0f, 4.4f),
-                new Vector3(-86.3f, 0f, 1.9f), new Vector3(59.3f, 0f, -5.8f), new Vector3(85.2f, 0f, -10.6f), new Vector3(-49.8f, 0f, -8.1f),
-                new Vector3(-57.8f, 0f, -14.4f), new Vector3(-48.0f, 0f, -16.5f), new Vector3(-103.6f, 0f, -25.4f), new Vector3(-83.2f, 0f, -32.8f),
-                new Vector3(25.8f, 0f, -48.5f), new Vector3(-48.8f, 0f, -37.2f), new Vector3(-42.4f, 0f, -60.8f), new Vector3(27.1f, 0f, -89.3f),
-                new Vector3(-60.4f, 0f, -73.3f), new Vector3(11.7f, 0f, -102.4f)
+                new Vector3(72.2f, 0f, 81.2f), new Vector3(55.8f, 0f, 79.5f), new Vector3(40.3f, 0f, 82.5f), new Vector3(-19.3f, 0f, 95.4f),
+                new Vector3(75.4f, 0f, 72.1f), new Vector3(29.3f, 0f, 49.2f), new Vector3(56.1f, 0f, 44.6f), new Vector3(-90.9f, 0f, 60.7f),
+                new Vector3(-99.1f, 0f, 47.1f), new Vector3(81.7f, 0f, 30.1f), new Vector3(42.1f, 0f, 28.4f), new Vector3(51.3f, 0f, 12.6f),
+                new Vector3(31.9f, 0f, 13.3f), new Vector3(90.7f, 0f, 7.1f), new Vector3(62.1f, 0f, 4.3f), new Vector3(-106.2f, 0f, 4.6f),
+                new Vector3(-86.2f, 0f, 2.1f), new Vector3(59.3f, 0f, -5.6f), new Vector3(85.4f, 0f, -10.2f), new Vector3(-49.8f, 0f, -7.9f),
+                new Vector3(-57.8f, 0f, -14.2f), new Vector3(-48.1f, 0f, -16.2f), new Vector3(-103.7f, 0f, -24.9f), new Vector3(-83.3f, 0f, -32.3f),
+                new Vector3(25.5f, 0f, -48.8f), new Vector3(-49.1f, 0f, -36.7f), new Vector3(-43.2f, 0f, -60.3f), new Vector3(26.3f, 0f, -89.6f),
+                new Vector3(-61.2f, 0f, -72.6f), new Vector3(10.6f, 0f, -102.6f)
             };
             for (int index = 0; index < extraMaplePositions.Length; index++)
             {
@@ -133,9 +133,9 @@ namespace TccTrafficVision.Editor.SumoImport
 
             Vector3[] extraPinePositions =
             {
-                new Vector3(85.7f, 0f, 87.3f), new Vector3(105.0f, 0f, 81.9f), new Vector3(105.0f, 0f, 72.8f), new Vector3(-70.7f, 0f, 92.6f),
-                new Vector3(105.0f, 0f, 55.1f), new Vector3(-87.3f, 0f, 72.2f), new Vector3(68.9f, 0f, -98.7f), new Vector3(-76.5f, 0f, -89.3f),
-                new Vector3(-91.1f, 0f, -91.1f), new Vector3(-119.0f, 0f, -89.9f)
+                new Vector3(84.8f, 0f, 88.2f), new Vector3(105.0f, 0f, 82.8f), new Vector3(105.0f, 0f, 72.5f), new Vector3(-70.8f, 0f, 92.0f),
+                new Vector3(105.0f, 0f, 55.7f), new Vector3(-87.7f, 0f, 71.2f), new Vector3(68.1f, 0f, -100.1f), new Vector3(-77.6f, 0f, -88.4f),
+                new Vector3(-92.1f, 0f, -90.1f), new Vector3(-119.0f, 0f, -89.6f)
             };
             for (int index = 0; index < extraPinePositions.Length; index++)
             {

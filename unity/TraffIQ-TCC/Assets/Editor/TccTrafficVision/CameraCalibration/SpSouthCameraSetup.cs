@@ -33,8 +33,8 @@ namespace TccTrafficVision.Editor.CameraCalibration
             CreateOrConfigureCamera(new CameraDefinition(
                 "south",
                 SouthCameraName,
-                new Vector3(-2.02f, 8f, -7.47f),
-                new Vector3(17.08f, 195.47f, 0f),
+                new Vector3(-2.05f, 8f, -7.54f),
+                new Vector3(17.08f, 196.43f, 0f),
                 26.0f));
         }
 
