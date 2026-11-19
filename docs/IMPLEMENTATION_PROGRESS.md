@@ -1031,17 +1031,18 @@ continua a de antes (depois de todo verde Sul), porque lá a ordem é fixa.
 
   | Controlador | Regra atual | Por tempo (40 s) |
   |---|---|---|
-  | Tempo fixo | 20,7 / 55,2 | 28,5 / 28,5 |
-  | Max-pressure | 26,5 / 20,9 | 16,2 / 33,6 |
-  | Especialista (v2) | 14,1 / 22,4 | 10,9 / 33,6 |
-  | Global `ped40` | 14,7 / 22,9 | 12,4 / 33,9 |
+  | Tempo fixo | 21,1 / 60,3 | 29,5 / 32,9 |
+  | Max-pressure | 28,7 / 24,6 | 16,8 / 37,3 |
+  | Especialista (v2) | 14,5 / 27,3 | 11,3 / 39,0 |
+  | Global `ped40` | 14,9 / 26,8 | 12,3 / 39,5 |
 
   Com ciclos curtos (controle adaptativo), "a cada verde Sul" dá a fase de
   pedestres com mais frequência que "40 s + a próxima troca": os veículos
-  melhoram e os pedestres pioram ~11 s (nível C → D do HCM). No tempo fixo
+  melhoram e os pedestres pioram ~12 s (nível C → D do HCM). No tempo fixo
   (ciclo de ~109 s) é o contrário. A ordem não muda: o global vence o
-  max-pressure (−3,8 s, p < 0,001) e fica atrás do especialista (+1,5 s);
-  pedestres empatados entre os três adaptativos. A regra só troca espera de
+  max-pressure (−4,5 s, p < 0,001) e fica atrás do especialista (+1,0 s,
+  p < 0,001); pedestres empatados com o especialista e +2,1 s contra o
+  max-pressure (p = 0,007). A regra só troca espera de
   pedestre por espera de veículo; mantida a regra atual no SP.
 - Tentativa descartada: ajuste fino do `ped40` (480 episódios, lr 3·10⁻⁴,
   validação em 3 seeds; `dqn-fase-livre-ped40b-*`). Venceu na validação, mas
