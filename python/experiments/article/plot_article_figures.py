@@ -112,19 +112,31 @@ def compare(group: dict[str, dict[int, dict[str, Any]]], references: list[str]) 
 
 
 def bars(ax, groups: list[str], series: list[str], data: dict[str, dict[str, Any]], metric: str,
-         labels: list[str], decimals: int = 1) -> None:
+         labels: list[str], decimals: int = 1, stagger: bool = False) -> None:
     width = 0.8 / len(series)
     x = np.arange(len(groups))
+    labels_by_group: list[list[tuple[float, float, float]]] = [[] for _ in groups]
     for i, name in enumerate(series):
         means = [data[g]["summary"][name][metric]["mean"] if name in data[g]["summary"] else np.nan for g in groups]
         errors = [data[g]["summary"][name][metric]["ci95"] if name in data[g]["summary"] else 0 for g in groups]
         positions = x - 0.4 + width * (i + 0.5)
         ax.bar(positions, means, width * 0.92, color=COLORS[name], label=LABELS[name], zorder=2)
         ax.errorbar(positions, means, yerr=errors, fmt="none", ecolor=TEXT, elinewidth=0.7, capsize=1.8, zorder=3)
-        for xpos, mean, err in zip(positions, means, errors):
+        for g, (xpos, mean, err) in enumerate(zip(positions, means, errors)):
             if not np.isnan(mean):
-                ax.text(xpos, mean + err + 0.4, f"{mean:.{decimals}f}".replace(".", ","), ha="center", va="bottom",
-                        fontsize=6, color=TEXT)
+                labels_by_group[g].append((xpos, mean, mean + err + 0.4))
+    # Com barras estreitas (``stagger``), dois rótulos vizinhos de 4 caracteres ("14,5") e
+    # alturas parecidas se sobrepõem: sobe o da direita só o necessário.
+    gap = 0.045 * max(y for group in labels_by_group for _, _, y in group)
+    for group in labels_by_group:
+        previous_y, previous_wide = -np.inf, False
+        for xpos, mean, y in group:
+            text = f"{mean:.{decimals}f}".replace(".", ",")
+            wide = len(text) >= 4
+            if stagger and wide and previous_wide and abs(y - previous_y) < gap:
+                y = previous_y + gap
+            ax.text(xpos, y, text, ha="center", va="bottom", fontsize=6, color=TEXT)
+            previous_y, previous_wide = y, wide
     ax.set_xticks(x, labels)
     ax.tick_params(axis="x", length=0)
 
@@ -134,7 +146,7 @@ def figure_sp(sp: dict[str, Any], output: Path) -> None:
     fig, axes = plt.subplots(1, 2, figsize=(WIDTH_IN, 2.7))
     series = ["baseline", "max_pressure", "v2", "global"]
     for ax, metric, title in zip(axes, (WAIT, STOPPED), ("Espera média por veículo (s)", "Espera dos veículos que pararam (s)")):
-        bars(ax, groups, series, sp, metric, [SP_SCENARIOS[g] for g in groups])
+        bars(ax, groups, series, sp, metric, [SP_SCENARIOS[g] for g in groups], stagger=True)
         ax.set_title(title, fontsize=9, color=TEXT, loc="left")
         ax.set_ylim(0, ax.get_ylim()[1] * 1.08)
     handles, names = axes[0].get_legend_handles_labels()
