@@ -38,7 +38,7 @@ percepção *ground truth*):
 
 | Cenário | Tempo fixo | Max-pressure | Especialista (v5.0) | Global (v6.0) |
 |---|---:|---:|---:|---:|
-| SP `calibrated_ped` (com pedestres, o mais realista) | 21,1 | 28,7 | 14,5 | **14,9** (−30%) |
+| SP `calibrated_ped` (com o estágio de pedestres, o mais realista) | 21,1 | 28,7 | 14,5 | **14,9** (−29,5%) |
 | SP `calibrated` (demanda medida) | 13,0 | 5,2 | 4,2 | **4,4** (−66%) |
 | SP `original` (demanda equilibrada) | 14,6 | 4,7 | 4,7 | 4,8 |
 | `cruz-assimetrico` baixa (nunca visto) | 21,7 | 9,9 | — | **7,9** |

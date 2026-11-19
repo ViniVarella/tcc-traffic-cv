@@ -15,13 +15,14 @@ sincronização, recompensa de treino e avaliação.
 **Versão atual: v6.0 (modelo global)** — um único DQN que serve para qualquer
 cruzamento, sem novo treino: a mesma rede dá uma nota a cada estágio do
 semáforo e abre o de maior nota. Foi treinado só em quatro cruzamentos
-sintéticos e nunca viu o de São Paulo. Em dez repetições (seeds 201–210,
-percepção *ground truth*), no cenário com a fase de pedestres a cada ciclo,
-reduz a espera média dos veículos do tempo fixo em 30% (21,1 → 14,9 s) e a
-dos veículos que pararam em 42% (33,1 → 19,0 s); o max-pressure fica em
-28,7 s. Sem pedestres, a redução é de 66% (13,0 → 4,4 s). Decidindo pelas
-câmeras, as reduções com pedestres ficam em 29% e 41%. Com o aviso V2I, todas
-as viaturas cruzam sem parar (ver [v6.0 — Modelo global](#v60--modelo-global)).
+sintéticos e nunca viu o de São Paulo. Decidindo pelas câmeras (seeds
+201–203), com o estágio de pedestres a cada ciclo, reduz a espera média dos
+veículos do tempo fixo em 29% (21,2 → 15,1 s) e a dos veículos que pararam
+em 41%; sem o estágio, em 64% (13,2 → 4,7 s). Com a percepção
+*ground truth*, em dez repetições (seeds 201–210), as reduções são de 29,5%
+(21,1 → 14,9 s) e 42% (33,1 → 19,0 s) com o estágio de pedestres, com o
+max-pressure em 28,7 s, e de 66% (13,0 → 4,4 s) sem ele. Com o aviso
+V2I, todas as viaturas cruzam sem parar (ver [v6.0 — Modelo global](#v60--modelo-global)).
 
 ## Arquitetura
 
@@ -168,7 +169,7 @@ estágios, sem novo treino:
 - **Treino** (só SUMO, percepção *ground truth*): quatro cruzamentos
   sintéticos (`cruz-2x2`, `cruz-opostas`, `t-3` e `t-avenida`, gerados em
   `sumo/generic/` por `experiments.data.build_generic_intersections`), cada um com
-  demanda baixa, média e desbalanceada, com e sem pedestres (24 cenários).
+  demanda baixa, média e desbalanceada, com e sem o estágio de pedestres (24 cenários).
   Primeiro, demonstrações e imitação do max-pressure (DQfD); depois, Double
   DQN sem imitação. Nos sintéticos, a fase de pedestres é obrigatória por
   tempo (entra na primeira troca de verde 40 s depois da anterior); no SP,
@@ -182,7 +183,7 @@ Seeds 201–210, percepção *ground truth*, espera média por veículo (s), tes
 
 | Cenário | Tempo fixo | Max-pressure | Especialista (v5.0) | Modelo global (v6.0) |
 |---|---:|---:|---:|---:|
-| SP `calibrated_ped` (com pedestres) | 21,1 | 28,7 | 14,5 | **14,9** (−30%) |
+| SP `calibrated_ped` (com o estágio de pedestres) | 21,1 | 28,7 | 14,5 | **14,9** (−29,5%) |
 | SP `calibrated` | 13,0 | 5,2 | 4,2 | **4,4** (−66%) |
 | SP `original` | 14,6 | 4,7 | 4,7 | 4,8 |
 | `cruz-assimetrico` baixa | 21,7 | 9,9 | — | **7,9** |
@@ -192,15 +193,15 @@ Seeds 201–210, percepção *ground truth*, espera média por veículo (s), tes
 | `cruz-assimetrico` média + pedestres | 60,0 | **39,1** | — | 45,4 |
 | `cruz-assimetrico` desbalanceada + pedestres | 58,7 | 36,8 | — | **32,2** |
 
-- No SP com pedestres, a espera dos veículos que pararam cai de 33,1 para
+- No SP com o estágio de pedestres, a espera dos veículos que pararam cai de 33,1 para
   19,0 s (−42%), e a diferença para o especialista (+0,4 s) não é
   significativa (p = 0,12). O max-pressure não considera os 18 s com todos os
   veículos no vermelho a cada fase de pedestres, fica pior que o tempo fixo e
   deixa em média 14 veículos na fila de inserção. Os pedestres esperam 26,8 s
   (tempo fixo 60,3 s).
 - No `cruz-assimetrico`, o global vence o tempo fixo nos seis cenários e o
-  max-pressure em três, empata em dois e perde em um (média com pedestres,
-  +6,2 s). Os cenários mais carregados estão perto da saturação em todos os
+  max-pressure em três, empata em dois e perde em um (média com o estágio de
+  pedestres, +6,2 s). Os cenários mais carregados estão perto da saturação em todos os
   controladores e devem ser lidos junto com a fila de inserção.
 - **Com as câmeras** (Unity, seeds 201–203, 0 frames perdidos;
   `versoes-*-visual-global.json`), o global, nunca treinado com elas, faz
@@ -210,7 +211,7 @@ Seeds 201–210, percepção *ground truth*, espera média por veículo (s), tes
   p = 0,12; +0,3 s, p = 0,004).
 - **Viaturas** (18 em 3 seeds, perda total = espera para entrar + perda na
   rede): com o aviso V2I, 18 de 18 cruzam sem parar, com 1,5 s de perda
-  (*ground truth* e câmeras; com pedestres, 17 de 18 e 2,4 s, pois a viatura
+  (*ground truth* e câmeras; com o estágio de pedestres, 17 de 18 e 2,4 s, pois a viatura
   espera a travessia em andamento); sem preempção, só 8 de 18, com 10,2 s
   (7 de 18 e 8,9 s com as câmeras). Só com a detecção visual, 17 de 18 sem
   parar e 3,7 s, com 18/18 detectadas e nenhum alarme falso.
