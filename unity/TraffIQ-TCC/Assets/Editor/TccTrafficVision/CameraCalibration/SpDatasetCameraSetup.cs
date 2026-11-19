@@ -25,12 +25,12 @@ namespace TccTrafficVision.Editor.CameraCalibration
             // cameras, south_ds_right lets the south signal post touch the lane
             // edge (~0.5% of the lane area): partial occlusion is useful training
             // data, and the labels come from visible-pixel masks.
-            new CameraDefinition("south_ds_left", "SP Dataset South Left", new Vector3(-4.63f, 10f, -6.25f), new Vector3(20.5f, 172.92f, 0f), 32f),
-            new CameraDefinition("south_ds_right", "SP Dataset South Right", new Vector3(-0.46f, 8f, -9.02f), new Vector3(19.99f, 178.1f, 0f), 33.8f),
-            new CameraDefinition("east_ds_near", "SP Dataset East Near", new Vector3(7.39f, 8f, -6.87f), new Vector3(19.87f, 103.68f, 0f), 33.5f),
-            new CameraDefinition("east_ds_far", "SP Dataset East Far", new Vector3(-3.64f, 6f, -1.91f), new Vector3(9.06f, 106.02f, 0f), 12.4f),
-            new CameraDefinition("west_ds_near", "SP Dataset West Near", new Vector3(-3.59f, 11f, -1.97f), new Vector3(16.86f, 280.88f, 0f), 23f),
-            new CameraDefinition("west_ds_far", "SP Dataset West Far", new Vector3(9.37f, 7.5f, -7.48f), new Vector3(8.09f, 283.45f, 0f), 9.1f),
+            new CameraDefinition("south_ds_left", "SP Dataset South Left", new Vector3(-3.05f, 10f, -0.51f), new Vector3(20.5f, 193.18f, 0f), 32f),
+            new CameraDefinition("south_ds_right", "SP Dataset South Right", new Vector3(-0.1f, 8f, -4.55f), new Vector3(19.99f, 198.36f, 0f), 33.8f),
+            new CameraDefinition("east_ds_near", "SP Dataset East Near", new Vector3(-1.79f, 8f, -4.05f), new Vector3(19.87f, 103.68f, 0f), 33.5f),
+            new CameraDefinition("east_ds_far", "SP Dataset East Far", new Vector3(-12.82f, 6f, 0.91f), new Vector3(9.06f, 106.02f, 0f), 12.4f),
+            new CameraDefinition("west_ds_near", "SP Dataset West Near", new Vector3(9.67f, 11f, -6f), new Vector3(16.86f, 280.88f, 0f), 23f),
+            new CameraDefinition("west_ds_far", "SP Dataset West Far", new Vector3(22.63f, 7.5f, -11.51f), new Vector3(8.09f, 283.45f, 0f), 9.1f),
         };
 
         [MenuItem("Traffic Vision/Dataset/Create SP Dataset Cameras")]

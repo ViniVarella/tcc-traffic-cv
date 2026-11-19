@@ -33,8 +33,8 @@ namespace TccTrafficVision.Editor.CameraCalibration
             CreateOrConfigureCamera(new CameraDefinition(
                 "south",
                 SouthCameraName,
-                new Vector3(-1.63f, 8f, -6.08f),
-                new Vector3(17.08f, 176.74f, 0f),
+                new Vector3(-0.18f, 8f, -1.39f),
+                new Vector3(17.08f, 197f, 0f),
                 26.0f));
         }
 
@@ -44,7 +44,7 @@ namespace TccTrafficVision.Editor.CameraCalibration
             CreateOrConfigureCamera(new CameraDefinition(
                 "east",
                 EastCameraName,
-                new Vector3(2.1f, 6f, -3.67f),
+                new Vector3(-7.08f, 6f, -0.85f),
                 new Vector3(11.41f, 105.89f, 0f),
                 16.7f));
         }
@@ -55,7 +55,7 @@ namespace TccTrafficVision.Editor.CameraCalibration
             CreateOrConfigureCamera(new CameraDefinition(
                 "west",
                 WestCameraName,
-                new Vector3(3.63f, 9f, -5.73f),
+                new Vector3(16.89f, 9f, -9.76f),
                 new Vector3(11.15f, 283.11f, 0f),
                 12.9f));
         }

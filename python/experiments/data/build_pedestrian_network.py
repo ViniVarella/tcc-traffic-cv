@@ -3,7 +3,8 @@
 Saídas em ``sumo/sp/`` (a rede sem pedestres não muda):
 
 - ``Cruzamento.ped.net.xml``: calçadas e faixas de pedestre (``netconvert
-  --sidewalks.guess --crossings.guess``). A geometria das faixas de veículos e
+  --sidewalks.guess --crossings.guess``), com a largura medida no cruzamento
+  real (``--crossing-width``, 4,38 m). A geometria das faixas de veículos e
   os links 0–9 do semáforo são preservados; as travessias viram os links
   seguintes. A calçada vira a faixa 0 de cada via, então as faixas de veículos
   ganham +1 no índice (``E3_0`` → ``E3_1``).
@@ -156,6 +157,7 @@ def main() -> None:
     parser.add_argument("--pedestrians-per-hour", type=float, default=300.0)
     parser.add_argument("--walking-speed", type=float, default=1.2, help="Velocidade de projeto (m/s) do verde de pedestre.")
     parser.add_argument("--end", type=float, default=3600.0)
+    parser.add_argument("--crossing-width", type=float, default=4.38, help="Largura das faixas de pedestre (m), medida no cruzamento real.")
     args = parser.parse_args()
 
     source, target = root / "Cruzamento.net.xml", root / "Cruzamento.ped.net.xml"
@@ -163,7 +165,7 @@ def main() -> None:
         work = Path(tmp)
         guessed = work / "guessed.net.xml"
         subprocess.run(["netconvert", "-s", str(source), "--sidewalks.guess", "--crossings.guess", "--walkingareas",
-                        "-o", str(guessed)], check=True, capture_output=True)
+                        "--default.crossing-width", str(args.crossing_width), "-o", str(guessed)], check=True, capture_output=True)
         subprocess.run(["netconvert", "-s", str(guessed), "--plain-output-prefix", str(work / "plain")],
                        check=True, capture_output=True)
         connections = work / "plain.con.xml"

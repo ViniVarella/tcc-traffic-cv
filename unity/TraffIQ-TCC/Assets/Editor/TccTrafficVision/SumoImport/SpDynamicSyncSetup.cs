@@ -95,12 +95,12 @@ namespace TccTrafficVision.Editor.SumoImport
             }
 
             // E2, E3 and E6 are the three incoming approaches controlled by
-            // this TLS. Each post is placed right of its vehicle direction,
-            // just beyond the respective stop line and sidewalk.
+            // this TLS. Each post stands on the right sidewalk of its approach,
+            // just before the stop line (the lane end, next to the crosswalk).
             marker.transform.position = Vector3.zero;
-            CreateTrafficSignalPost(marker.transform, "Signal Post East", new Vector3(19.36f, 0f, -2.93f), new Quaternion(0f, -0.5941611f, 0f, 0.80434614f));
-            CreateTrafficSignalPost(marker.transform, "Signal Post South", new Vector3(6.3f, 0f, -19.46f), new Quaternion(0f, -0.028023053f, 0f, 0.99960726f));
-            CreateTrafficSignalPost(marker.transform, "Signal Post West", new Vector3(-25.95f, 0f, -4.01f), new Quaternion(0f, 0.8f, 0f, 0.6000001f));
+            CreateTrafficSignalPost(marker.transform, "Signal Post East", new Vector3(14.2f, 0f, -1.35f), new Quaternion(0f, -0.5941611f, 0f, 0.80434614f));
+            CreateTrafficSignalPost(marker.transform, "Signal Post South", new Vector3(1.63f, 0f, -19.97f), new Quaternion(0f, 0.1482409f, 0f, 0.9889513f));
+            CreateTrafficSignalPost(marker.transform, "Signal Post West", new Vector3(-14.79f, 0f, -7.41f), new Quaternion(0f, 0.8f, 0f, 0.6000001f));
         }
 
         private static void CreateTrafficSignalPost(Transform parent, string objectName, Vector3 position, Quaternion rotation)

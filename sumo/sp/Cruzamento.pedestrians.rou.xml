@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Gerado por python -m experiments.build_pedestrian_network. Demanda
+<!-- Gerado por python -m experiments.data.build_pedestrian_network. Demanda
      sintética (o drone não mediu pedestres): chegadas Poisson entre as
      calçadas de todas as vias, divididas igualmente entre os pares. -->
 <routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
