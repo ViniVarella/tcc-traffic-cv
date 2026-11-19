@@ -97,21 +97,21 @@
                 <div class="hero-visual">
                     <div class="highlights">
                         <div class="highlight-card">
-                            <span class="highlight-value">−67%</span>
+                            <span class="highlight-value">−64%</span>
                             <span class="highlight-text">no tempo de espera dos veículos, em cenário sem pedestres</span>
                         </div>
                         <div class="highlight-card">
-                            <span class="highlight-value">−32%</span>
+                            <span class="highlight-value">−29%</span>
                             <span class="highlight-text">no tempo de espera dos veículos, em cenário com fase de pedestres</span>
                         </div>
                         <div class="highlight-card">
-                            <span class="highlight-value" title="80,6%: 29 de 36 ambulâncias">~80%</span>
+                            <span class="highlight-value" title="17 de 18 ambulâncias, detectadas só pelas câmeras">94%</span>
                             <span class="highlight-text">das ambulâncias atravessam sem parar</span>
                         </div>
                         <p class="highlights-note">
                             Simulação de um cruzamento real de São Paulo, com o TraffIQ decidindo somente com
                             base nas imagens das câmeras. Tempos de espera comparados com o semáforo de tempo
-                            fixo; ambulâncias: média dos cenários com e sem pedestres.
+                            fixo; ambulâncias: cenário sem pedestres.
                         </p>
                     </div>
                 </div>
@@ -220,7 +220,7 @@
                         <div class="timeline-content">
                             <div class="timeline-tag">v3.0 · set/2026</div>
                             <h4>IA com informações por faixa</h4>
-                            <p>O modelo passa a receber, para cada faixa, o número de veículos, os veículos parados e o tempo de espera. O tempo de espera dos veículos é 67% menor que no tempo fixo, em cenário sem pedestres.</p>
+                            <p>O modelo passa a receber, para cada faixa, o número de veículos, os veículos parados e o tempo de espera. O tempo de espera dos veículos é 68% menor que no tempo fixo, em cenário sem pedestres.</p>
                         </div>
                     </div>
                     <div class="timeline-item">
@@ -236,7 +236,7 @@
                         <div class="timeline-content">
                             <div class="timeline-tag">v5.0 · out/2026</div>
                             <h4>Fase exclusiva para pedestres</h4>
-                            <p>A cada ciclo, todos os veículos param para a travessia de pedestres. Ainda assim, o tempo de espera dos veículos é 32% menor que no tempo fixo.</p>
+                            <p>A cada ciclo, todos os veículos param para a travessia de pedestres. Ainda assim, o tempo de espera dos veículos é 31% menor que no tempo fixo.</p>
                         </div>
                     </div>
                     <div class="timeline-item active">
@@ -244,7 +244,7 @@
                         <div class="timeline-content">
                             <div class="timeline-tag current">v6.0 · atual</div>
                             <h4>Um modelo para qualquer cruzamento</h4>
-                            <p>A IA foi treinada só em cruzamentos fictícios, com 2 a 4 fases e números diferentes de faixas, e escolhe livremente qual via libera em seguida. Sem nunca ter visto este cruzamento, ela reduz o tempo de espera dos veículos em 70% em relação ao tempo fixo, em cenário sem pedestres (medido com os dados exatos do simulador).</p>
+                            <p>A IA foi treinada só em cruzamentos fictícios, com 2 a 4 fases e números diferentes de faixas, e escolhe livremente qual via libera em seguida. Sem nunca ter visto este cruzamento, ela reduz o tempo de espera dos veículos em 66% em relação ao tempo fixo, em cenário sem pedestres, e em 30% com a fase de pedestres (medido com os dados exatos do simulador).</p>
                         </div>
                     </div>
                 </div>
@@ -582,14 +582,14 @@
                                 <div class="impact-icon green">🎯</div>
                                 <div class="impact-details">
                                     <div class="impact-title">Nível de Serviço da Via (HCM)</div>
-                                    <div class="impact-desc">Evolução do <span class="badge-tag tag-warning">Nível C</span> (20,8 s) para <span class="badge-tag tag-success">Nível B</span> (14,1 s).</div>
+                                    <div class="impact-desc">Evolução do <span class="badge-tag tag-warning">Nível C</span> (21,2 s) para <span class="badge-tag tag-success">Nível B</span> (15,1 s).</div>
                                 </div>
                             </div>
                             <div class="impact-item">
                                 <div class="impact-icon siren">🚑</div>
                                 <div class="impact-details">
                                     <div class="impact-title">Prioridade para Emergências</div>
-                                    <div class="impact-desc">Com o aviso de aproximação (V2I), todas as ambulâncias cruzam <span class="badge-tag tag-siren">sem parar</span>, com perda média de 1,8 s.</div>
+                                    <div class="impact-desc">Com o aviso de aproximação (V2I), todas as ambulâncias cruzam <span class="badge-tag tag-siren">sem parar</span>, com perda média de 1,5 s.</div>
                                 </div>
                             </div>
                             <div class="impact-item">
@@ -616,58 +616,58 @@
 
                 <div class="benchmark-grid">
                     <div class="benchmark-card highlighted">
-                        <div class="benchmark-scenario">Cenário com Pedestres (v5.0)</div>
-                        <div class="benchmark-metric-main">−32%</div>
+                        <div class="benchmark-scenario">Cenário com Pedestres (v6.0)</div>
+                        <div class="benchmark-metric-main">−29%</div>
                         <div class="benchmark-metric-label">no tempo de espera dos veículos</div>
                         <div class="benchmark-comparison">
                             <div class="comp-row">
                                 <span>Semáforo fixo:</span>
-                                <strong>20,8 s</strong>
+                                <strong>21,2 s</strong>
                             </div>
                             <div class="comp-row">
                                 <span>TraffIQ (IA):</span>
-                                <strong class="text-green">14,1 s</strong>
+                                <strong class="text-green">15,1 s</strong>
                             </div>
                         </div>
-                        <div class="benchmark-footer-note">Pela câmera, com a fase de pedestres a cada ciclo</div>
+                        <div class="benchmark-footer-note">Pela câmera, com a fase de pedestres a cada ciclo; com os dados do simulador, 14,8 s</div>
                     </div>
 
                     <div class="benchmark-card">
                         <div class="benchmark-scenario">Cenário sem Pedestres (Fluxo Direto)</div>
-                        <div class="benchmark-metric-main">−67%</div>
+                        <div class="benchmark-metric-main">−64%</div>
                         <div class="benchmark-metric-label">no tempo de espera dos veículos</div>
                         <div class="benchmark-comparison">
                             <div class="comp-row">
                                 <span>Semáforo fixo:</span>
-                                <strong>13,0 s</strong>
+                                <strong>13,2 s</strong>
                             </div>
                             <div class="comp-row">
                                 <span>TraffIQ (IA):</span>
-                                <strong class="text-green">4,3 s</strong>
+                                <strong class="text-green">4,7 s</strong>
                             </div>
                         </div>
-                        <div class="benchmark-footer-note">Pela câmera; com os dados do simulador, 4,1 s</div>
+                        <div class="benchmark-footer-note">Pela câmera; com os dados do simulador, 4,5 s</div>
                     </div>
 
                     <div class="benchmark-card">
                         <div class="benchmark-scenario">Veículos de Emergência</div>
                         <div class="benchmark-metric-main">100%</div>
-                        <div class="benchmark-metric-label">das ambulâncias passam sem parar com aviso V2I (36 de 36)</div>
+                        <div class="benchmark-metric-label">das ambulâncias passam sem parar com aviso V2I (18 de 18)</div>
                         <div class="benchmark-comparison">
                             <div class="comp-row">
                                 <span>Sem prioridade:</span>
-                                <strong>50% sem parar</strong>
+                                <strong>39% sem parar</strong>
                             </div>
                             <div class="comp-row">
                                 <span>Somente câmera:</span>
-                                <strong>~80% sem parar</strong>
+                                <strong>94% sem parar</strong>
                             </div>
                             <div class="comp-row">
                                 <span>Com aviso V2I:</span>
                                 <strong class="text-siren">100% sem parar</strong>
                             </div>
                         </div>
-                        <div class="benchmark-footer-note">36 ambulâncias testadas no trânsito real do cruzamento, com e sem pedestres.</div>
+                        <div class="benchmark-footer-note">18 ambulâncias testadas no trânsito medido do cruzamento, decidindo pelas câmeras.</div>
                     </div>
 
                     <div class="benchmark-card">
@@ -677,7 +677,7 @@
                         <div class="benchmark-comparison">
                             <div class="comp-row">
                                 <span>Diferença da visão:</span>
-                                <strong>−0,1 s em relação ao simulador</strong>
+                                <strong>+0,2 s em relação ao simulador</strong>
                             </div>
                             <div class="comp-row">
                                 <span>Alcance das ROIs:</span>

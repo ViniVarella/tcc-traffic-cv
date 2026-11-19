@@ -38,9 +38,9 @@ percepção *ground truth*):
 
 | Cenário | Tempo fixo | Max-pressure | Especialista (v5.0) | Global (v6.0) |
 |---|---:|---:|---:|---:|
-| SP `calibrated_ped` (com pedestres, o mais realista) | 20,7 | 26,5 | 14,1 | **14,7** (−29%) |
-| SP `calibrated` (demanda medida) | 12,9 | 5,0 | 4,2 | **4,4** (−66%) |
-| SP `original` (demanda equilibrada) | 14,9 | 4,6 | 4,5 | 4,7 |
+| SP `calibrated_ped` (com pedestres, o mais realista) | 21,1 | 28,7 | 14,5 | **14,9** (−30%) |
+| SP `calibrated` (demanda medida) | 13,0 | 5,2 | 4,2 | **4,4** (−66%) |
+| SP `original` (demanda equilibrada) | 14,6 | 4,7 | 4,7 | 4,8 |
 | `cruz-assimetrico` baixa (nunca visto) | 21,7 | 9,9 | — | **7,9** |
 | `cruz-assimetrico` média | 31,8 | 20,3 | — | 19,1 (empate) |
 | `cruz-assimetrico` desbalanceada | 33,7 | 19,9 | — | 19,7 (empate) |
@@ -48,14 +48,14 @@ percepção *ground truth*):
 | `cruz-assimetrico` média + pedestres | 60,0 | **39,1** | — | 45,4 |
 | `cruz-assimetrico` desbalanceada + pedestres | 58,7 | 36,8 | — | **32,2** |
 
-- **Com as câmeras** (Unity, 3 seeds, 0 frames perdidos): 4,67 s no
-  `calibrated` (−64% contra o tempo fixo visual) e 15,6 s no `calibrated_ped`
-  (−25%), sem diferença significativa da percepção *ground truth* (p = 0,26 e
-  0,17).
+- **Com as câmeras** (Unity, 3 seeds, 0 frames perdidos): 4,71 s no
+  `calibrated` (−64% contra o tempo fixo) e 15,1 s no `calibrated_ped`
+  (−29%), contra 4,54 e 14,8 s com a percepção *ground truth* nas mesmas seeds
+  (+0,2 s, p = 0,12; +0,3 s, p = 0,004).
 - **Viaturas** (`calibrated`, 18 em 3 seeds, câmeras): com o aviso V2I, 18/18
-  cruzam sem parar (perda média 1,3 s); sem prioridade, 6/18 (9,8 s); só com a
-  detecção visual, 14/18 (4,2 s), com 18/18 detectadas e nenhum alarme falso.
-- **Pedestres** (`calibrated_ped`): esperam 22,9 s com o global, contra 55,2 s
+  cruzam sem parar (perda média 1,5 s); sem prioridade, 7/18 (8,9 s); só com a
+  detecção visual, 17/18 (3,7 s), com 18/18 detectadas e nenhum alarme falso.
+- **Pedestres** (`calibrated_ped`): esperam 26,8 s com o global, contra 60,3 s
   no tempo fixo.
 - Cada decisão leva ~0,1 ms num núcleo de notebook.
 
@@ -988,9 +988,9 @@ continua a de antes (depois de todo verde Sul), porque lá a ordem é fixa.
 
   | Cenário | Tempo fixo | Max-pressure | Especialista | Global `ped40` |
   |---|---|---|---|---|
-  | SP `calibrated` | 12,9 | 5,0 | 4,2 | 4,4 (−0,6 vs MP; +0,2 vs especialista, p = 0,023) |
-  | SP `calibrated_ped` | 20,7 | 26,5 | 14,1 | 14,7 (−11,8 vs MP; +0,7 vs especialista); pedestres 22,9 s (especialista 22,4) |
-  | SP `original` | 14,9 | 4,6 | 4,5 | 4,7 (empate com o MP) |
+  | SP `calibrated` | 13,0 | 5,2 | 4,2 | 4,4 (−0,8 vs MP; +0,2 vs especialista, p = 0,052) |
+  | SP `calibrated_ped` | 21,1 | 28,7 | 14,5 | 14,9 (−13,8 vs MP; +0,4 vs especialista, p = 0,12); pedestres 26,8 s (especialista 27,3) |
+  | SP `original` | 14,6 | 4,7 | 4,7 | 4,8 (+0,1 vs MP, p = 0,019) |
   | `cruz-assimetrico` baixa | 21,7 | 9,9 | — | 7,9 (−2,0, p < 0,001) |
   | `cruz-assimetrico` media | 31,8 | 20,3 | — | 19,1 (empate, p = 0,18) |
   | `cruz-assimetrico` desbalanceada | 33,7 | 19,9 | — | 19,7 (empate) |
@@ -1001,31 +1001,28 @@ continua a de antes (depois de todo verde Sul), porque lá a ordem é fixa.
 - Contra o checkpoint `rl`, sem pedestres, a piora continua: +1,5 s na baixa
   e +3,5 s na média (p ≤ 0,002). Hipótese não provada: o mesmo modelo agora
   divide a capacidade entre cenários com e sem pedestres.
-- Preempção (V2I, `preempcao-*-oracle-global-ped40.json`): 18/18 viaturas sem
-  parar; perda média 0,4 s (`calibrated`) e 0,9 s (`calibrated_ped`).
+- Preempção (V2I, `preempcao-*-oracle-global-ped40.json`), perda na rede /
+  total / sem parar: 0,5 / 1,5 s / 18 de 18 (`calibrated`) e 1,4 / 2,4 s /
+  17 de 18 (`calibrated_ped`: a viatura espera a travessia de pedestres em
+  andamento). Sem preempção: 10,2 s / 8 de 18 e 16,3 s / 9 de 18.
 - Percepção visual (Unity, YOLO de 2 classes + ByteTrack, seeds 201–203,
   `missing_frames` = 0; `versoes-*-visual-global.json`), espera média (s),
-  teste t pareado; as outras versões vêm de `versoes-*-visual.json`:
+  teste t pareado contra o global com *ground truth* nas mesmas seeds:
 
-  | Cenário | Global visual | Global *ground truth* | Especialista visual | Max-pressure visual | Tempo fixo visual |
-  |---|---|---|---|---|---|
-  | `calibrated` | 4,67 | 4,49 (p = 0,26) | 4,31 (p = 0,015) | 4,77 (p = 0,64) | 12,98 (−64%) |
-  | `calibrated_ped` | 15,6 | 14,7 (p = 0,17) | 14,2 (p = 0,08) | 21,0 (p = 0,011) | 20,8 (−25%) |
+  | Cenário | Global visual | Global *ground truth* | Tempo fixo |
+  |---|---|---|---|
+  | `calibrated` | 4,71 | 4,54 (p = 0,12) | 13,21 (−64%) |
+  | `calibrated_ped` | 15,1 | 14,8 (p = 0,004) | 21,22 (−29%) |
 
-  Espera dos pedestres no `calibrated_ped`: 24,2 s (*ground truth* 23,2; max-pressure 24,2;
-  especialista 25,0). Fila de inserção média ≤ 0,3 veículo. A visão custa
-  ao global +0,2 s e +1,0 s (não significativos), na ordem do especialista.
+  Espera dos pedestres no `calibrated_ped`: 29,4 s (*ground truth* 27,9 nas
+  mesmas seeds). Fila de inserção média ≤ 0,1 veículo. A visão custa ao
+  global +0,2 s e +0,3 s.
 - Preempção com câmeras (`preempcao-calibrated-visual-global.json`,
   `calibrated`, seeds 201–203, 18 viaturas, `missing_frames` = 0), perda total
-  (entrada + rede) / sem parar, contra o especialista com câmeras
-  (`preempcao-calibrated-visual.json`): V2I 1,3 s / 18 de 18 (especialista
-  1,4 s / 18); só visão 4,2 s / 14 de 18 (especialista 2,7 s / 16); ambos
-  1,4 s / 18 de 18 (1,4 s / 18). Visão: 18/18 detectadas, 0 alarmes falsos.
-  Só a detecção visual fica pior que no especialista (3 seeds; não testado).
-  Sem preempção, também com câmeras (`preempcao-calibrated-visual-global-v2i.json`,
-  2026-11-10, `missing_frames` = 0, mesmo comando com `--detections v2i`):
-  9,8 s / 6 de 18 (*ground truth*: 10,8 s / 7 de 18); o V2I da mesma rodada
-  repetiu 1,3 s / 18 de 18. Espera do tráfego 4,6 s sem e 4,8 s com preempção.
+  (entrada + rede) / sem parar (`--detections v2i,vision`): sem preempção
+  8,9 s / 7 de 18; V2I 1,5 s / 18 de 18; só visão 3,7 s / 17 de 18. Visão:
+  18/18 detectadas, 0 alarmes falsos, ~6 s antes da linha (V2I ~22 s).
+  Espera do tráfego 4,6 s sem e 5,0 s com V2I.
 - Teste de sensibilidade (pedido do usuário): a regra por tempo (N = 40 s)
   também no SP, só como registro (`compare_versions --pedestrian-interval 40`,
   `versoes-calibrated_ped-oracle-10seeds-ped-tempo40.json`; o padrão do SP
