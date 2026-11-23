@@ -4,6 +4,7 @@ const path = require("path");
 const {
   Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType, AlignmentType,
   HeadingLevel, BorderStyle, LevelFormat, ShadingType, Header, PageNumber, LineRuleType, PageBreak, TableLayoutType,
+  ExternalHyperlink, UnderlineType,
 } = require("docx");
 
 const ROOT = process.argv[2];
@@ -21,10 +22,18 @@ let figureCount = 0;
 let tableCount = 0;
 let chartCount = 0;
 
-// Texto com *itálico* e **negrito** simples.
+// Texto com *itálico*, **negrito** e [link](url) simples. O link sai azul e sublinhado,
+// como o estilo padrão de hiperlink do Word; U+200B no rótulo deixa a URL quebrar a linha.
 function runs(text, opts = {}) {
-  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/).filter(Boolean);
+  const parts = text.split(/(\[[^\]]+\]\([^)]+\)|\*\*[^*]+\*\*|\*[^*]+\*)/).filter(Boolean);
   return parts.map((part) => {
+    const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (link) {
+      return new ExternalHyperlink({
+        link: link[2],
+        children: [new TextRun({ text: link[1], font: FONT, size: opts.size || BODY, color: "0563C1", underline: { type: UnderlineType.SINGLE, color: "0563C1" } })],
+      });
+    }
     if (part.startsWith("**")) return new TextRun({ text: part.slice(2, -2), bold: true, font: FONT, size: opts.size || BODY });
     if (part.startsWith("*")) return new TextRun({ text: part.slice(1, -1), italics: true, font: FONT, size: opts.size || BODY });
     return new TextRun({ text: part, font: FONT, size: opts.size || BODY, bold: opts.bold });
@@ -198,12 +207,14 @@ const body = [
   p("Decidindo pelas câmeras (3 sementes, limitadas pela renderização em tempo real no Unity, sem quadros perdidos), o modelo global, que nunca foi treinado com elas, manteve o desempenho: 4,71 s na demanda medida e 15,1 s com o estágio de pedestres, contra 4,54 s e 14,8 s com a percepção *ground truth* nas mesmas sementes (+0,2 s, p = 0,12, e +0,3 s, p = 0,004). Contra o tempo fixo nas mesmas sementes, a redução foi de 64% (13,2 s para 4,7 s; p < 0,001) e de 29% (21,2 s para 15,1 s; p = 0,005), e, com o estágio de pedestres, a espera dos veículos que pararam caiu 41% (33,1 s para 19,4 s). Na prioridade para emergências, também decidindo pelas câmeras, as 18 viaturas avaliadas cruzaram sem parar com o aviso V2I, com perda média de 1,5 s; sem a prioridade, apenas 7 cruzaram sem parar, com 8,9 s. Somente com a detecção visual, 17 das 18 cruzaram sem parar, com todas detectadas e nenhum alarme falso. A prioridade adia um estágio de pedestres ainda não iniciado, mas nunca interrompe uma travessia em andamento. Cada decisão leva cerca de 0,1 ms em um núcleo de processador de *notebook* (Apple M5)."),
   h2("4.7 Objetivos e comparação com a literatura"),
   p("Os cinco objetivos específicos foram atingidos: a demanda foi medida com drone e reproduzida no SUMO (seção 4.1); as câmeras do gêmeo digital forneceram filas e esperas por faixa, com espera no máximo 0,3 s maior que com a percepção *ground truth* (4.2 e 4.6); os agentes operaram sob a camada de segurança, com estágio de pedestres e prioridade para emergências (4.3 e 4.6); o modelo global, treinado apenas em cruzamentos sintéticos, controlou dois cruzamentos não vistos (4.4 e 4.5); e as comparações usaram dez repetições pareadas com teste *t* (4.4 e 4.5)."),
-  p("Em relação à literatura, Genders e Razavi (2016) e Wei et al. (2019) treinam e avaliam cada modelo no mesmo cenário, com dados exatos do simulador; neste trabalho, o mesmo modelo foi avaliado em cruzamentos não vistos e decidindo pelas câmeras. Como o FRAP (ZHENG et al., 2019) e o AttendLight (OROOJLOOY et al., 2020), o modelo global descreve o cruzamento por estágio para não depender do número de faixas e de estágios; este trabalho acrescenta o estágio obrigatório de pedestres, a prioridade para emergências e a percepção visual, e disponibiliza a integração em tempo real entre SUMO, Unity e controlador, com o código aberto em https://github.com/​ViniVarella/​tcc-traffic-cv."),
+  p("Em relação à literatura, Genders e Razavi (2016) e Wei et al. (2019) treinam e avaliam cada modelo no mesmo cenário, com dados exatos do simulador; neste trabalho, o mesmo modelo foi avaliado em cruzamentos não vistos e decidindo pelas câmeras. Como o FRAP (ZHENG et al., 2019) e o AttendLight (OROOJLOOY et al., 2020), o modelo global descreve o cruzamento por estágio para não depender do número de faixas e de estágios; este trabalho acrescenta o estágio obrigatório de pedestres, a prioridade para emergências e a percepção visual, e disponibiliza a integração em tempo real entre SUMO, Unity e controlador, com o código aberto em [https://github.com/​ViniVarella/​tcc-traffic-cv](https://github.com/ViniVarella/tcc-traffic-cv)."),
 
   h1("5. Considerações Finais"),
-  p("O trabalho cumpriu os objetivos propostos. No cruzamento estudado, decidindo pelas câmeras, a espera dos veículos caiu 29% com o estágio de pedestres e 64% sem ele, em relação ao tempo fixo. Com a percepção *ground truth*, em dez repetições e com significância estatística, caiu 29,5% e 66%."),
-  p("A principal contribuição é o modelo global. Treinado apenas em cruzamentos sintéticos, ele ficou a menos de 1 s do especialista no cruzamento real e generalizou para outra geometria e outro número de estágios, com espera menor que a do *max-pressure* ou sem diferença significativa em cinco de seis cenários. O ganho sobre o *max-pressure* cresce quando há um estágio obrigatório caro, como o de pedestres em São Paulo (−13,8 s), o que indica que o modelo considera esse custo."),
-  p("As limitações são a avaliação em simulação, com imagens sintéticas; o treino com percepção *ground truth*; um único cruzamento real; e a calibração das câmeras em cada cruzamento novo, embora sem novo treino. Propõem-se a avaliação com câmeras reais, a coordenação entre cruzamentos vizinhos (WEI et al., 2019) e um piloto em campo com o órgão de trânsito."),
+  p("O trabalho atingiu os objetivos propostos e demonstrou, em simulação, a eficácia do TraffIQ no controle semafórico adaptativo por visão computacional e aprendizado por reforço profundo. No cruzamento estudado, decidindo pelas câmeras virtuais, o sistema reduziu a espera média dos veículos em relação ao tempo fixo em 29% com o estágio de pedestres (21,2 s para 15,1 s) e em 64% sem ele (13,2 s para 4,7 s)."),
+  p("Os benefícios estenderam-se aos veículos de emergência: com a prioridade V2I, as 18 viaturas avaliadas cruzaram sem parar, com perda média de 1,5 s, ante apenas sete sem a prioridade, com 8,9 s."),
+  p("A principal contribuição é o modelo global, treinado apenas em cruzamentos sintéticos e aplicável a outras configurações sem novo treino. No cruzamento real, ficou a menos de 1 s do especialista, treinado nele, e, com o estágio de pedestres, teve espera 13,8 s menor que a do *max-pressure*. Em um cruzamento não usado no treino, superou o *max-pressure* em três de seis cenários, foi estatisticamente equivalente em dois e inferior em um, o que evidencia capacidade de generalização."),
+  p("As limitações são a avaliação em simulação, com imagens sintéticas; o treino com percepção *ground truth*; um único cruzamento real; e a calibração das câmeras em cada cruzamento novo, embora sem novo treino. Propõem-se testes com câmeras reais, a coordenação entre cruzamentos vizinhos e a validação em campo."),
+  p("Conclui-se que o TraffIQ tem potencial para aumentar a eficiência semafórica e reduzir a espera no trânsito urbano, constituindo uma base promissora para aplicações em ambientes reais."),
 
   h1("Referências"),
   ref("ECLIPSE SUMO. **SUMO Documentation**. 2026. Disponível em: https://sumo.dlr.de/docs/. Acesso em: 9 mar. 2026."),
